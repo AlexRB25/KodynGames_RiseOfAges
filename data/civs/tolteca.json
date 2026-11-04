@@ -1,0 +1,25 @@
+{
+ "order": 5,
+ "name": "Toltecas",
+ "season": "mesoamerica",
+ "desc": "Arqueros +1 de alcance y casas más baratas. Pero oro 10 % más lento y militares con 5 % menos vida.",
+ "mods": {
+  "archer_range": 1,
+  "cost_mult": {
+   "casa": 0.83
+  },
+  "gather": {
+   "oro": 0.9
+  },
+  "mil_hp": 0.95
+ },
+ "look": {
+  "skin": [
+   0.63,
+   0.43,
+   0.29
+  ],
+  "style": "mesoamerica"
+ },
+ "id": "tolteca"
+}

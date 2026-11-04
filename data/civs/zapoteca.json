@@ -1,0 +1,23 @@
+{
+ "order": 4,
+ "name": "Zapotecas",
+ "season": "mesoamerica",
+ "desc": "Piedra 20 % más rápida y edificios con +15 % de vida. Pero sus militares pegan -1 y el alimento es 5 % más lento.",
+ "mods": {
+  "gather": {
+   "piedra": 1.2,
+   "comida": 0.95
+  },
+  "bld_hp": 1.15,
+  "mil_atk": -1
+ },
+ "look": {
+  "skin": [
+   0.58,
+   0.4,
+   0.27
+  ],
+  "style": "mesoamerica"
+ },
+ "id": "zapoteca"
+}

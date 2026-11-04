@@ -1,0 +1,24 @@
+{
+ "order": 3,
+ "name": "Purépechas",
+ "season": "mesoamerica",
+ "desc": "Oro 20 % más rápido y torres +2 de ataque. Pero madera 10 % más lenta, militares con 10 % menos vida y aldeanos 5 % más lentos.",
+ "mods": {
+  "gather": {
+   "oro": 1.2,
+   "madera": 0.9
+  },
+  "tower_atk": 2,
+  "mil_hp": 0.9,
+  "villager_speed": 0.95
+ },
+ "look": {
+  "skin": [
+   0.64,
+   0.44,
+   0.3
+  ],
+  "style": "mesoamerica"
+ },
+ "id": "purepecha"
+}

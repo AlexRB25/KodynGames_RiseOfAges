@@ -1,0 +1,541 @@
+class_name Controller
+extends Node
+## Entrada del jugador local: selección, órdenes y colocación de edificios.
+## Clic izq = seleccionar (arrastrar = recuadro, Shift = añadir, doble clic = todos los del mismo tipo).
+## Clic der = orden según el objetivo. Teclas: Esc, Supr, H (centro), . (aldeano sin tarea),
+## Ctrl+1..9 guardar grupo, 1..9 recuperarlo, Espacio = ir a la selección.
+
+var game: Game
+var selection: Array[Entity] = []
+var placing := ""
+var drag_start := Vector2.ZERO
+var dragging := false
+var drag_rect := Rect2()
+var wall_start := Vector2i(-1, -1)
+var groups := {}
+var _ghost: Node3D
+var _ghost_parts: Array[MeshInstance3D] = []
+var _last_click_t := 0.0
+var _last_click_kind := ""
+var _idle_i := 0
+var _press_pos := Vector2.ZERO
+var _touch_long_t := -1.0
+
+
+func setup(g: Game) -> void:
+	game = g
+
+
+func forget(e: Entity) -> void:
+	if selection.has(e):
+		selection.erase(e)
+		game.hud.refresh_selection()
+	for k in groups:
+		groups[k].erase(e)
+
+
+func cam() -> RtsCamera:
+	return game.camera
+
+
+# ---------------- selección ----------------
+
+func set_selection(list: Array) -> void:
+	for e in selection:
+		if is_instance_valid(e):
+			e.set_selected(false)
+	selection.clear()
+	for e in list:
+		if Entity.live(e) or (e is Animal and Entity.valid(e)):
+			selection.append(e)
+			e.set_selected(true)
+	game.hud.refresh_selection()
+
+
+func add_to_selection(list: Array) -> void:
+	var s := selection.duplicate()
+	for e in list:
+		if s.has(e):
+			s.erase(e)
+		else:
+			s.append(e)
+	set_selection(s)
+
+
+func own_units_selected() -> Array[Unit]:
+	var out: Array[Unit] = []
+	for e in selection:
+		if e is Unit and e.owner_id == game.local_id and not e.dead:
+			out.append(e)
+	return out
+
+
+func own_building_selected() -> Building:
+	for e in selection:
+		if e is Building and e.owner_id == game.local_id:
+			return e
+	return null
+
+
+func _screen_of(p: Vector2, h: float) -> Vector2:
+	return cam().cam.unproject_position(Vector3(p.x, h, p.y))
+
+
+func _on_screen(p: Vector2, h: float) -> bool:
+	return not cam().cam.is_position_behind(Vector3(p.x, h, p.y))
+
+
+## Entidad bajo el cursor.
+func pick(sp: Vector2) -> Entity:
+	var best: Entity = null
+	var bd := 20.0
+	for u in game.units:
+		if u.dead or not u.visible:
+			continue
+		var d := _screen_of(u.pos, 0.6).distance_to(sp)
+		if d < bd:
+			bd = d
+			best = u
+	for a in game.animals:
+		if not a.visible:
+			continue
+		var d := _screen_of(a.pos, 0.3).distance_to(sp)
+		if d < bd:
+			bd = d
+			best = a
+	if best:
+		return best
+	var g := cam().screen_to_ground(sp)
+	var e = game.map.entity_at(MapData.to_tile(g))
+	if e and e.visible:
+		return e
+	# edificios altos: comparar con el centro proyectado
+	bd = 9999.0
+	for b in game.buildings:
+		if not b.visible:
+			continue
+		var s: float = b.def["size"]
+		var d := _screen_of(b.center(), s * 0.4).distance_to(sp)
+		var lim := 900.0 / cam().dist * s * 0.4
+		if d < lim and d < bd:
+			bd = d
+			best = b
+	return best
+
+
+# ---------------- entrada ----------------
+
+var _fingers := 0
+var _two_finger := false
+
+
+func _unhandled_input(ev: InputEvent) -> void:
+	if game.over:
+		return
+	# Con dos dedos se mueve la cámara: cancelar el recuadro de selección.
+	if ev is InputEventScreenTouch:
+		_fingers = maxi(0, _fingers + (1 if ev.pressed else -1))
+		if _fingers >= 2:
+			_two_finger = true
+			if dragging:
+				dragging = false
+				game.hud.set_drag_rect(Rect2())
+		if _fingers == 0:
+			_two_finger = false
+		return
+	if _two_finger and ev is InputEventMouseButton:
+		return
+	if ev is InputEventMouseButton:
+		_mouse_button(ev)
+	elif ev is InputEventMouseMotion:
+		if dragging:
+			var cur: Vector2 = ev.position
+			drag_rect = Rect2(drag_start, cur - drag_start).abs()
+			game.hud.set_drag_rect(drag_rect if drag_rect.size.length() > 6.0 else Rect2())
+	elif ev is InputEventKey and ev.pressed and not ev.echo:
+		_key(ev)
+
+
+func _mouse_button(ev: InputEventMouseButton) -> void:
+	if ev.button_index == MOUSE_BUTTON_LEFT:
+		if ev.pressed:
+			if placing != "":
+				if Defs.BUILDINGS[placing].get("wall", false):
+					wall_start = MapData.to_tile(cam().screen_to_ground(ev.position))
+				else:
+					_place_at(ev.position, ev.shift_pressed)
+				return
+			dragging = true
+			drag_start = ev.position
+			drag_rect = Rect2()
+		else:
+			if placing != "" and wall_start.x >= 0:
+				_place_wall(ev.position, ev.shift_pressed)
+				return
+			if not dragging:
+				return
+			dragging = false
+			game.hud.set_drag_rect(Rect2())
+			if drag_rect.size.length() > 6.0:
+				_box_select(drag_rect, ev.shift_pressed)
+			else:
+				_click_select(ev.position, ev.shift_pressed)
+	elif ev.button_index == MOUSE_BUTTON_RIGHT and ev.pressed:
+		if placing != "":
+			cancel_placing()
+			return
+		_command(ev.position, ev.shift_pressed)
+
+
+func _click_select(sp: Vector2, add: bool) -> void:
+	var e := pick(sp)
+	# Táctil: con tus unidades seleccionadas, tocar otra cosa (suelo, recurso, enemigo) es una orden.
+	if Hud.is_touch() and not own_units_selected().is_empty():
+		var own: bool = e != null and (e is Unit or e is Building) and e.owner_id == game.local_id
+		var useful_building: bool = own and e is Building and action_for(e) != ""
+		if not own or useful_building:
+			_command(sp, false)
+			return
+	var now := Time.get_ticks_msec() / 1000.0
+	if e == null:
+		if not add:
+			set_selection([])
+		return
+	# doble clic: todos los de ese tipo en pantalla
+	if e is Unit and e.owner_id == game.local_id and now - _last_click_t < 0.35 and _last_click_kind == e.kind:
+		var vis := game.get_viewport().get_visible_rect()
+		var all: Array = []
+		for u in game.units:
+			if u.owner_id == game.local_id and u.kind == e.kind and not u.dead and vis.has_point(_screen_of(u.pos, 0.6)):
+				all.append(u)
+		set_selection(all)
+		return
+	_last_click_t = now
+	_last_click_kind = e.kind
+	if add and e.owner_id == game.local_id:
+		add_to_selection([e])
+	else:
+		set_selection([e])
+
+
+func _box_select(r: Rect2, add: bool) -> void:
+	var found: Array = []
+	for u in game.units:
+		if u.owner_id == game.local_id and not u.dead and _on_screen(u.pos, 0.6) and r.has_point(_screen_of(u.pos, 0.6)):
+			found.append(u)
+	if found.is_empty():
+		for b in game.buildings:
+			if b.owner_id == game.local_id and r.has_point(_screen_of(b.center(), 0.5)):
+				found.append(b)
+				break
+	# Si hay militares y aldeanos, el recuadro prefiere a los militares solo con Alt.
+	if add:
+		var s := selection.duplicate()
+		for e in found:
+			if not s.has(e):
+				s.append(e)
+		set_selection(s)
+	else:
+		set_selection(found)
+
+
+func _command(sp: Vector2, queue: bool) -> void:
+	var g := cam().screen_to_ground(sp)
+	var target := pick(sp)
+	var us := own_units_selected()
+	if not us.is_empty():
+		if target and target is ResourceNode and not game.fog.is_explored_rect(target.rect):
+			target = null
+		game.order_units(us, target, g, queue)
+		_marker(g, target)
+		return
+	var b := own_building_selected()
+	if b:
+		game.issue({"k": "rally", "e": b.id, "x": g.x, "y": g.y, "t": target.id if target else 0})
+		_marker(g, target)
+
+
+func _marker(p: Vector2, target: Entity) -> void:
+	var mi := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.3
+	tm.outer_radius = 0.42
+	tm.rings = 16
+	tm.ring_segments = 4
+	mi.mesh = tm
+	var c := Color(0.4, 1.0, 0.4)
+	if target and game.is_enemy(game.local_id, target.owner_id):
+		c = Color(1.0, 0.3, 0.3)
+	elif target and (target.has_resource() or target is Animal):
+		c = Color(1.0, 0.85, 0.3)
+	mi.material_override = Mat.flat(c)
+	mi.position = Vector3(p.x, 0.05, p.y)
+	game.add_child(mi)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "scale", Vector3(0.2, 1, 0.2), 0.5)
+	tw.tween_callback(mi.queue_free)
+
+
+func _key(ev: InputEventKey) -> void:
+	match ev.keycode:
+		KEY_ESCAPE:
+			if placing != "":
+				cancel_placing()
+			elif not selection.is_empty():
+				set_selection([])
+			else:
+				game.hud.toggle_menu()
+		KEY_DELETE:
+			var kill: Array = []
+			for e in selection:
+				if not Entity.valid(e) or e.owner_id != game.local_id:
+					continue
+				if e is Unit:
+					kill.append(e.id)
+				elif e is Building:
+					game.issue({"k": "destroy", "e": e.id})
+			if not kill.is_empty():
+				game.issue({"k": "kill", "u": kill})
+		KEY_H:
+			for b in game.buildings:
+				if b.owner_id == game.local_id and b.kind == "centro":
+					set_selection([b])
+					cam().focus(b.center())
+					break
+		KEY_PERIOD:
+			select_next_idle()
+		KEY_SPACE:
+			if not selection.is_empty() and Entity.valid(selection[0]):
+				cam().focus(selection[0].center())
+		KEY_F3:
+			game.paused = not game.paused
+	if ev.keycode >= KEY_1 and ev.keycode <= KEY_9:
+		var n: int = ev.keycode - KEY_0
+		if ev.ctrl_pressed:
+			groups[n] = selection.duplicate()
+		elif groups.has(n):
+			var live: Array = []
+			for e in groups[n]:
+				if Entity.live(e):
+					live.append(e)
+			set_selection(live)
+			if ev.shift_pressed and not live.is_empty():
+				cam().focus(live[0].center())
+
+
+func idle_villagers() -> Array[Unit]:
+	var out: Array[Unit] = []
+	for u in game.units:
+		if u.owner_id == game.local_id and u.is_villager() and u.is_idle():
+			out.append(u)
+	return out
+
+
+func select_next_idle() -> void:
+	var list := idle_villagers()
+	if list.is_empty():
+		return
+	_idle_i = (_idle_i + 1) % list.size()
+	set_selection([list[_idle_i]])
+	cam().focus(list[_idle_i].pos)
+
+
+# ---------------- colocar edificios ----------------
+
+func start_placing(k: String) -> void:
+	var reason := game.build_block_reason(game.local_id, k)
+	if reason == "" and any_villager() == null:
+		reason = "No tienes aldeanos."
+	if reason != "":
+		game.hud.notify(reason, Vector2.INF)
+		return
+	cancel_placing()
+	placing = k
+	_ghost = Node3D.new()
+	game.add_child(_ghost)
+	_ghost_parts.clear()
+
+
+func cancel_placing() -> void:
+	placing = ""
+	wall_start = Vector2i(-1, -1)
+	if _ghost:
+		_ghost.queue_free()
+		_ghost = null
+	_ghost_parts.clear()
+
+
+func _ghost_tile(sp: Vector2) -> Vector2i:
+	var g := cam().screen_to_ground(sp)
+	var sz: int = Defs.BUILDINGS[placing]["size"]
+	return Vector2i(floori(g.x - sz * 0.5 + 0.5), floori(g.y - sz * 0.5 + 0.5))
+
+
+func _wall_tiles(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var d := b - a
+	var n := maxi(absi(d.x), absi(d.y))
+	for i in n + 1:
+		var t := Vector2i(roundi(a.x + d.x * float(i) / maxf(n, 1)), roundi(a.y + d.y * float(i) / maxf(n, 1)))
+		if out.is_empty() or out[out.size() - 1] != t:
+			out.append(t)
+	return out
+
+
+var _cursor := ""
+var _cursor_t := 0.0
+
+
+## Qué haría la selección con clic derecho sobre esa entidad ("" = moverse).
+func action_for(target: Entity) -> String:
+	var us := own_units_selected()
+	if us.is_empty() or target == null:
+		return ""
+	if target.owner_id >= 0 and game.is_enemy(game.local_id, target.owner_id) and not target.dead:
+		return "atacar"
+	var vill := false
+	var carrying := {}
+	for u in us:
+		if u.is_villager():
+			vill = true
+			if u.carry > 0.0:
+				carrying[u.carry_type] = true
+	if not vill:
+		if target is Animal and not target.dead:
+			return "atacar"
+		return ""
+	if target is Building and target.owner_id == game.local_id:
+		if not target.complete:
+			return "construir"
+		if target.kind == "granja":
+			return "cosechar"
+		for r in carrying:
+			if target.def.get("drop", []).has(r):
+				return "depositar"
+		return ""
+	if target is Animal:
+		return "cazar"
+	if target is ResourceNode and target.has_resource():
+		match target.kind:
+			"arbol":
+				return "talar"
+			"piedra", "oro":
+				return "minar"
+			"arbusto":
+				return "recolectar"
+			"pesca":
+				return "pescar"
+	return ""
+
+
+func _set_cursor(kind: String) -> void:
+	if kind == _cursor:
+		return
+	_cursor = kind
+	if kind == "":
+		Input.set_custom_mouse_cursor(null)
+	else:
+		Input.set_custom_mouse_cursor(Cursors.texture(kind), Input.CURSOR_ARROW, Cursors.hotspot(kind))
+
+
+func _update_cursor(dt: float) -> void:
+	_cursor_t -= dt
+	if _cursor_t > 0.0:
+		return
+	_cursor_t = 0.05
+	if placing != "" or dragging or game.over:
+		_set_cursor("")
+		return
+	# Sobre la interfaz: cursor normal.
+	var hovered := game.get_viewport().gui_get_hovered_control()
+	if hovered and hovered.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		_set_cursor("")
+		return
+	var sp := game.get_viewport().get_mouse_position()
+	var t := pick(sp)
+	if t is ResourceNode and not game.fog.is_explored_rect(t.rect):
+		t = null
+	_set_cursor(action_for(t))
+
+
+func _exit_tree() -> void:
+	Input.set_custom_mouse_cursor(null)
+
+
+func _process(dt: float) -> void:
+	_update_cursor(dt)
+	if placing == "" or _ghost == null:
+		return
+	var sp := game.get_viewport().get_mouse_position()
+	var tiles: Array[Vector2i] = []
+	if Defs.BUILDINGS[placing].get("wall", false) and wall_start.x >= 0:
+		tiles = _wall_tiles(wall_start, MapData.to_tile(cam().screen_to_ground(sp)))
+	else:
+		tiles = [_ghost_tile(sp)]
+	var sz: int = Defs.BUILDINGS[placing]["size"]
+	while _ghost_parts.size() < tiles.size():
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(sz, 0.6 if sz > 1 else 1.0, sz)
+		mi.mesh = bm
+		_ghost.add_child(mi)
+		_ghost_parts.append(mi)
+	for i in _ghost_parts.size():
+		var mi := _ghost_parts[i]
+		mi.visible = i < tiles.size()
+		if not mi.visible:
+			continue
+		var t := tiles[i]
+		mi.position = Vector3(t.x + sz * 0.5, 0.3, t.y + sz * 0.5)
+		var ok := game.can_place_ui(placing, t)
+		mi.material_override = Mat.flat(Color(0.3, 1.0, 0.3, 0.45) if ok else Color(1.0, 0.25, 0.2, 0.45))
+
+
+func _place_at(sp: Vector2, keep: bool) -> void:
+	var k := placing
+	var t := _ghost_tile(sp)
+	if not game.can_place_ui(k, t):
+		game.hud.notify("No se puede construir ahí.", Vector2.INF)
+		return
+	var reason := game.build_block_reason(game.local_id, k)
+	if reason != "":
+		game.hud.notify(reason, Vector2.INF)
+		cancel_placing()
+		return
+	_issue_place(k, [t], keep)
+	if not keep:
+		cancel_placing()
+
+
+func _place_wall(sp: Vector2, keep: bool) -> void:
+	var k := placing
+	var tiles: Array = []
+	for t in _wall_tiles(wall_start, MapData.to_tile(cam().screen_to_ground(sp))):
+		if game.can_place_ui(k, t):
+			tiles.append(t)
+	wall_start = Vector2i(-1, -1)
+	if tiles.is_empty():
+		game.hud.notify("No se puede construir ahí.", Vector2.INF)
+	else:
+		_issue_place(k, tiles, keep)
+	if not keep:
+		cancel_placing()
+
+
+## Manda la orden de construir; si no hay aldeanos seleccionados, el juego elige el más cercano.
+func _issue_place(k: String, tiles: Array, queue: bool) -> void:
+	var ids: Array = []
+	for u in own_units_selected():
+		if u.is_villager():
+			ids.append(u.id)
+	var tl: Array = []
+	for t in tiles:
+		tl.append([t.x, t.y])
+	game.issue({"k": "place", "b": k, "tiles": tl, "u": ids, "q": queue})
+
+
+func any_villager() -> Unit:
+	for u in game.units:
+		if u.owner_id == game.local_id and u.is_villager() and not u.dead:
+			return u
+	return null

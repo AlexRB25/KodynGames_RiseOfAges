@@ -1,0 +1,24 @@
+{
+ "order": 1,
+ "name": "Mexicas",
+ "season": "mesoamerica",
+ "desc": "Militares se entrenan 20 % más rápido y pegan +1. Pero recogen alimento 10 % más lento, sus edificios tienen 15 % menos vida y construyen 15 % más lento.",
+ "mods": {
+  "mil_train": 0.8,
+  "mil_atk": 1,
+  "gather": {
+   "comida": 0.9
+  },
+  "bld_hp": 0.85,
+  "build_speed": 0.85
+ },
+ "look": {
+  "skin": [
+   0.62,
+   0.42,
+   0.28
+  ],
+  "style": "mesoamerica"
+ },
+ "id": "mexica"
+}

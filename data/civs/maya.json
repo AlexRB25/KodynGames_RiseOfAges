@@ -1,0 +1,26 @@
+{
+ "order": 2,
+ "name": "Mayas",
+ "season": "mesoamerica",
+ "desc": "Madera y alimento 10 % más rápido y empiezan con +50 de madera. Pero sus militares tienen 10 % menos vida y tardan 10 % más en entrenar.",
+ "mods": {
+  "gather": {
+   "madera": 1.1,
+   "comida": 1.1
+  },
+  "start": {
+   "madera": 50
+  },
+  "mil_hp": 0.9,
+  "mil_train": 1.1
+ },
+ "look": {
+  "skin": [
+   0.6,
+   0.4,
+   0.26
+  ],
+  "style": "mesoamerica"
+ },
+ "id": "maya"
+}

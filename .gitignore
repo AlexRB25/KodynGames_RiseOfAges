@@ -1,0 +1,3 @@
+.godot/
+server/node_modules/
+*.tmp

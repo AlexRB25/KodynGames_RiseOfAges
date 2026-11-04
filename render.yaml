@@ -1,0 +1,10 @@
+# Render: un solo servicio web (Node) que sirve la landing, el juego web y las salas en línea.
+services:
+  - type: web
+    name: conquista
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /salud
+    plan: free
