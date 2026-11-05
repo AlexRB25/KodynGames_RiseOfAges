@@ -50,6 +50,20 @@ func points() -> int:
 	return int(profile.get("points", 0))
 
 
+## ¿Ya hizo (u omitió) el tutorial en este equipo?
+func tutorial_done() -> bool:
+	var cfg := ConfigFile.new()
+	cfg.load(SESSION_PATH)
+	return bool(cfg.get_value("jugador", "tutorial", false))
+
+
+func set_tutorial_done(v: bool) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SESSION_PATH)
+	cfg.set_value("jugador", "tutorial", v)
+	cfg.save(SESSION_PATH)
+
+
 ## Civilización favorita (se guarda en este equipo).
 func fav_civ() -> String:
 	var cfg := ConfigFile.new()

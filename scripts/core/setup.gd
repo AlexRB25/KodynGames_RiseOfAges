@@ -8,6 +8,7 @@ var map_type := "azar"
 var seed_value := 0
 var local_player := 0
 var online := false
+var tutorial := false   # partida guiada (rival que no ataca)
 
 
 func _ready() -> void:
@@ -22,6 +23,7 @@ func default_skirmish() -> void:
 	]
 	local_player = 0
 	online = false
+	tutorial = false
 	map_size = "mediano"
 	map_type = "azar"
 	seed_value = 0

@@ -26,6 +26,9 @@ func setup(m: Node) -> void:
 	Account.changed.connect(_refresh_chip)
 	_refresh_chip()
 	_show_civ()
+	# La primera vez: ofrecer el tutorial (se puede omitir).
+	if not Account.tutorial_done():
+		_welcome()
 	# Si ya jugaste en línea en este equipo, carga tu nivel.
 	if Account.accounts_ready() and Account.refresh_token != "" and not Account.signed_in():
 		Account.sign_in()
@@ -292,6 +295,29 @@ func _soon(title: String, text: String) -> void:
 	vb.add_child(ok)
 
 
+func _welcome() -> void:
+	var vb := _window("¡Bienvenido a Rise of Ages!", 600)
+	var l := Label.new()
+	l.text = "¿Aprendemos lo básico? Te enseñamos a mover aldeanos, juntar recursos, comprar aldeanos y construir. Son unos 2 minutos."
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_color", CREAM)
+	vb.add_child(l)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 14)
+	vb.add_child(row)
+	var go := art_button("Empezar tutorial", Vector2(260, 60), 26, Color(0.16, 0.42, 0.22))
+	go.pressed.connect(func() -> void: menu.start_tutorial())
+	row.add_child(go)
+	var skip := art_button("Omitir", Vector2(160, 60), 26, Color(0.25, 0.22, 0.20))
+	skip.pressed.connect(func() -> void:
+		Account.set_tutorial_done(true)
+		_close_overlay())
+	row.add_child(skip)
+
+
 func _civ_picker() -> void:
 	var vb := _window("Elige tu civilización", 980)
 	var grid := GridContainer.new()
@@ -364,6 +390,10 @@ func _config() -> void:
 	else:
 		acc.text = "Tu cuenta es de invitado. En \"Jugar con rango\" puedes guardar tu progreso con correo o entrar con tu cuenta de Kodyn Games (la de Zombie War)."
 	vb.add_child(acc)
+	var tut := art_button("Repetir tutorial", Vector2(240, 52), 22, Color(0.16, 0.42, 0.22))
+	tut.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tut.pressed.connect(func() -> void: menu.start_tutorial())
+	vb.add_child(tut)
 	var ok := art_button("Guardar", Vector2(200, 56), 24)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(func() -> void:

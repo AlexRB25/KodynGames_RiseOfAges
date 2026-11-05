@@ -62,6 +62,11 @@ func start_match() -> void:
 			seed_v = int(arg.get_slice("=", 1))
 		elif arg.begins_with("--tipo="):
 			Setup.map_type = arg.get_slice("=", 1)
+		elif arg == "--tutorial":
+			Setup.tutorial = true
+			Setup.map_size = "pequeno"
+			Setup.map_type = "valle"
+			seed_v = 4242
 		elif arg.begins_with("--civ=") and not Setup.players.is_empty():
 			Setup.players[Setup.local_player]["civ"] = arg.get_slice("=", 1)
 	map.setup(size)
@@ -128,7 +133,11 @@ func start_match() -> void:
 		add_child(controller)
 		controller.setup(self)
 		hud.setup(self)
-		if Defs.MAP_TYPES.has(map_type):
+		if Setup.tutorial:
+			var tut := Tutorial.new()
+			add_child(tut)
+			tut.setup(self)
+		elif Defs.MAP_TYPES.has(map_type):
 			hud.notify("Mapa: %s. %s" % [Defs.MAP_TYPES[map_type]["name"], Defs.MAP_TYPES[map_type]["desc"]], Vector2.INF)
 	_update_fog()
 	if online:
@@ -204,6 +213,10 @@ func _dev_args() -> void:
 			camera.focus(dc + Vector2(3.3, -0.7))
 			camera.dist = 7.0
 			camera.target_dist = 7.0
+		elif a.begins_with("--paso=") and hud:
+			for ch in get_children():
+				if ch is Tutorial:
+					ch._go(int(a.get_slice("=", 1)) - 1)
 		elif a.begins_with("--tab=") and hud:
 			hud.set_tab(a.get_slice("=", 1))
 		elif a.begins_with("--arrastre") and controller:

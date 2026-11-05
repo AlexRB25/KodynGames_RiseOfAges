@@ -204,6 +204,7 @@ func _handle(m: Dictionary) -> void:
 			Setup.map_type = String(m.get("type", "azar"))
 			Setup.seed_value = int(m["seed"])
 			Setup.online = true
+			Setup.tutorial = false
 			ranked = bool(m.get("ranked", false))
 			queue_info = {}
 			_buffer.clear()

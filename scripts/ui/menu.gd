@@ -236,6 +236,23 @@ func open_mode(k: String) -> void:
 			online_box.visible = true
 
 
+## Partida guiada: tú contra un rival que no ataca, en un mapa pequeño y tranquilo.
+func start_tutorial() -> void:
+	var fav := Account.fav_civ()
+	var other: String = Defs.CIV_ORDER[1] if Defs.CIV_ORDER[0] == fav else Defs.CIV_ORDER[0]
+	Setup.players = [
+		{"name": Account.player_name if Account.player_name != "" else "Tú", "civ": fav, "team": 1, "color": 0, "bot": false, "difficulty": "normal"},
+		{"name": "Rival de práctica", "civ": other, "team": 2, "color": 1, "bot": false, "difficulty": "normal"},
+	]
+	Setup.local_player = 0
+	Setup.online = false
+	Setup.tutorial = true
+	Setup.map_size = "pequeno"
+	Setup.map_type = "valle"
+	Setup.seed_value = 4242
+	get_tree().change_scene_to_file("res://scenes/game.tscn")
+
+
 ## Tu civilización favorita queda elegida en todas las formas de juego.
 func apply_fav_civ() -> void:
 	var idx := maxi(0, Defs.CIV_ORDER.find(Account.fav_civ()))
@@ -373,6 +390,7 @@ func _start() -> void:
 		return
 	Setup.players = players
 	Setup.online = false
+	Setup.tutorial = false
 	Setup.local_player = 0
 	Setup.map_size = ["pequeno", "mediano", "grande"][size_opt.selected]
 	Setup.map_type = Defs.MAP_TYPE_ORDER[type_opt.selected]
