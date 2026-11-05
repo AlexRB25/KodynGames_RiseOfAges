@@ -90,6 +90,21 @@ func _build() -> void:
 	logo.position = Vector2(26, 14)
 	logo.size = Vector2(330, 190)
 	add_child(logo)
+	# Versión abajo a la izquierda (se cambia en project.godot: application/config/version).
+	var ver := Label.new()
+	ver.text = "V" + str(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	ver.add_theme_font_override("font", font)
+	ver.add_theme_font_size_override("font_size", 20)
+	ver.add_theme_color_override("font_color", Color(CREAM, 0.85))
+	ver.add_theme_color_override("font_outline_color", Color(0.1, 0.06, 0.03))
+	ver.add_theme_constant_override("outline_size", 6)
+	ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ver.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	ver.offset_left = 20
+	ver.offset_top = -40
+	ver.offset_bottom = -12
+	ver.offset_right = 200
+	add_child(ver)
 	# Arriba a la derecha: nivel en línea, Tienda, Configuración (y Salir en PC).
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)

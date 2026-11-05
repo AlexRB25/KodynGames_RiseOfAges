@@ -9,6 +9,7 @@ boot_splash/image="res://assets/ui/arranque.png"
 
 config/name="Rise of Ages"
 config/description="Estrategia en tiempo real: civilizaciones mesoamericanas."
+config/version="1.0.1"
 run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
