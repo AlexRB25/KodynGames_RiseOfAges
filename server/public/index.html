@@ -50,7 +50,7 @@ h1 { font-family: 'Cinzel', serif; font-weight: 800; font-size: clamp(44px, 9vw,
 section { padding: 56px 0; border-bottom: 1px solid rgba(138,106,55,.35); }
 h2 { font-family: 'Cinzel', serif; font-size: clamp(26px, 4vw, 36px); color: var(--gold); margin: 0 0 18px; }
 p.lead { font-size: 18px; max-width: 820px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 16px; }
 .card { background: var(--panel); border: 2px solid var(--border); border-radius: 12px; padding: 18px; }
 .card h3 { margin: 0 0 6px; font-size: 19px; color: var(--text); }
 .card p { margin: 0; color: var(--muted); }
@@ -71,10 +71,58 @@ td:first-child { color: var(--gold); font-weight: 800; white-space: nowrap; widt
 .road li { margin: 6px 0; }
 .ok { color: var(--green); font-weight: 800; }
 .warn { background: rgba(217,87,63,.12); border: 2px solid var(--red); border-radius: 12px; padding: 14px 16px; }
+/* barra fija */
+nav.top { position: sticky; top: 0; z-index: 10; background: rgba(27,19,12,.92); backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(138,106,55,.5); }
+nav.top .wrap { display: flex; align-items: center; gap: 18px; height: 56px; }
+nav.top img { height: 34px; width: auto; display: block; }
+nav.top .links { display: flex; gap: 16px; margin-left: auto; align-items: center; }
+nav.top .links a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 15px; }
+nav.top .links a:hover { color: var(--gold); }
+nav.top .links a.btn { color: #2a1a08; font-size: 15px; padding: 8px 16px; box-shadow: 0 3px 0 #8a5f1c; }
+@media (max-width: 760px) { nav.top .links a.opt { display: none; } }
+html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+.pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 0 22px; }
+.pill { font-size: 13px; font-weight: 800; padding: 5px 12px; border-radius: 999px; background: rgba(42,30,19,.85);
+  border: 1px solid var(--border); color: var(--text); }
+/* capturas */
+.shots { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.shots .side { display: grid; gap: 12px; }
+.shots figure { margin: 0; position: relative; border: 2px solid var(--border); border-radius: 12px; overflow: hidden; background: #000; }
+.shots img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.shots .main img { aspect-ratio: 16/9; }
+.shots .side img { aspect-ratio: 16/9; }
+.shots figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 8px; font-weight: 600; font-size: 14px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.85)); }
+@media (max-width: 760px) { .shots { grid-template-columns: 1fr; } }
+/* etapas de recursos */
+.stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 12px; }
+.stage-row { background: var(--panel); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.stage-row h3 { margin: 0 0 8px; font-size: 17px; }
+.stage-row .cells { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; align-items: end; }
+.stage-row .cell { text-align: center; min-width: 0; }
+.stage-row .cell img { display: block; margin: 0 auto; max-width: 100%; height: auto; max-height: 96px; }
+.stage-row .cell span { display: inline-block; margin-top: 6px; font-weight: 800; font-size: 12px; padding: 2px 8px;
+  border-radius: 8px; background: var(--panel2); border: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+.stage-row .cell.end span { color: var(--gold); }
+.tagnew { font-family: 'Nunito', Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #2a1a08;
+  background: var(--green); border-radius: 6px; padding: 2px 7px; vertical-align: middle; margin-left: 6px; }
 footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align: center; }
 </style>
 </head>
 <body>
+
+<nav class="top">
+  <div class="wrap">
+    <a href="#" aria-label="Inicio"><img src="/img/logo.png" alt="Rise of Ages" width="57" height="34"></a>
+    <div class="links">
+      <a class="opt" href="#juego">El juego</a>
+      <a class="opt" href="#mundo">El mundo</a>
+      <a class="opt" href="#amigos">Con amigos</a>
+      <a class="btn" href="/jugar/">▶ Jugar</a>
+    </div>
+  </div>
+</nav>
 
 <header class="hero">
   <div class="wrap">
@@ -82,6 +130,10 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
     <h1 class="sr">Rise of Ages</h1>
     <img class="logo" src="/img/logo.png" alt="Rise of Ages" width="560" height="335">
     <p class="tag">Levanta tu civilización mesoamericana desde una aldea hasta un imperio. Recolecta, construye, evoluciona y derrota a tus rivales.</p>
+    <div class="pills">
+      <span class="pill">🎮 Gratis</span><span class="pill">🌐 En el navegador</span>
+      <span class="pill">🎓 Tutorial guiado</span><span class="pill">🗣️ Español · English · Português</span>
+    </div>
     <div class="cta">
       <a class="btn" href="/jugar/">▶ Jugar ahora</a>
       <a class="btn alt" href="#amigos">Jugar con un amigo</a>
@@ -89,6 +141,19 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
     <p class="note">Se juega en el navegador, en computadora o celular (en horizontal). No hay que instalar nada.</p>
   </div>
 </header>
+
+<section id="juego">
+  <div class="wrap">
+    <h2>Así se ve</h2>
+    <div class="shots">
+      <figure class="main"><img src="/img/captura1.webp" alt="Un pueblo maya con su centro, casas, corral y granjas junto al bosque y un lago" width="1600" height="900"><figcaption>Tu pueblo crece entre bosques, minas y lagos</figcaption></figure>
+      <div class="side">
+        <figure><img src="/img/captura2.webp" alt="Granjas, corral con cabras y una mina de oro" width="960" height="540" loading="lazy"><figcaption>Granjas, corral y minas</figcaption></figure>
+        <figure><img src="/img/captura3.webp" alt="Aldeanos y guerreros de las 5 eras junto al bosque" width="960" height="540" loading="lazy"><figcaption>Tu gente cambia en cada era</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section>
   <div class="wrap">
@@ -103,7 +168,60 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
       <div class="card"><div class="ico">🌫️</div><h3>Niebla de guerra</h3><p>No sabes dónde está tu enemigo hasta que lo encuentras. Explora el mapa: ríos, lagos, selva y desierto.</p></div>
       <div class="card"><div class="ico">🤖</div><h3>Contra bots</h3><p>Hasta 8 jugadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… con 4 dificultades.</p></div>
       <div class="card"><div class="ico">🌐</div><h3>Con amigos</h3><p>Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).</p></div>
+      <div class="card"><div class="ico">🎓</div><h3>Tutorial guiado <span class="tagnew">NUEVO</span></h3><p>La primera vez te lleva paso a paso: elegir aldeanos, juntar comida, cortar madera y construir. Ilumina justo lo que tienes que tocar.</p></div>
+      <div class="card"><div class="ico">🗣️</div><h3>En tu idioma <span class="tagnew">NUEVO</span></h3><p>Español, inglés y portugués. Toma el idioma de tu dispositivo y lo puedes cambiar en Configuración.</p></div>
       <div class="card"><div class="ico">🏆</div><h3>Con rango</h3><p>Te emparejamos con alguien de tu nivel en 1 vs 1, 2 vs 2 o 4 vs 4. Ganar suma puntos, perder resta, y cada 100 puntos subes de nivel.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="mundo">
+  <div class="wrap">
+    <h2>Un mundo que se gasta <span class="tagnew">NUEVO</span></h2>
+    <p class="lead">Cada árbol, mina y arbusto se va acabando mientras tus aldeanos trabajan, y lo ves en el mapa. Al talar un árbol queda su <b>tocón</b> unos minutos. Las cabras se pastorean para que den comida sin morir, o se cazan. Planea bien: lo que está cerca de tu Centro no dura para siempre.</p>
+    <div class="stages">
+      <div class="stage-row"><h3>Árbol · madera</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/arbol_100.webp" alt="Árbol 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img src="/img/etapas/arbol_75.webp" alt="Árbol 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/arbol_50.webp" alt="Árbol 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/arbol_25.webp" alt="Árbol 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><img src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span>Tocón</span></div>
+      </div></div>
+      <div class="stage-row"><h3>Pino · madera</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/pino_100.webp" alt="Pino 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img src="/img/etapas/pino_75.webp" alt="Pino 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/pino_50.webp" alt="Pino 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/pino_25.webp" alt="Pino 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><img src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span>Tocón</span></div>
+      </div></div>
+      <div class="stage-row"><h3>Mina de oro</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/oro_100.webp" alt="Mina de oro 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img src="/img/etapas/oro_75.webp" alt="Mina de oro 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/oro_50.webp" alt="Mina de oro 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/oro_25.webp" alt="Mina de oro 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span>Agotada</span></div>
+      </div></div>
+      <div class="stage-row"><h3>Mina de piedra</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/piedra_100.webp" alt="Mina de piedra 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img src="/img/etapas/piedra_75.webp" alt="Mina de piedra 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/piedra_50.webp" alt="Mina de piedra 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/piedra_25.webp" alt="Mina de piedra 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span>Agotada</span></div>
+      </div></div>
+      <div class="stage-row"><h3>Arbusto de bayas · alimento</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/arbusto_100.webp" alt="Arbusto de bayas 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img src="/img/etapas/arbusto_75.webp" alt="Arbusto de bayas 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/arbusto_50.webp" alt="Arbusto de bayas 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/arbusto_25.webp" alt="Arbusto de bayas 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span>Agotado</span></div>
+      </div></div>
+      <div class="stage-row"><h3>Cabra · alimento</h3><div class="cells">
+        <div class="cell"><img src="/img/etapas/cabra_100.webp" alt="Cabra Viva" loading="lazy"><span>Viva</span></div>
+        <div class="cell"><img src="/img/etapas/cabra_75.webp" alt="Cabra 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img src="/img/etapas/cabra_50.webp" alt="Cabra 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img src="/img/etapas/cabra_25.webp" alt="Cabra 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span>Agotada</span></div>
+      </div></div>
     </div>
   </div>
 </section>
@@ -126,7 +244,7 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
       <div class="era"><img src="/img/maya_centro4.jpg" alt="Centro maya nivel 4" loading="lazy"><small>Centro ceremonial</small></div>
       <div class="era"><img src="/img/maya_centro5.jpg" alt="Centro maya nivel 5" loading="lazy"><small>Gran templo</small></div>
     </div>
-    <p class="note">Arte conceptual de la beta: dentro del mapa las figuras todavía son sencillas y las iremos cambiando.</p>
+    <p class="note">Arte conceptual. En el mapa ya hay edificios, árboles, minas y animales en 3D con este estilo, y vamos agregando más en cada versión.</p>
   </div>
 </section>
 
@@ -205,12 +323,13 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
   <div class="wrap">
     <h2>Es una beta</h2>
     <div class="warn">
-      <p style="margin:0">Estamos probando el juego: los gráficos son provisionales, puede haber errores y el balance va a cambiar.
+      <p style="margin:0">Estamos probando el juego: los gráficos van cambiando en cada versión, puede haber errores y el balance va a cambiar.
       Durante la beta los puntos de rango pueden reiniciarse. ¡Tu opinión nos ayuda mucho!</p>
     </div>
     <h3 style="margin-top:24px">Lo que viene</h3>
     <ul class="road">
-      <li><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango (esta beta).</li>
+      <li><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango.</li>
+      <li><span class="ok">✔</span> Tutorial guiado, español/inglés/portugués y recursos en 3D que se van gastando.</li>
       <li>Barcos de pesca, de transporte y de guerra; mares y muelles.</li>
       <li>Puertas en murallas, unidades únicas por civilización y castillos más completos.</li>
       <li>Nuevas civilizaciones por temporadas, gráficos mejorados, sonido y música.</li>

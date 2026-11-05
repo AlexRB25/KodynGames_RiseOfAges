@@ -179,6 +179,8 @@ func _dev_args() -> void:
 				camera.focus(c.center())
 				camera.dist = 20.0
 				camera.target_dist = 20.0
+		elif a == "--sinhud" and hud:
+			hud.visible = false   # desarrollo: capturas limpias para la página
 		elif a.begins_with("--at=") and camera:
 			# --at=x,y,distancia  (desarrollo: mirar un punto del mapa)
 			var v := a.get_slice("=", 1).split(",")
