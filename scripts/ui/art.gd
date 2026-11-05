@@ -3,6 +3,8 @@ class_name Art
 ## Si falta una imagen, el juego usa lo dibujado por código: nunca truena por arte faltante.
 
 const ROOT := "res://assets/"
+## Mientras una civilización no tenga su propio arte, usa el de esta.
+const FALLBACK_CIV := "maya"
 const ICONS := {"comida": "alimento", "madera": "madera", "oro": "oro", "piedra": "piedra", "pop": "poblacion"}
 
 static var _cache := {}
@@ -39,11 +41,16 @@ static func portrait(civ: String, id: String, age: int) -> Texture2D:
 		order.append(l)
 	for l in range(clampi(age, 1, 5) + 1, 6):
 		order.append(l)
-	for l in order:
-		var t := tex("civs/%s/%s/%s/nivel%d.png" % [civ, group, id, l])
-		if t:
-			return t
+	for c in _civs(civ):
+		for l in order:
+			var t := tex("civs/%s/%s/%s/nivel%d.png" % [c, group, id, l])
+			if t:
+				return t
 	return null
+
+
+static func _civs(civ: String) -> Array:
+	return [civ] if civ == FALLBACK_CIV else [civ, FALLBACK_CIV]
 
 
 ## Modelo 3D (.glb) de una unidad o edificio: assets/modelos/<civ>/<id>/nivelN.glb.
@@ -54,17 +61,18 @@ static func model(civ: String, id: String, age: int) -> PackedScene:
 		order.append(l)
 	for l in range(clampi(age, 1, 5) + 1, 6):
 		order.append(l)
-	for l in order:
-		var rel := "modelos/%s/%s/nivel%d.glb" % [civ, id, l]
-		if _cache.has(rel):
-			if _cache[rel]:
-				return _cache[rel]
-			continue
-		var path := ROOT + rel
-		var ps: PackedScene = load(path) if ResourceLoader.exists(path) else null
-		_cache[rel] = ps
-		if ps:
-			return ps
+	for c in _civs(civ):
+		for l in order:
+			var rel := "modelos/%s/%s/nivel%d.glb" % [c, id, l]
+			if _cache.has(rel):
+				if _cache[rel]:
+					return _cache[rel]
+				continue
+			var path := ROOT + rel
+			var ps: PackedScene = load(path) if ResourceLoader.exists(path) else null
+			_cache[rel] = ps
+			if ps:
+				return ps
 	return null
 
 
