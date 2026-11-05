@@ -2,28 +2,31 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b4bp2rewddphb"
-path="res://.godot/imported/nivel3.vista.png-85542968a0f6d9ef08e542ff86159049.ctex"
+uid="uid://cstv7hxut0rul"
+path="res://.godot/imported/nivel5_0.jpg-e661df5d840f13132a7c3168fc4c8c81.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "4ba3ba7f812ee5f2504203b938053753"
 }
 
 [deps]
 
-source_file="res://assets/modelos/maya/templo/nivel3.vista.png"
-dest_files=["res://.godot/imported/nivel3.vista.png-85542968a0f6d9ef08e542ff86159049.ctex"]
+source_file="res://assets/modelos/maya/centro/nivel5_0.jpg"
+dest_files=["res://.godot/imported/nivel5_0.jpg-e661df5d840f13132a7c3168fc4c8c81.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.8
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
@@ -36,5 +39,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
-detect_3d/compress_to=1
+process/size_limit=512
+detect_3d/compress_to=0

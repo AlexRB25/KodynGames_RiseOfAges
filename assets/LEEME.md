@@ -51,7 +51,7 @@ Una civilización nueva (españoles, incas, orcos…) lleva su propia carpeta en
 Los edificios del mapa pueden usar un modelo 3D en vez de la figura hecha por código:
 
 ```
-assets/modelos/<civilizacion>/<edificio>/nivelN.glb     ej. assets/modelos/maya/templo/nivel3.glb
+assets/modelos/<civilizacion>/<edificio>/nivelN.glb     ej. assets/modelos/maya/centro/nivel5.glb
 ```
 
 - El juego lo ajusta solo al tamaño en casillas del edificio y le pone una franja del color del jugador en la base.

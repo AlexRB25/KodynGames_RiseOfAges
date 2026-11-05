@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cv07kfuuqbxog"
-path="res://.godot/imported/nivel3.glb-ad510cec7be883eb1b78363d83e68a66.scn"
+uid="uid://dlpbtm8gk2us7"
+path="res://.godot/imported/nivel5.glb-3c172aec0697481f3e447d4c63a167bd.scn"
 
 [deps]
 
-source_file="res://assets/modelos/maya/templo/nivel3.glb"
-dest_files=["res://.godot/imported/nivel3.glb-ad510cec7be883eb1b78363d83e68a66.scn"]
+source_file="res://assets/modelos/maya/centro/nivel5.glb"
+dest_files=["res://.godot/imported/nivel5.glb-3c172aec0697481f3e447d4c63a167bd.scn"]
 
 [params]
 
