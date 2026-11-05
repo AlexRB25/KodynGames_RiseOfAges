@@ -78,11 +78,11 @@ func own_building_selected() -> Building:
 
 
 func _screen_of(p: Vector2, h: float) -> Vector2:
-	return cam().cam.unproject_position(Vector3(p.x, h, p.y))
+	return cam().cam.unproject_position(Vector3(p.x, h + game.map.height_at(p), p.y))
 
 
 func _on_screen(p: Vector2, h: float) -> bool:
-	return not cam().cam.is_position_behind(Vector3(p.x, h, p.y))
+	return not cam().cam.is_position_behind(Vector3(p.x, h + game.map.height_at(p), p.y))
 
 
 ## Entidad bajo el cursor.
@@ -269,7 +269,7 @@ func _marker(p: Vector2, target: Entity) -> void:
 	elif target and (target.has_resource() or target is Animal):
 		c = Color(1.0, 0.85, 0.3)
 	mi.material_override = Mat.flat(c)
-	mi.position = Vector3(p.x, 0.05, p.y)
+	mi.position = Vector3(p.x, 0.05 + game.map.height_at(p), p.y)
 	game.add_child(mi)
 	var tw := mi.create_tween()
 	tw.tween_property(mi, "scale", Vector3(0.2, 1, 0.2), 0.5)
@@ -486,7 +486,7 @@ func _process(dt: float) -> void:
 		if not mi.visible:
 			continue
 		var t := tiles[i]
-		mi.position = Vector3(t.x + sz * 0.5, 0.3, t.y + sz * 0.5)
+		mi.position = Vector3(t.x + sz * 0.5, 0.3 + game.map.tile_h(t), t.y + sz * 0.5)
 		var ok := game.can_place_ui(placing, t)
 		mi.material_override = Mat.flat(Color(0.3, 1.0, 0.3, 0.45) if ok else Color(1.0, 0.25, 0.2, 0.45))
 

@@ -6,6 +6,7 @@ extends Node3D
 signal game_over(winner_team: int)
 
 var map := MapData.new()
+var map_type := ""   # tipo de mapa que tocó (Defs.MAP_TYPES)
 var fog := Fog.new()
 var players: Array[PlayerState] = []
 var units: Array[Unit] = []
@@ -56,6 +57,11 @@ func start_match() -> void:
 	online = Setup.online
 	var size: int = Defs.MAP_SIZES.get(Setup.map_size, 160)
 	var seed_v: int = Setup.seed_value if Setup.seed_value != 0 else randi()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			seed_v = int(arg.get_slice("=", 1))
+		elif arg.begins_with("--tipo="):
+			Setup.map_type = arg.get_slice("=", 1)
 	map.setup(size)
 	var teams: Array = []
 	for i in cfg.size():
@@ -77,7 +83,8 @@ func start_match() -> void:
 			p.res[r] = float(p.res[r])
 		players.append(p)
 		teams.append(p.team)
-	var plan := MapGen.new().generate(map, cfg.size(), teams, seed_v)
+	var plan := MapGen.new().generate(map, cfg.size(), teams, seed_v, Setup.map_type)
+	map_type = String(plan.get("type", ""))
 	fog.setup(map)
 	Mat.setup(fog.texture, Vector2(size, size))
 
@@ -119,6 +126,8 @@ func start_match() -> void:
 		add_child(controller)
 		controller.setup(self)
 		hud.setup(self)
+		if Defs.MAP_TYPES.has(map_type):
+			hud.notify("Mapa: %s. %s" % [Defs.MAP_TYPES[map_type]["name"], Defs.MAP_TYPES[map_type]["desc"]], Vector2.INF)
 	_update_fog()
 	if online:
 		Net.attach(self)
@@ -140,6 +149,17 @@ func _dev_args() -> void:
 				camera.focus(c.center())
 				camera.dist = 20.0
 				camera.target_dist = 20.0
+		elif a.begins_with("--at=") and camera:
+			# --at=x,y,distancia  (desarrollo: mirar un punto del mapa)
+			var v := a.get_slice("=", 1).split(",")
+			camera.focus(Vector2(float(v[0]), float(v[1])))
+			if v.size() > 2:
+				camera.dist = float(v[2])
+				camera.target_dist = float(v[2])
+		elif a.begins_with("--sel=") and controller:
+			var sc := main_center(int(a.get_slice("=", 1)))
+			if sc:
+				controller.set_selection([sc])
 		elif a.begins_with("--shot="):
 			var path := a.get_slice("=", 1)
 			await get_tree().create_timer(2.5).timeout
@@ -236,7 +256,7 @@ func release_static(e: Entity, clear_owner: bool) -> void:
 			var i := map.idx(t)
 			if map.solid[i] > 0:
 				map.solid[i] -= 1
-				if map.solid[i] == 0 and map.ground[i] != MapData.WATER:
+				if map.solid[i] == 0 and not map.ground_blocks(i):
 					map.astar.set_point_solid(t, false)
 			if clear_owner and map.ent[i] == e:
 				map.ent[i] = null
@@ -463,6 +483,15 @@ func _check_victory() -> void:
 			hud.show_result(winner == team_of(local_id))
 
 
+## En línea con rango: el servidor da la partida por terminada (el rival abandonó).
+func end_by_forfeit(winner_team: int, forfeit: bool) -> void:
+	if over or not forfeit:
+		return
+	over = true
+	if hud:
+		hud.show_result(winner_team == team_of(local_id))
+
+
 func main_center(pid: int) -> Building:
 	for b in buildings:
 		if b.owner_id == pid and b.kind == "centro" and b.complete and not b.dead:
@@ -470,10 +499,13 @@ func main_center(pid: int) -> Building:
 	return null
 
 
-func _defeat(pid: int) -> void:
+func _defeat(pid: int, resigned := false) -> void:
 	var p := players[pid]
 	p.defeated = true
-	notify(local_id, "%s se quedó sin centros y fue derrotado." % p.name if pid != local_id else "Te quedaste sin centros.", Vector2.INF)
+	if resigned:
+		notify(local_id, "%s se rindió." % p.name if pid != local_id else "Te rendiste.", Vector2.INF)
+	else:
+		notify(local_id, "%s se quedó sin centros y fue derrotado." % p.name if pid != local_id else "Te quedaste sin centros.", Vector2.INF)
 	for u in units.duplicate():
 		if u.owner_id == pid:
 			u.take_damage(99999.0, null)
@@ -521,7 +553,7 @@ func _render_projectiles(_dt: float) -> void:
 		var end: Vector2 = t.center() if is_instance_valid(t) else pr["start"]
 		var f := clampf(pr["t"] / pr["dur"], 0.0, 1.0)
 		var p: Vector2 = pr["start"].lerp(end, f)
-		var y: float = lerpf(pr["h"], 0.7, f) + sin(f * PI) * 1.2
+		var y: float = lerpf(pr["h"], 0.7, f) + sin(f * PI) * 1.2 + map.height_at(p)
 		n.position = Vector3(p.x, y, p.y)
 		var d: Vector2 = end - pr["start"]
 		n.rotation.y = -atan2(d.y, d.x)
@@ -1056,6 +1088,9 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 			var b := _own_building(pid, c.get("e", 0))
 			if b:
 				destroy_building(b, false)
+		"resign":
+			_defeat(pid, true)
+			_check_victory()
 
 
 ## Aldeano más cercano de un jugador (prefiere los que no tienen tarea).

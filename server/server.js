@@ -10,9 +10,16 @@ const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, 'public');
-const PROTOCOL = 1;
+const PROTOCOL = 2;
 const TURN_MS = 100;
 const MAX_PLAYERS = 8;
+const MAP_TYPES = ['azar', 'valle', 'costa', 'mesetas', 'lagos', 'selva', 'desierto', 'mar_interior'];
+
+// Cuentas y puntos (mismo Supabase que Zombie War). Sin estas variables el servidor
+// funciona en "modo prueba": los puntos viven en memoria y se pierden al reiniciar.
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+const ACCOUNTS = !!(SUPABASE_URL && SUPABASE_KEY);
 
 // ---------------- archivos estáticos ----------------
 const MIME = {
@@ -63,7 +70,8 @@ function serveStatic(req, res) {
 const server = http.createServer((req, res) => {
   if (req.url === '/salud') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ ok: true, salas: rooms.size }));
+    return res.end(JSON.stringify({ ok: true, salas: rooms.size, cuentas: ACCOUNTS,
+      en_cola: Object.values(queues).reduce((s, q) => s + q.length, 0) }));
   }
   serveStatic(req, res);
 });
@@ -90,7 +98,7 @@ function clean(s, n) {
 
 function roomState(room) {
   return {
-    code: room.code, host: room.host, map: room.map, bots: room.bots,
+    code: room.code, host: room.host, map: room.map, type: room.type || 'azar', bots: room.bots,
     players: room.players.map(p => ({ id: p.id, name: p.name, civ: p.civ, team: p.team, color: p.color })),
   };
 }
@@ -124,11 +132,19 @@ function leave(ws) {
   if (room.players.length === 0) {
     if (room.timer) clearInterval(room.timer);
     rooms.delete(room.code);
+    if (room.ranked && room.started && !room.rated && p) {
+      room.left.push(p);
+      checkForfeit(room);
+    }
     return;
   }
   if (room.host === ws.pid) room.host = room.players[0].id;
   if (room.started) {
     for (const o of room.players) send(o.ws, { t: 'left', name: p ? p.name : '' });
+    if (room.ranked && p && !room.rated) {
+      room.left.push(p);
+      checkForfeit(room);
+    }
   } else {
     broadcastRoom(room);
   }
@@ -139,7 +155,8 @@ function startGame(room) {
   const list = [];
   for (const p of room.players) {
     p.slot = list.length;
-    list.push({ name: p.name, civ: p.civ, team: p.team, color: p.color, bot: false, difficulty: 'normal' });
+    list.push({ name: p.name, civ: p.civ, team: p.team, color: p.color, bot: false, difficulty: 'normal',
+      level: p.level || 0 });
   }
   const used = new Set(list.map(x => x.color));
   for (const b of room.bots) {
@@ -156,7 +173,7 @@ function startGame(room) {
   room.hashes = new Map();
   const seed = crypto.randomInt(1, 2 ** 31 - 1);
   for (const p of room.players) {
-    send(p.ws, { t: 'start', players: list, you: p.slot, map: room.map, seed });
+    send(p.ws, { t: 'start', players: list, you: p.slot, map: room.map, type: room.type || 'azar', seed, ranked: !!room.ranked, mode: room.mode || '' });
   }
   room.timer = setInterval(() => tickRoom(room), TURN_MS);
   return '';
@@ -230,6 +247,7 @@ wss.on('connection', ws => {
       case 'config': {
         if (!room || room.started || room.host !== ws.pid) return;
         if (['pequeno', 'mediano', 'grande'].includes(m.map)) room.map = m.map;
+        if (MAP_TYPES.includes(m.type)) room.type = m.type;
         if (Array.isArray(m.bots)) {
           const max = MAX_PLAYERS - room.players.length;
           room.bots = m.bots.slice(0, max).map(b => ({
@@ -254,6 +272,26 @@ wss.on('connection', ws => {
         if (room.pending.length < 400) room.pending.push([p.slot, m.c]);
         break;
       }
+      case 'queue': {
+        if (m.v !== PROTOCOL) return send(ws, { t: 'error', msg: 'Versión distinta: recarga la página para actualizar el juego.' });
+        leave(ws);
+        enqueue(ws, m).catch(e => {
+          console.log('cola:', e.message);
+          send(ws, { t: 'error', msg: 'No se pudo entrar a la cola: ' + e.message });
+        });
+        break;
+      }
+      case 'unqueue': {
+        dequeue(ws);
+        send(ws, { t: 'unqueued' });
+        break;
+      }
+      case 'over': {
+        if (!room || !room.started || !room.ranked) return;
+        const p = room.players.find(x => x.id === ws.pid);
+        if (p) onOver(room, p, m.winner | 0);
+        break;
+      }
       case 'hash': {
         if (!room || !room.started) return;
         const p = room.players.find(x => x.id === ws.pid);
@@ -262,7 +300,7 @@ wss.on('connection', ws => {
       }
     }
   });
-  ws.on('close', () => leave(ws));
+  ws.on('close', () => { dequeue(ws); leave(ws); });
   ws.on('error', () => {});
 });
 
@@ -274,5 +312,190 @@ setInterval(() => {
     try { ws.ping(); } catch {}
   }
 }, 25000);
+
+// ---------------- partidas con rango: cola, emparejar por puntos y repartir puntos ----------------
+const MODES = { '1v1': { size: 2, map: 'pequeno' }, '2v2': { size: 4, map: 'mediano' }, '4v4': { size: 8, map: 'grande' } };
+const queues = { '1v1': [], '2v2': [], '4v4': [] };
+const devPoints = new Map(); // modo prueba: nombre -> {points, wins, losses, games}
+
+function level(points) { return 1 + Math.floor(Math.max(0, points) / 100); }
+
+async function supa(pathname, opts = {}, token = SUPABASE_KEY) {
+  const r = await fetch(SUPABASE_URL + pathname, Object.assign({}, opts, {
+    headers: Object.assign({ apikey: SUPABASE_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, opts.headers || {}),
+  }));
+  const text = await r.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!r.ok) throw new Error((data && (data.message || data.msg)) || ('HTTP ' + r.status));
+  return data;
+}
+
+function rpc(fn, args) {
+  return supa('/rest/v1/rpc/' + fn, { method: 'POST', body: JSON.stringify(args) });
+}
+
+// Quién es y cuántos puntos tiene. Con Supabase se verifica la sesión del jugador.
+async function identify(m) {
+  const name = clean(m.name, 16) || 'Jugador';
+  if (!ACCOUNTS) {
+    const d = devPoints.get(name) || { points: 0 };
+    return { uid: 'dev:' + name, name, points: d.points };
+  }
+  if (!m.token) throw new Error('inicia sesión primero');
+  const user = await supa('/auth/v1/user', {}, String(m.token));
+  if (!user || !user.id) throw new Error('sesión no válida');
+  const prof = await rpc('roa_server_profile', { p_user: user.id });
+  return { uid: user.id, name: (prof && prof.name) || name, points: (prof && prof.points) | 0 };
+}
+
+async function enqueue(ws, m) {
+  const mode = MODES[m.mode] ? m.mode : '1v1';
+  dequeue(ws);
+  const who = await identify(m);
+  if (ws.readyState !== 1) return;
+  // La misma cuenta no puede estar dos veces en la cola.
+  for (const k in queues) {
+    for (const e of queues[k].filter(e => e.uid === who.uid)) {
+      e.ws.queued = null;
+      send(e.ws, { t: 'unqueued', msg: 'Entraste a la cola desde otro lugar.' });
+    }
+    queues[k] = queues[k].filter(e => e.uid !== who.uid);
+  }
+  const entry = { ws, uid: who.uid, name: who.name, points: who.points, civ: clean(m.civ, 24) || 'mexica', since: Date.now() };
+  queues[mode].push(entry);
+  ws.queued = mode;
+  send(ws, { t: 'queued', mode, points: who.points, level: level(who.points), name: who.name,
+    waiting: queues[mode].length, need: MODES[mode].size });
+  matchmake();
+}
+
+function dequeue(ws) {
+  const mode = ws.queued;
+  if (!mode) return;
+  ws.queued = null;
+  queues[mode] = queues[mode].filter(e => e.ws !== ws);
+}
+
+// Empareja con los más cercanos en puntos al que lleva más tiempo esperando.
+// Si no hay nadie de tu nivel, se juega con quien esté en la cola.
+function matchmake() {
+  for (const mode in queues) {
+    const q = queues[mode] = queues[mode].filter(e => e.ws.readyState === 1);
+    const need = MODES[mode].size;
+    while (q.length >= need) {
+      q.sort((a, b) => a.since - b.since);
+      const anchor = q[0];
+      const rest = q.slice(1).sort((a, b) => Math.abs(a.points - anchor.points) - Math.abs(b.points - anchor.points));
+      const group = [anchor].concat(rest.slice(0, need - 1));
+      for (const g of group) {
+        q.splice(q.indexOf(g), 1);
+        g.ws.queued = null;
+      }
+      startRanked(mode, group);
+    }
+    for (const e of q) send(e.ws, { t: 'queue', mode, waiting: q.length, need });
+  }
+}
+
+function startRanked(mode, group) {
+  // Equipos parejos: del más fuerte al más débil, en serpiente (A B B A A B B A).
+  group.sort((a, b) => b.points - a.points);
+  const r = { code: newCode(), players: [], bots: [], map: MODES[mode].map, host: 0, nextId: 0, started: false,
+    ranked: true, mode, left: [], reports: new Map(), rated: false };
+  rooms.set(r.code, r);
+  group.forEach((g, i) => {
+    const p = addPlayer(r, g.ws, g.name);
+    p.civ = g.civ;
+    p.uid = g.uid;
+    p.points = g.points;
+    p.level = level(g.points);
+    p.team = [1, 2, 2, 1][i % 4];
+    p.color = i;
+  });
+  r.host = r.players[0].id;
+  r.all = r.players.slice();
+  console.log(`[${r.code}] con rango ${mode}:`, r.players.map(p => `${p.name}(${p.points})`).join(' vs '));
+  startGame(r);
+}
+
+// Cada cliente avisa qué equipo ganó (todos simulan lo mismo, así que deben coincidir).
+function onOver(room, p, winner) {
+  if (room.rated) return;
+  room.reports.set(p.uid, winner);
+  const connected = room.players.filter(x => x.ws.readyState === 1);
+  if (connected.every(x => room.reports.has(x.uid))) finishRanked(room);
+  else if (!room.overTimer) room.overTimer = setTimeout(() => finishRanked(room), 20000);
+}
+
+// Si todos los que siguen conectados son de un mismo equipo, ese equipo gana.
+function checkForfeit(room) {
+  if (room.rated) return;
+  const teams = new Set(room.players.filter(x => x.ws.readyState === 1).map(x => x.team));
+  if (teams.size <= 1) finishRanked(room, teams.size === 1 ? [...teams][0] : null);
+}
+
+async function finishRanked(room, forcedWinner) {
+  if (room.rated) return;
+  room.rated = true;
+  if (room.overTimer) clearTimeout(room.overTimer);
+  let winner = forcedWinner;
+  if (winner === undefined) {
+    const votes = new Set(room.reports.values());
+    winner = votes.size === 1 ? [...votes][0] : null;
+    if (votes.size > 1) console.log(`[${room.code}] resultados distintos, no cuenta`, [...room.reports.entries()]);
+  }
+  if (!(winner > 0)) winner = null;
+  const leftIds = new Set(room.left.map(x => x.uid));
+  const players = room.all.map(x => ({ user_id: x.uid, team: x.team, civ: x.civ, abandoned: leftIds.has(x.uid) }));
+  let results = [];
+  try {
+    results = ACCOUNTS
+      ? (await rpc('roa_apply_result', { p_mode: room.mode, p_winner_team: winner, p_players: players })) || []
+      : devApply(winner, players);
+  } catch (e) {
+    console.log(`[${room.code}] no se guardaron los puntos:`, e.message);
+  }
+  console.log(`[${room.code}] fin con rango: gana equipo ${winner}`,
+    results.map(x => `${x.user_id} ${x.delta >= 0 ? '+' : ''}${x.delta}`).join(', '));
+  for (const x of room.all) {
+    const mine = results.find(rr => rr.user_id === x.uid);
+    send(x.ws, {
+      t: 'rated', winner, forfeit: forcedWinner !== undefined, you: mine || null,
+      results: room.all.map(o => {
+        const rr = results.find(z => z.user_id === o.uid) || {};
+        return { slot: o.slot, name: o.name, delta: rr.delta | 0, points: rr.points | 0, level: rr.level || level(rr.points | 0) };
+      }),
+    });
+  }
+}
+
+// Modo prueba (sin Supabase): misma regla que roa_apply_result en supabase/esquema.sql.
+function devApply(winner, players) {
+  const pts = uid => (devPoints.get(uid.slice(4)) || { points: 0 }).points;
+  const avg = arr => arr.length ? arr.reduce((s, x) => s + pts(x.user_id), 0) / arr.length : 0;
+  const out = players.map(pl => {
+    const diff = avg(players.filter(x => x.team !== pl.team)) - avg(players.filter(x => x.team === pl.team));
+    const won = winner != null && pl.team === winner && !pl.abandoned;
+    let delta = 0;
+    if (winner != null) {
+      delta = won ? 20 + Math.max(-10, Math.min(10, Math.round(diff / 20)))
+        : -(15 + Math.max(-8, Math.min(8, Math.round(-diff / 20)))) - (pl.abandoned ? 5 : 0);
+    }
+    return { pl, won, delta };
+  });
+  return out.map(({ pl, won, delta }) => {
+    const name = pl.user_id.slice(4);
+    const d = devPoints.get(name) || { points: 0, wins: 0, losses: 0, games: 0 };
+    const before = d.points;
+    d.points = Math.max(0, d.points + delta);
+    d.games++;
+    if (won) d.wins++; else if (winner != null) d.losses++;
+    devPoints.set(name, d);
+    return { user_id: pl.user_id, delta: d.points - before, points: d.points, level: level(d.points), won };
+  });
+}
+
+setInterval(matchmake, 2000);
 
 server.listen(PORT, () => console.log(`Conquista escuchando en el puerto ${PORT}`));

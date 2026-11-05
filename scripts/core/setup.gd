@@ -4,6 +4,7 @@ extends Node
 ## players: Array de Dictionary {name, civ, team, color, bot, difficulty}
 var players: Array = []
 var map_size := "mediano"
+var map_type := "azar"
 var seed_value := 0
 var local_player := 0
 var online := false
@@ -22,4 +23,5 @@ func default_skirmish() -> void:
 	local_player = 0
 	online = false
 	map_size = "mediano"
+	map_type = "azar"
 	seed_value = 0

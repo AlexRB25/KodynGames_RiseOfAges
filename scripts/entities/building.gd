@@ -48,7 +48,7 @@ func init(g: Game, k: String, owner: int, tile: Vector2i, done: bool) -> void:
 	var sz: int = def["size"]
 	rect = Rect2i(tile, Vector2i(sz, sz))
 	pos = center()
-	position = Vector3(pos.x, 0, pos.y)
+	position = Vector3(pos.x, MapData.active.tile_h(tile) if MapData.active else 0.0, pos.y)
 	radius = sz * 0.5
 	sight = def["sight"]
 	max_hp = _hp_for_age()

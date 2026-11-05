@@ -45,7 +45,7 @@ func init(g: Game, k: String, tile: Vector2i, seed_v: int) -> void:
 	max_amount = amount
 	rect = Rect2i(tile, Vector2i(1, 1))
 	pos = MapData.center(tile)
-	position = Vector3(pos.x, 0, pos.y)
+	position = Vector3(pos.x, MapData.active.tile_h(tile) if MapData.active else 0.0, pos.y)
 	max_hp = 0
 	_rng_seed = seed_v
 	_build_visual()

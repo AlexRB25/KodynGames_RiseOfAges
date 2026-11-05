@@ -102,14 +102,14 @@ const BUILDINGS := {
 ## req: Array de [lista de edificios aceptados, cantidad, texto]
 ## Al avanzar cambian el vestuario de las unidades y el aspecto de los edificios.
 const AGES := [
-	{"name": "Aldea"},
-	{"name": "Señorío", "cost": {"comida": 500}, "time": 60.0,
+	{"name": "Aldea Primitiva"},
+	{"name": "Era Tribal", "cost": {"comida": 500}, "time": 60.0,
 		"req": [[["casa"], 2, "2 casas"], [["maderero", "minero", "molino"], 2, "2 campamentos o molinos"]]},
-	{"name": "Ciudad-Estado", "cost": {"comida": 800, "oro": 200}, "time": 90.0,
+	{"name": "Era de Piedra", "cost": {"comida": 800, "oro": 200}, "time": 90.0,
 		"req": [[["cuartel", "arqueria", "establo"], 2, "2 edificios militares"], [["mercado"], 1, "1 mercado"], [["granja"], 4, "4 granjas"]]},
-	{"name": "Reino", "cost": {"comida": 1000, "oro": 600}, "time": 110.0,
+	{"name": "Era de los Metales", "cost": {"comida": 1000, "oro": 600}, "time": 110.0,
 		"req": [[["templo"], 1, "1 templo"], [["torre"], 2, "2 torres"], [["centro"], 2, "2 centros"]]},
-	{"name": "Imperio", "cost": {"comida": 1500, "oro": 1000, "piedra": 300}, "time": 140.0,
+	{"name": "Era Imperial", "cost": {"comida": 1500, "oro": 1000, "piedra": 300}, "time": 140.0,
 		"req": [[["castillo"], 1, "1 castillo"], [["casa"], 12, "12 casas"], [["templo"], 2, "2 templos"]]},
 ]
 const AGE_HP := 0.2   # +20 % de vida a los edificios por cada era
@@ -178,6 +178,29 @@ const DIFFICULTY := {
 const DIFF_ORDER := ["facil", "normal", "dificil", "experto"]
 
 const MAP_SIZES := {"pequeno": 120, "mediano": 160, "grande": 220}
+
+## Tipos de mapa. Todos se generan al azar en cada partida (nunca sale el mismo);
+## el tipo cambia el carácter: cuánto mar, mesetas, lagos, selva o desierto.
+## seas: esquinas con mar (-1 = según el tamaño); plateaus/lakes: multiplicador;
+## bias: -1 más selva … +1 más desierto.
+const MAP_TYPES := {
+	"azar": {"name": "Al azar", "desc": "Cada partida, un tipo de mapa distinto."},
+	"valle": {"name": "Valle", "desc": "Equilibrado: un poco de todo.",
+		"seas": -1, "sea_r": 0.27, "plateaus": 1.0, "lakes": 1.0, "bias": 0.0},
+	"costa": {"name": "Costa", "desc": "Mucho mar en las orillas, playas y acantilados.",
+		"seas": 3, "sea_r": 0.31, "plateaus": 0.7, "lakes": 0.5, "bias": 0.0},
+	"mesetas": {"name": "Mesetas", "desc": "Muchas mesetas con barrancos y pocas subidas.",
+		"seas": 0, "plateaus": 2.6, "lakes": 0.6, "bias": 0.1},
+	"lagos": {"name": "Tierra de lagos", "desc": "Lagos por todas partes y un río.",
+		"seas": 0, "plateaus": 0.6, "lakes": 3.0, "bias": -0.1},
+	"selva": {"name": "Selva", "desc": "Selva espesa: mucha madera y caminos angostos.",
+		"seas": 1, "sea_r": 0.25, "plateaus": 0.8, "lakes": 1.0, "bias": -0.45},
+	"desierto": {"name": "Desierto", "desc": "Poca madera, oasis y mesetas de roca.",
+		"seas": 0, "plateaus": 1.5, "lakes": 0.7, "bias": 0.5},
+	"mar_interior": {"name": "Mar interior", "desc": "Un mar en el centro: se pelea por las orillas.",
+		"seas": 0, "plateaus": 0.8, "lakes": 0.4, "bias": 0.0, "inner_sea": true, "river": false},
+}
+const MAP_TYPE_ORDER := ["azar", "valle", "costa", "mesetas", "lagos", "selva", "desierto", "mar_interior"]
 
 
 static func cost_of(kind: String, civ: String) -> Dictionary:

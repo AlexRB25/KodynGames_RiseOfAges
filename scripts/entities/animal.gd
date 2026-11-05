@@ -61,7 +61,7 @@ func init(g: Game, k: String, p: Vector2, seed_v: int) -> void:
 	radius = 0.25
 	_rng.seed = seed_v
 	wait_t = _rng.randf_range(0.5, 4.0)
-	position = Vector3(p.x, 0, p.y)
+	position = Vector3(p.x, MapData.ground_y(p), p.y)
 	_build_visual()
 
 
@@ -164,7 +164,7 @@ func sim(dt: float) -> void:
 
 func render(alpha: float, dt: float) -> void:
 	var p := prev_pos.lerp(pos, alpha)
-	position = Vector3(p.x, 0, p.y)
+	position = Vector3(p.x, MapData.ground_y(p), p.y)
 	tick_bar(dt)
 	if dead:
 		if _death_t < 1.0:

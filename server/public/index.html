@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conquista — Beta</title>
-<meta name="description" content="Conquista: juego de estrategia en tiempo real con civilizaciones mesoamericanas. Beta gratuita para jugar en el navegador, contra bots o en línea con amigos.">
+<title>Rise of Ages — Beta</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<meta property="og:image" content="/img/portada.jpg">
+<meta name="description" content="Rise of Ages: juego de estrategia en tiempo real con civilizaciones mesoamericanas. Beta gratuita en el navegador: contra bots, con amigos o con rango en línea.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
@@ -18,10 +20,10 @@ html, body { margin: 0; background: var(--bg); color: var(--text); font-family: 
 a { color: var(--gold); }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
 header.hero {
-  position: relative; overflow: hidden; padding: 72px 0 64px; text-align: center;
+  position: relative; overflow: hidden; padding: 56px 0 64px; text-align: center;
   background:
-    radial-gradient(ellipse at 50% 120%, rgba(127,174,74,.35), transparent 60%),
-    linear-gradient(180deg, #24180e 0%, #1b130c 100%);
+    linear-gradient(180deg, rgba(27,19,12,.35) 0%, rgba(27,19,12,.55) 55%, #1b130c 100%),
+    url('/img/portada.jpg') center 30% / cover no-repeat, #24180e;
   border-bottom: 2px solid var(--border);
 }
 .beta { display: inline-block; font-weight: 800; letter-spacing: .12em; font-size: 13px; padding: 6px 14px;
@@ -35,12 +37,16 @@ h1 { font-family: 'Cinzel', serif; font-weight: 800; font-size: clamp(44px, 9vw,
 .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #8a5f1c; }
 .btn.alt { background: transparent; color: var(--gold); border: 2px solid var(--gold); box-shadow: none; }
 .note { color: var(--muted); font-size: 14px; margin-top: 16px; }
-/* Pirámide dibujada */
-.pyr { margin: 0 auto 6px; width: 180px; height: 96px; position: relative; }
-.pyr i { position: absolute; left: 50%; transform: translateX(-50%); height: 18px; background: #b9ad97; border-top: 3px solid #d8ccb4; }
-.pyr i:nth-child(1) { bottom: 0; width: 180px; } .pyr i:nth-child(2) { bottom: 18px; width: 144px; }
-.pyr i:nth-child(3) { bottom: 36px; width: 108px; } .pyr i:nth-child(4) { bottom: 54px; width: 72px; }
-.pyr b { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); width: 44px; height: 24px; background: #d9b25a; border-radius: 3px 3px 0 0; }
+.logo { display: block; width: min(460px, 86vw); height: auto; margin: 10px auto 4px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.6)); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.tag { text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+.card .ico img { width: 34px; height: 34px; }
+.eras { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.era { background: var(--panel); border: 2px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+.era img { width: 100%; height: auto; display: block; border-radius: 8px; }
+.era img.badge { margin-bottom: 8px; border-radius: 0; }
+.era small { display: block; color: var(--muted); margin-top: 6px; font-size: 13px; }
+@media (max-width: 760px) { .eras { grid-template-columns: repeat(2, 1fr); } }
 section { padding: 56px 0; border-bottom: 1px solid rgba(138,106,55,.35); }
 h2 { font-family: 'Cinzel', serif; font-size: clamp(26px, 4vw, 36px); color: var(--gold); margin: 0 0 18px; }
 p.lead { font-size: 18px; max-width: 820px; }
@@ -72,9 +78,9 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
 
 <header class="hero">
   <div class="wrap">
-    <div class="pyr"><b></b><i></i><i></i><i></i><i></i></div>
     <span class="beta">VERSIÓN BETA · GRATIS</span>
-    <h1>CONQUISTA</h1>
+    <h1 class="sr">Rise of Ages</h1>
+    <img class="logo" src="/img/logo.png" alt="Rise of Ages" width="560" height="335">
     <p class="tag">Levanta tu civilización mesoamericana desde una aldea hasta un imperio. Recolecta, construye, evoluciona y derrota a tus rivales.</p>
     <div class="cta">
       <a class="btn" href="/jugar/">▶ Jugar ahora</a>
@@ -87,17 +93,40 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
 <section>
   <div class="wrap">
     <h2>¿En qué consiste?</h2>
-    <p class="lead">Conquista es un juego de <b>estrategia en tiempo real</b>. Empiezas con un Centro y 5 aldeanos en un mapa
+    <p class="lead">Rise of Ages es un juego de <b>estrategia en tiempo real</b>. Empiezas con un Centro y 5 aldeanos en un mapa
       que no conoces: solo ves lo que tus unidades alcanzan a ver. Tienes que explorar, juntar recursos, crecer tu pueblo,
       avanzar de era y armar un ejército. <b>Gana el equipo que deje a los demás sin ningún Centro.</b></p>
     <div class="grid">
-      <div class="card"><div class="ico">🌽</div><h3>4 recursos</h3><p>Alimento, madera, oro y piedra. Tus aldeanos cazan, recogen bayas, pescan, siembran, talan y pican.</p></div>
+      <div class="card"><div class="ico"><img src="/img/alimento.png" alt=""><img src="/img/madera.png" alt=""><img src="/img/oro.png" alt=""><img src="/img/piedra.png" alt=""></div><h3>4 recursos</h3><p>Alimento, madera, oro y piedra. Tus aldeanos cazan, recogen bayas, pescan, siembran, talan y pican.</p></div>
       <div class="card"><div class="ico">🏠</div><h3>Construye por cuadros</h3><p>Casas, campamentos, molino, granjas, cuartel, arquería, establo, torres, murallas, mercado, templo y castillo.</p></div>
-      <div class="card"><div class="ico">🏛️</div><h3>5 eras</h3><p>Aldea, Señorío, Ciudad-Estado, Reino e Imperio. Cada era pide recursos y edificios, y tu gente y tus edificios se ven mejor.</p></div>
+      <div class="card"><div class="ico">🏛️</div><h3>5 eras</h3><p>Aldea Primitiva, Era Tribal, Era de Piedra, Era de los Metales y Era Imperial. Cada era pide recursos y edificios, y tu gente y tus edificios se ven mejor.</p></div>
       <div class="card"><div class="ico">🌫️</div><h3>Niebla de guerra</h3><p>No sabes dónde está tu enemigo hasta que lo encuentras. Explora el mapa: ríos, lagos, selva y desierto.</p></div>
       <div class="card"><div class="ico">🤖</div><h3>Contra bots</h3><p>Hasta 8 jugadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… con 4 dificultades.</p></div>
-      <div class="card"><div class="ico">🌐</div><h3>En línea</h3><p>Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).</p></div>
+      <div class="card"><div class="ico">🌐</div><h3>Con amigos</h3><p>Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).</p></div>
+      <div class="card"><div class="ico">🏆</div><h3>Con rango</h3><p>Te emparejamos con alguien de tu nivel en 1 vs 1, 2 vs 2 o 4 vs 4. Ganar suma puntos, perder resta, y cada 100 puntos subes de nivel.</p></div>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>De aldea a imperio: 5 eras</h2>
+    <p class="lead">Arriba al centro de la pantalla siempre ves en qué era vas. Al avanzar, tu gente se viste mejor y tus edificios se hacen más grandes y firmes. Así evolucionan los mayas:</p>
+    <div class="eras">
+      <div class="era"><img class="badge" src="/img/era1.png" alt="I Aldea Primitiva"><img src="/img/maya_aldeano1.jpg" alt="Aldeano maya nivel 1" loading="lazy"><small>Aldeano básico</small></div>
+      <div class="era"><img class="badge" src="/img/era2.png" alt="II Era Tribal"><img src="/img/maya_aldeano2.jpg" alt="Aldeano maya nivel 2" loading="lazy"><small>Trabajador</small></div>
+      <div class="era"><img class="badge" src="/img/era3.png" alt="III Era de Piedra"><img src="/img/maya_aldeano3.jpg" alt="Aldeano maya nivel 3" loading="lazy"><small>Especializado</small></div>
+      <div class="era"><img class="badge" src="/img/era4.png" alt="IV Era de los Metales"><img src="/img/maya_aldeano4.jpg" alt="Aldeano maya nivel 4" loading="lazy"><small>Experto</small></div>
+      <div class="era"><img class="badge" src="/img/era5.png" alt="V Era Imperial"><img src="/img/maya_aldeano5.jpg" alt="Aldeano maya nivel 5" loading="lazy"><small>Maestro</small></div>
+    </div>
+    <div class="eras" style="margin-top:10px">
+      <div class="era"><img src="/img/maya_centro1.jpg" alt="Centro maya nivel 1" loading="lazy"><small>Centro básico</small></div>
+      <div class="era"><img src="/img/maya_centro2.jpg" alt="Centro maya nivel 2" loading="lazy"><small>Centro de aldea</small></div>
+      <div class="era"><img src="/img/maya_centro3.jpg" alt="Centro maya nivel 3" loading="lazy"><small>Centro de comunidad</small></div>
+      <div class="era"><img src="/img/maya_centro4.jpg" alt="Centro maya nivel 4" loading="lazy"><small>Centro ceremonial</small></div>
+      <div class="era"><img src="/img/maya_centro5.jpg" alt="Centro maya nivel 5" loading="lazy"><small>Gran templo</small></div>
+    </div>
+    <p class="note">Arte conceptual de la beta: dentro del mapa las figuras todavía son sencillas y las iremos cambiando.</p>
   </div>
 </section>
 
@@ -120,12 +149,17 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
   <div class="wrap">
     <h2>Jugar en línea con un amigo</h2>
     <ol class="steps">
-      <li>Entra a <a href="/jugar/">Jugar</a> y elige <b>“En línea con amigos (beta)”</b>.</li>
+      <li>Entra a <a href="/jugar/">Jugar</a> y elige <b>“Sala con amigos (código)”</b>.</li>
       <li>Escribe tu nombre y toca <b>Crear sala</b>. Te aparece un <b>código de 4 letras</b>.</li>
       <li>Tu amigo entra al mismo enlace, escribe su nombre y el código, y toca <b>Unirse</b>.</li>
       <li>Cada quien elige civilización, equipo y color. Quien creó la sala elige el mapa, puede agregar bots y toca <b>¡Comenzar!</b></li>
     </ol>
     <p class="note">Tip: si quieren jugar juntos contra la computadora, pónganse en el mismo equipo y agreguen bots en el otro.</p>
+    <h3 style="margin-top:28px">Partidas con rango</h3>
+    <p>Elige <b>“Jugar con rango (en línea)”</b>, tu civilización y el modo: <b>1 vs 1, 2 vs 2 o 4 vs 4</b>. Te emparejamos con el jugador conectado más cercano a tu nivel.
+      Si no hay nadie de tu nivel, juegas con quien esté. Ganar suma puntos (más si le ganas a alguien de nivel más alto) y perder resta.
+      Salirse a media partida cuenta como derrota.</p>
+    <p class="note">Tu cuenta es la misma de Kodyn Games (la de Zombie War), pero los puntos de Rise of Ages son aparte.</p>
   </div>
 </section>
 
@@ -172,11 +206,11 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
     <h2>Es una beta</h2>
     <div class="warn">
       <p style="margin:0">Estamos probando el juego: los gráficos son provisionales, puede haber errores y el balance va a cambiar.
-      Las partidas en línea no se guardan. ¡Tu opinión nos ayuda mucho!</p>
+      Durante la beta los puntos de rango pueden reiniciarse. ¡Tu opinión nos ayuda mucho!</p>
     </div>
     <h3 style="margin-top:24px">Lo que viene</h3>
     <ul class="road">
-      <li><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots y juego en línea (esta beta).</li>
+      <li><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango (esta beta).</li>
       <li>Barcos de pesca, de transporte y de guerra; mares y muelles.</li>
       <li>Puertas en murallas, unidades únicas por civilización y castillos más completos.</li>
       <li>Nuevas civilizaciones por temporadas, gráficos mejorados, sonido y música.</li>
@@ -186,6 +220,6 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
   </div>
 </section>
 
-<footer>Conquista · Beta · Hecho con Godot Engine</footer>
+<footer>Rise of Ages · Beta · Kodyn Games · Hecho con Godot Engine</footer>
 </body>
 </html>

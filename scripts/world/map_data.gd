@@ -4,7 +4,14 @@ extends RefCounted
 ## y búsqueda de caminos (A*). 1 casilla = 1 unidad de mundo; el centro de la
 ## casilla (x, y) está en (x + 0.5, y + 0.5). En 3D, "y" del mapa es el eje Z.
 
-enum { GRASS, WATER, SAND, DIRT, DRY, JUNGLE, DESERT }
+enum { GRASS, WATER, SAND, DIRT, DRY, JUNGLE, DESERT, CLIFF }
+
+const LEVEL_H := 2.2       # alto de una meseta
+const WATER_Y := -0.14     # superficie del agua
+const WATER_BED := -0.75   # fondo del agua
+
+## Mapa de la partida en curso (para que las figuras sepan a qué altura pararse).
+static var active: MapData
 
 var w := 0
 var h := 0
@@ -12,6 +19,7 @@ var ground := PackedByteArray()
 var solid := PackedByteArray()        # >0 = bloqueada (árbol, mina, edificio)
 var reserved := PackedByteArray()     # >0 = ocupada por un edificio (aunque se pueda caminar, ej. granja)
 var ent: Array = []                   # casilla -> Entity estática (recurso o edificio) o null
+var height := PackedFloat32Array()    # altura del suelo de cada casilla (0 llano, LEVEL_H meseta)
 var astar := AStarGrid2D.new()
 
 const N8 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
@@ -29,6 +37,9 @@ func setup(size: int) -> void:
 	reserved.fill(0)
 	ent.resize(w * h)
 	ent.fill(null)
+	height.resize(w * h)
+	height.fill(0.0)
+	active = self
 	astar.region = Rect2i(0, 0, w, h)
 	astar.cell_size = Vector2(1, 1)
 	astar.offset = Vector2(0.5, 0.5)
@@ -38,12 +49,56 @@ func setup(size: int) -> void:
 	astar.update()
 
 
-## Llamar cuando el suelo ya está generado: marca el agua como bloqueada.
+## Llamar cuando el suelo ya está generado: marca el agua y los barrancos como bloqueados.
 func finish_ground() -> void:
 	for y in h:
 		for x in w:
-			if ground[y * w + x] == WATER:
+			var i := y * w + x
+			if ground[i] == WATER:
+				height[i] = WATER_BED
+			if ground_blocks(i):
 				astar.set_point_solid(Vector2i(x, y), true)
+
+
+## Agua o barranco: no se camina ni se construye.
+func ground_blocks(i: int) -> bool:
+	return ground[i] == WATER or ground[i] == CLIFF
+
+
+func tile_h(t: Vector2i) -> float:
+	if not inside(t):
+		return 0.0
+	var i := idx(t)
+	return WATER_Y if ground[i] == WATER else height[i]
+
+
+## Altura del suelo en un punto: suave en las rampas, plana junto a barrancos y agua.
+func height_at(p: Vector2) -> float:
+	var t := to_tile(p)
+	if not inside(t):
+		return 0.0
+	var h0 := tile_h(t)
+	var c := center(t)
+	var sx := 1 if p.x >= c.x else -1
+	var sy := 1 if p.y >= c.y else -1
+	var fx := absf(p.x - c.x)
+	var fy := absf(p.y - c.y)
+	var hx := _near_h(t + Vector2i(sx, 0), h0)
+	var hy := _near_h(t + Vector2i(0, sy), h0)
+	var hxy := _near_h(t + Vector2i(sx, sy), h0)
+	return lerpf(lerpf(h0, hx, fx), lerpf(hy, hxy, fx), fy)
+
+
+func _near_h(t: Vector2i, h0: float) -> float:
+	if not inside(t) or ground_blocks(idx(t)):
+		return h0
+	var hn := height[idx(t)]
+	return hn if absf(hn - h0) <= LEVEL_H * 0.55 else h0
+
+
+## Altura del suelo para las figuras 3D (0 si no hay partida).
+static func ground_y(p: Vector2) -> float:
+	return active.height_at(p) if active else 0.0
 
 
 func idx(t: Vector2i) -> int:
@@ -63,7 +118,7 @@ func is_free(t: Vector2i) -> bool:
 	if not inside(t):
 		return false
 	var i := idx(t)
-	return ground[i] != WATER and solid[i] == 0
+	return not ground_blocks(i) and solid[i] == 0
 
 
 ## Libre para construir o colocar algo.
@@ -71,13 +126,17 @@ func is_open(t: Vector2i) -> bool:
 	if not inside(t):
 		return false
 	var i := idx(t)
-	return ground[i] != WATER and solid[i] == 0 and reserved[i] == 0 and ent[i] == null
+	return not ground_blocks(i) and solid[i] == 0 and reserved[i] == 0 and ent[i] == null
 
 
 func rect_open(r: Rect2i) -> bool:
+	if not inside(r.position):
+		return false
+	var h0 := height[idx(r.position)]
 	for y in range(r.position.y, r.end.y):
 		for x in range(r.position.x, r.end.x):
-			if not is_open(Vector2i(x, y)):
+			var t := Vector2i(x, y)
+			if not is_open(t) or height[idx(t)] != h0:   # todo el edificio a la misma altura
 				return false
 	return true
 
@@ -108,7 +167,7 @@ func release(r: Rect2i, e, blocks: bool) -> void:
 			reserved[i] = 0
 			if blocks and solid[i] > 0:
 				solid[i] -= 1
-				if solid[i] == 0 and ground[i] != WATER:
+				if solid[i] == 0 and not ground_blocks(i):
 					astar.set_point_solid(t, false)
 
 

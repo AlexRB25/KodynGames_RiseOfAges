@@ -16,7 +16,12 @@ func setup(g: Game) -> void:
 	base = PackedByteArray()
 	base.resize(w * w * 3)
 	for i in w * w:
-		var c: Color = TerrainView.GROUND_COLORS[g.map.ground[i]]
+		var gi: int = g.map.ground[i]
+		var c: Color = Color(0.18, 0.45, 0.66) if gi == MapData.WATER else TerrainView.GROUND_COLORS[gi]
+		if gi == MapData.CLIFF:
+			c = c.darkened(0.25)
+		elif g.map.height[i] > 0.1:
+			c = c.lightened(0.12)
 		base[i * 3] = int(c.r * 255)
 		base[i * 3 + 1] = int(c.g * 255)
 		base[i * 3 + 2] = int(c.b * 255)

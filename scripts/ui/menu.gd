@@ -2,6 +2,7 @@ extends Control
 ## Menú principal y configuración de partida contra bots (hasta 8 jugadores, 4 vs 4).
 
 var rows: Array = []     # cada fila: {type: OptionButton, civ, team, color}
+var type_opt: OptionButton
 var size_opt: OptionButton
 var list: VBoxContainer
 var main_box: VBoxContainer
@@ -11,6 +12,14 @@ var lobby_box: VBoxContainer
 var name_edit: LineEdit
 var code_edit: LineEdit
 var status_label: Label
+var ranked_box: VBoxContainer
+var profile_label: RichTextLabel
+var rk_name: LineEdit
+var rk_civ: OptionButton
+var rk_status: Label
+var rk_modes: HBoxContainer
+var rk_cancel: Button
+var acct_box: VBoxContainer
 
 const TYPES := ["Cerrado", "Tú", "Bot Fácil", "Bot Normal", "Bot Difícil", "Bot Experto"]
 
@@ -20,6 +29,14 @@ func _ready() -> void:
 	bg.color = Color(0.12, 0.09, 0.06)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	var fondo := Art.tex("ui/fondo.jpg")
+	if fondo:
+		var ft := TextureRect.new()
+		ft.texture = fondo
+		ft.set_anchors_preset(Control.PRESET_FULL_RECT)
+		ft.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ft.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		add_child(ft)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
@@ -28,17 +45,38 @@ func _ready() -> void:
 	center.add_child(panel)
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 12)
-	panel.add_child(root)
-	var title := Label.new()
-	title.text = "CONQUISTA"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 52)
-	title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.38))
-	root.add_child(title)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(_scroll)
+	_scroll.add_child(root)
+	_root = root
+	var logo := Art.tex("ui/logo.png")
+	if logo:
+		var lt := TextureRect.new()
+		_logo = lt
+		lt.texture = logo
+		lt.custom_minimum_size = Vector2(380, 190)
+		lt.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lt.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		root.add_child(lt)
+	else:
+		var title := Label.new()
+		title.text = "RISE OF AGES"
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override("font_size", 52)
+		title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.38))
+		root.add_child(title)
 	var sub := Label.new()
-	sub.text = "Civilizaciones de Mesoamérica"
+	sub.text = "Beta · Civilizaciones de Mesoamérica"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(sub)
+	profile_label = RichTextLabel.new()
+	profile_label.bbcode_enabled = true
+	profile_label.fit_content = true
+	profile_label.custom_minimum_size = Vector2(420, 0)
+	root.add_child(profile_label)
+	Account.changed.connect(_refresh_profile)
+	_refresh_profile()
 
 	main_box = VBoxContainer.new()
 	main_box.add_theme_constant_override("separation", 10)
@@ -48,7 +86,11 @@ func _ready() -> void:
 		main_box.visible = false
 		setup_box.visible = true)
 	main_box.add_child(solo)
-	var online := _big_button("En línea con amigos (beta)")
+	var rk := _big_button("Jugar con rango (en línea)")
+	rk.tooltip_text = "Te emparejamos con alguien de tu nivel. Ganar suma puntos, perder resta."
+	rk.pressed.connect(_open_ranked)
+	main_box.add_child(rk)
+	var online := _big_button("Sala con amigos (código)")
 	online.pressed.connect(func() -> void:
 		main_box.visible = false
 		online_box.visible = true)
@@ -97,6 +139,11 @@ func _ready() -> void:
 	size_opt.add_item("Grande (220)")
 	size_opt.select(1)
 	opts.add_child(size_opt)
+	var tl := Label.new()
+	tl.text = "  Tipo:"
+	opts.add_child(tl)
+	type_opt = _type_pick("azar", true, func(_v: String) -> void: pass)
+	opts.add_child(type_opt)
 	setup_box.add_child(opts)
 	var civ_info := Label.new()
 	civ_info.add_theme_font_size_override("font_size", 13)
@@ -118,17 +165,70 @@ func _ready() -> void:
 	var start := _big_button("¡Comenzar!")
 	start.pressed.connect(_start)
 	bh.add_child(start)
+	# Dos columnas: jugadores a la izquierda, civilizaciones a la derecha (cabe sin desplazarse).
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 20)
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 8)
+	cols.add_child(left)
+	for n in [presets, head, list, opts, bh]:
+		n.reparent(left)
+	civ_info.custom_minimum_size = Vector2(400, 0)
+	civ_info.reparent(cols)
+	setup_box.add_child(cols)
 	_preset([1, 2])
 	_build_online(root)
+	_build_ranked(root)
 	Net.room_changed.connect(_refresh_lobby)
-	Net.failed.connect(func(msg: String) -> void: _status(msg))
+	Net.queue_changed.connect(_refresh_queue)
+	Net.failed.connect(func(msg: String) -> void:
+		_status(msg)
+		if rk_status:
+			rk_status.text = msg)
 	Net.closed.connect(func() -> void:
 		_status("Se cerró la conexión.")
+		if ranked_box.visible:
+			_refresh_queue()
+			return
 		lobby_box.visible = false
 		online_box.visible = true)
 	Net.started.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/game.tscn"))
 	Setup.online = false
 	Net.close()
+	# Desarrollo: --rank abre la pantalla con rango, --shot=archivo.png guarda una captura.
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--rank":
+			_open_ranked()
+		elif arg == "--solo":
+			main_box.visible = false
+			setup_box.visible = true
+		elif arg.begins_with("--shot="):
+			await get_tree().create_timer(1.5).timeout
+			get_viewport().get_texture().get_image().save_png(arg.get_slice("=", 1))
+			get_tree().quit()
+
+
+var _scroll: ScrollContainer
+var _root: VBoxContainer
+var _logo: TextureRect
+
+
+## El panel se ajusta solo a la ventana: logo grande solo en la pantalla principal y,
+## si el contenido no cabe a lo alto, el panel se desplaza con la rueda o el dedo.
+func _process(_dt: float) -> void:
+	if _scroll == null:
+		return
+	if _logo:
+		var h := 190.0 if main_box.visible else 96.0
+		var vh0 := get_viewport_rect().size.y
+		if vh0 < 700.0:
+			h *= 0.6
+		_logo.custom_minimum_size = Vector2(380, h)
+	var want := _root.get_combined_minimum_size()
+	var vh := get_viewport_rect().size.y - 70.0   # márgenes del panel y de la ventana
+	var sz := Vector2(want.x + 14.0, minf(want.y, vh))
+	if not _scroll.custom_minimum_size.is_equal_approx(sz):
+		_scroll.custom_minimum_size = sz
 
 
 func _theme() -> Theme:
@@ -235,6 +335,7 @@ func _start() -> void:
 	Setup.online = false
 	Setup.local_player = 0
 	Setup.map_size = ["pequeno", "mediano", "grande"][size_opt.selected]
+	Setup.map_type = Defs.MAP_TYPE_ORDER[type_opt.selected]
 	Setup.seed_value = 0
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
@@ -264,7 +365,7 @@ func _build_online(root: VBoxContainer) -> void:
 	name_edit = LineEdit.new()
 	name_edit.max_length = 16
 	name_edit.placeholder_text = "Nombre"
-	name_edit.text = Net.player_name if Net.player_name != "Jugador" else ""
+	name_edit.text = Account.player_name
 	name_edit.custom_minimum_size = Vector2(320, 44)
 	online_box.add_child(name_edit)
 	var create := _big_button("Crear sala")
@@ -313,7 +414,192 @@ func _build_online(root: VBoxContainer) -> void:
 
 
 func _name() -> String:
-	return name_edit.text.strip_edges()
+	var n := name_edit.text.strip_edges()
+	if n != "":
+		Account.set_player_name(n)
+	return n
+
+
+# ---------------- con rango ----------------
+
+func _refresh_profile() -> void:
+	if profile_label == null:
+		return
+	var n := Account.player_name
+	if n == "" and Account.profile.is_empty():
+		profile_label.text = ""
+		return
+	var txt := "[center][b]%s[/b]" % (n if n != "" else String(Account.profile.get("name", "Jugador")))
+	if not Account.profile.is_empty():
+		txt += "  ·  [color=#ffd75a]Nivel %d[/color]  ·  %d puntos" % [Account.level(), Account.points()]
+		if Account.profile.has("wins"):
+			txt += "  ·  %d ganadas / %d perdidas" % [int(Account.profile["wins"]), int(Account.profile["losses"])]
+	profile_label.text = txt + "[/center]"
+
+
+func _open_ranked() -> void:
+	main_box.visible = false
+	ranked_box.visible = true
+	rk_name.text = Account.player_name
+	_refresh_account()
+	_refresh_queue()
+	if Account.accounts_ready():
+		rk_status.text = "Conectando tu cuenta…"
+		var err: String = await Account.sign_in()
+		rk_status.text = err
+		rk_name.text = Account.player_name
+		_refresh_account()
+
+
+func _build_ranked(root: VBoxContainer) -> void:
+	ranked_box = VBoxContainer.new()
+	ranked_box.visible = false
+	ranked_box.add_theme_constant_override("separation", 10)
+	root.add_child(ranked_box)
+	var info := Label.new()
+	info.text = "Te emparejamos con el jugador en línea más cercano a tu nivel.\nGanar suma puntos y perder resta; cada 100 puntos subes de nivel."
+	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ranked_box.add_child(info)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	ranked_box.add_child(row)
+	var nl := Label.new()
+	nl.text = "Nombre:"
+	row.add_child(nl)
+	rk_name = LineEdit.new()
+	rk_name.max_length = 16
+	rk_name.placeholder_text = "Tu nombre"
+	rk_name.custom_minimum_size = Vector2(220, 44)
+	row.add_child(rk_name)
+	var cl := Label.new()
+	cl.text = "Civilización:"
+	row.add_child(cl)
+	rk_civ = _civ_pick(Defs.CIV_ORDER[0], true, func(_v: String) -> void: pass)
+	row.add_child(rk_civ)
+	rk_modes = HBoxContainer.new()
+	rk_modes.add_theme_constant_override("separation", 8)
+	ranked_box.add_child(rk_modes)
+	for md in [["1v1", "Buscar 1 vs 1"], ["2v2", "Buscar 2 vs 2"], ["4v4", "Buscar 4 vs 4"]]:
+		var b := _big_button(md[1])
+		b.custom_minimum_size = Vector2(200, 52)
+		var mode: String = md[0]
+		b.pressed.connect(func() -> void: _search(mode))
+		rk_modes.add_child(b)
+	rk_status = Label.new()
+	rk_status.add_theme_color_override("font_color", Color(1, 0.8, 0.5))
+	rk_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rk_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rk_status.custom_minimum_size = Vector2(600, 0)
+	ranked_box.add_child(rk_status)
+	rk_cancel = _big_button("Cancelar búsqueda")
+	rk_cancel.pressed.connect(func() -> void:
+		Net.unqueue()
+		rk_status.text = "Búsqueda cancelada."
+		_refresh_queue())
+	ranked_box.add_child(rk_cancel)
+	acct_box = VBoxContainer.new()
+	acct_box.add_theme_constant_override("separation", 6)
+	ranked_box.add_child(acct_box)
+	var back := _big_button("Volver")
+	back.pressed.connect(func() -> void:
+		if not Net.queue_info.is_empty():
+			Net.unqueue()
+		ranked_box.visible = false
+		main_box.visible = true)
+	ranked_box.add_child(back)
+
+
+func _search(mode: String) -> void:
+	var n := rk_name.text.strip_edges()
+	if n.length() < 2:
+		rk_status.text = "Escribe tu nombre (mínimo 2 letras)."
+		return
+	var changed_name := n != Account.player_name
+	Account.set_player_name(n)
+	if Account.accounts_ready():
+		if not Account.signed_in():
+			rk_status.text = "Conectando tu cuenta…"
+			var err: String = await Account.sign_in()
+			if err != "":
+				rk_status.text = err
+				return
+		elif changed_name:
+			await Account.refresh_profile()
+	rk_status.text = "Conectando…"
+	Net.queue(mode, Defs.CIV_ORDER[rk_civ.selected])
+
+
+func _refresh_queue() -> void:
+	if rk_modes == null:
+		return
+	var q := Net.queue_info
+	var searching := not q.is_empty()
+	rk_modes.visible = not searching
+	rk_cancel.visible = searching
+	rk_name.editable = not searching
+	rk_civ.disabled = searching
+	if searching:
+		var need := int(q.get("need", 0))
+		var names := {"1v1": "1 vs 1", "2v2": "2 vs 2", "4v4": "4 vs 4"}
+		rk_status.text = "Buscando partida %s…  (%d de %d jugadores en la cola)\nSi no hay nadie de tu nivel, te toca con quien esté conectado." % [
+			names.get(String(q.get("mode", "")), ""), int(q.get("waiting", 0)), need]
+
+
+func _refresh_account() -> void:
+	for c in acct_box.get_children():
+		c.queue_free()
+	if not Account.accounts_ready():
+		var l := Label.new()
+		l.text = "Modo prueba: los puntos se guardan en el servidor por nombre y se borran si se reinicia."
+		l.add_theme_font_size_override("font_size", 13)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		acct_box.add_child(l)
+		return
+	if Account.signed_in() and not Account.is_anonymous:
+		var hb := HBoxContainer.new()
+		var l := Label.new()
+		l.text = "Cuenta Kodyn Games: %s" % Account.email
+		hb.add_child(l)
+		var out := Button.new()
+		out.text = "Cerrar sesión"
+		out.pressed.connect(func() -> void:
+			Account.logout()
+			_refresh_account())
+		hb.add_child(out)
+		acct_box.add_child(hb)
+		return
+	var t := Label.new()
+	t.text = "Juegas como invitado. Guarda tu progreso con correo, o entra con tu cuenta de Kodyn Games (la misma de Zombie War):"
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.custom_minimum_size = Vector2(600, 0)
+	t.add_theme_font_size_override("font_size", 13)
+	acct_box.add_child(t)
+	var hb2 := HBoxContainer.new()
+	hb2.add_theme_constant_override("separation", 6)
+	acct_box.add_child(hb2)
+	var em := LineEdit.new()
+	em.placeholder_text = "correo"
+	em.custom_minimum_size = Vector2(220, 40)
+	hb2.add_child(em)
+	var pw := LineEdit.new()
+	pw.placeholder_text = "contraseña"
+	pw.secret = true
+	pw.custom_minimum_size = Vector2(160, 40)
+	hb2.add_child(pw)
+	var save := Button.new()
+	save.text = "Guardar progreso"
+	save.pressed.connect(func() -> void:
+		var e: String = await Account.link_email(em.text.strip_edges(), pw.text)
+		rk_status.text = e if e != "" else "Listo: revisa tu correo para confirmarlo.")
+	hb2.add_child(save)
+	var enter := Button.new()
+	enter.text = "Ya tengo cuenta: entrar"
+	enter.pressed.connect(func() -> void:
+		var e: String = await Account.login(em.text.strip_edges(), pw.text)
+		rk_status.text = e if e != "" else "Entraste."
+		rk_name.text = Account.player_name
+		_refresh_account())
+	hb2.add_child(enter)
 
 
 func _refresh_lobby() -> void:
@@ -386,6 +672,8 @@ func _refresh_lobby() -> void:
 	mo.disabled = not host
 	mo.item_selected.connect(func(j: int) -> void: Net.set_config(maps[j], Net.room.get("bots", [])))
 	opts.add_child(mo)
+	opts.add_child(_type_pick(String(r.get("type", "azar")), host, func(v: String) -> void:
+		Net.set_config(String(Net.room.get("map", "mediano")), Net.room.get("bots", []), v)))
 	if host:
 		var add := Button.new()
 		add.text = "+ Agregar bot"
@@ -433,6 +721,19 @@ func _civ_pick(cur: String, enabled: bool, on_pick: Callable) -> OptionButton:
 	o.disabled = not enabled
 	o.custom_minimum_size = Vector2(150, 0)
 	o.item_selected.connect(func(j: int) -> void: on_pick.call(Defs.CIV_ORDER[j]))
+	return o
+
+
+func _type_pick(cur: String, enabled: bool, on_pick: Callable) -> OptionButton:
+	var o := OptionButton.new()
+	for i in Defs.MAP_TYPE_ORDER.size():
+		var k: String = Defs.MAP_TYPE_ORDER[i]
+		o.add_item(Defs.MAP_TYPES[k]["name"])
+		o.set_item_tooltip(i, Defs.MAP_TYPES[k]["desc"])
+	o.select(maxi(0, Defs.MAP_TYPE_ORDER.find(cur)))
+	o.disabled = not enabled
+	o.tooltip_text = "Tipo de mapa. El terreno se genera al azar en cada partida."
+	o.item_selected.connect(func(j: int) -> void: on_pick.call(Defs.MAP_TYPE_ORDER[j]))
 	return o
 
 

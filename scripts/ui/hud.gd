@@ -7,6 +7,9 @@ var game: Game
 var res_labels := {}
 var pop_label: Label
 var age_label: Label
+var era_tex: TextureRect
+var portrait: TextureRect
+var _era_shown := -1
 var time_label: Label
 var idle_btn: Button
 var notes: VBoxContainer
@@ -111,11 +114,6 @@ func _build_top(root: Control) -> void:
 		l.add_theme_font_size_override("font_size", 17)
 		hb.add_child(l)
 		res_labels[r] = l
-	var era := ResIcon.new("era")
-	hb.add_child(era)
-	age_label = Label.new()
-	age_label.custom_minimum_size = Vector2(110, 0)
-	hb.add_child(age_label)
 	var pi := ResIcon.new("pop")
 	pi.tooltip_text = "Población / máximo"
 	hb.add_child(pi)
@@ -123,6 +121,28 @@ func _build_top(root: Control) -> void:
 	pop_label.custom_minimum_size = Vector2(66, 0)
 	pop_label.add_theme_font_size_override("font_size", 17)
 	hb.add_child(pop_label)
+	# Al centro: la insignia de la era (nivel 1-5).
+	var mid := VBoxContainer.new()
+	mid.anchor_left = 0.5
+	mid.anchor_right = 0.5
+	mid.offset_left = -125
+	mid.offset_right = 125
+	mid.offset_top = 0
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_theme_constant_override("separation", -6)
+	root.add_child(mid)
+	era_tex = TextureRect.new()
+	era_tex.custom_minimum_size = Vector2(250, 76)
+	era_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	era_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mid.add_child(era_tex)
+	age_label = Label.new()
+	age_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	age_label.add_theme_font_size_override("font_size", 15)
+	age_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	age_label.add_theme_constant_override("outline_size", 5)
+	age_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	mid.add_child(age_label)
 	# A la derecha: tiempo, aldeanos sin tarea, mapa (táctil) y menú.
 	var right := PanelContainer.new()
 	right.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -173,8 +193,15 @@ func _build_bottom(root: Control) -> void:
 	actions.add_theme_constant_override("h_separation", 4)
 	actions.add_theme_constant_override("v_separation", 4)
 	act.add_child(actions)
+	portrait = TextureRect.new()
+	portrait.custom_minimum_size = Vector2(150, 150)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	portrait.visible = false
+	hb.add_child(portrait)
 	var info := VBoxContainer.new()
-	info.custom_minimum_size = Vector2(320, 0)
+	info.custom_minimum_size = Vector2(260, 0)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(info)
 	info_title = Label.new()
@@ -268,8 +295,17 @@ func _build_menu(root: Control) -> void:
 	help.text = "Clic izq: seleccionar · Arrastrar: recuadro\nClic der: mover / recolectar / atacar\nWASD o bordes: mover · Q/E o rueda central: girar\nRueda: acercar · H: centro · .: aldeano sin tarea\nCtrl+1-9: guardar grupo · Shift: varias obras"
 	help.add_theme_font_size_override("font_size", 12)
 	vb.add_child(help)
+	var resign := Button.new()
+	resign.text = "Rendirse"
+	resign.tooltip_text = "Pierdes la partida" + (" (cuenta para tus puntos)." if Net.ranked else ".")
+	resign.pressed.connect(func() -> void:
+		menu_panel.visible = false
+		if not game.online:
+			game.paused = false
+		game.issue({"k": "resign"}))
+	vb.add_child(resign)
 	var quit := Button.new()
-	quit.text = "Salir al menú principal"
+	quit.text = "Salir al menú principal" + (" (cuenta como derrota)" if Net.ranked else "")
 	quit.pressed.connect(func() -> void:
 		Net.close()
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
@@ -309,6 +345,16 @@ func show_result(win: bool) -> void:
 			p.stats["entrenados"], p.stats["muertes"]]
 	st.text = txt
 	vb.add_child(st)
+	rating_label = RichTextLabel.new()
+	rating_label.bbcode_enabled = true
+	rating_label.fit_content = true
+	rating_label.visible = false
+	vb.add_child(rating_label)
+	if Net.ranked:
+		rating_label.visible = true
+		rating_label.text = "[center]Calculando tus puntos…[/center]"
+		if not Net.last_rated.is_empty():
+			show_rating(Net.last_rated)
 	var b := Button.new()
 	b.text = "Volver al menú"
 	b.pressed.connect(func() -> void:
@@ -317,6 +363,27 @@ func show_result(win: bool) -> void:
 	vb.add_child(b)
 	await get_tree().process_frame
 	result_panel.position = (get_viewport().get_visible_rect().size - result_panel.size) * 0.5
+
+
+var rating_label: RichTextLabel
+
+
+## Puntos ganados o perdidos en la partida con rango.
+func show_rating(m: Dictionary) -> void:
+	if rating_label == null:
+		return
+	rating_label.visible = true
+	var you = m.get("you")
+	if not you is Dictionary:
+		rating_label.text = "[center]Esta partida no contó para el rango.[/center]"
+		return
+	var d := int(you.get("delta", 0))
+	var col := "#7dff7d" if d >= 0 else "#ff8a7a"
+	var txt := "[center][font_size=22][color=%s]%s%d puntos[/color][/font_size]\nAhora: %d puntos · Nivel %d" % [
+		col, "+" if d >= 0 else "", d, int(you.get("points", 0)), int(you.get("level", 1))]
+	if bool(m.get("forfeit", false)):
+		txt += "\n(el rival abandonó la partida)"
+	rating_label.text = txt + "[/center]"
 
 
 func set_drag_rect(r: Rect2) -> void:
@@ -350,8 +417,13 @@ func _process(dt: float) -> void:
 		res_labels[r].text = str(int(p.res[r]))
 	pop_label.text = "%d/%d" % [p.pop, p.pop_cap]
 	pop_label.add_theme_color_override("font_color", Color(1, 0.5, 0.4) if p.pop >= p.pop_cap else TEXT)
-	age_label.text = p.age_name()
-	age_label.tooltip_text = Defs.CIVS[p.civ]["name"]
+	if _era_shown != p.age:
+		_era_shown = p.age
+		var et := Art.era(p.civ, p.age)
+		era_tex.texture = et
+		era_tex.visible = et != null
+		age_label.text = ("Nivel %d" % p.age) if et else ("Nivel %d · %s" % [p.age, p.age_name()])
+		age_label.tooltip_text = "%s — %s" % [p.age_name(), Defs.CIVS[p.civ]["name"]]
 	var t := int(game.time)
 	time_label.text = "%02d:%02d" % [t / 60, t % 60]
 	var idle := game.controller.idle_villagers().size()
@@ -608,6 +680,12 @@ func _refresh_info() -> void:
 	for e in game.controller.selection:
 		if Entity.valid(e):
 			sel.append(e)
+	var pt: Texture2D = null
+	if not sel.is_empty() and (sel[0] is Unit or sel[0] is Building) and sel[0].owner_id >= 0:
+		var op: PlayerState = game.players[sel[0].owner_id]
+		pt = Art.portrait(op.civ, sel[0].kind, op.age)
+	portrait.texture = pt
+	portrait.visible = pt != null
 	if sel.is_empty():
 		info_title.text = ""
 		info_body.text = "Selecciona aldeanos para recolectar o construir.\nClic derecho sobre árboles, minas, bayas, animales o peces."

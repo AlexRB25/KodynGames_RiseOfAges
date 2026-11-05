@@ -130,6 +130,13 @@ func screen_to_ground(sp: Vector2) -> Vector2:
 	var d := cam.project_ray_normal(sp)
 	if absf(d.y) < 0.0001:
 		return Vector2(o.x, o.z)
-	var t := -o.y / d.y
-	var p := o + d * t
+	# Con mesetas: cortar el rayo con el suelo a la altura del punto (unas vueltas bastan).
+	var gy := 0.0
+	var p := o
+	for k in 4:
+		p = o + d * ((gy - o.y) / d.y)
+		var ny := MapData.ground_y(Vector2(p.x, p.z))
+		if absf(ny - gy) < 0.02:
+			break
+		gy = ny
 	return Vector2(p.x, p.z)

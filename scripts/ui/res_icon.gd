@@ -12,6 +12,11 @@ func _init(k: String = "") -> void:
 
 func _draw() -> void:
 	var s := size
+	var art := Art.icon(kind)
+	if art:
+		var side := minf(s.x, s.y)
+		draw_texture_rect(art, Rect2((s - Vector2(side, side)) * 0.5, Vector2(side, side)), false)
+		return
 	draw_rect(Rect2(Vector2.ZERO, s), Color(0.22, 0.17, 0.12), true)
 	draw_rect(Rect2(Vector2.ZERO, s), Color(0.6, 0.47, 0.25), false, 1.5)
 	var c := s * 0.5

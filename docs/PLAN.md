@@ -30,7 +30,7 @@ El nombre "Conquista" es provisional.
 - Granjas: la siembra se compra en el Centro (se pueden guardar varias); colocar una granja gasta
   1 siembra; el granjero siembra y luego cosecha 250; al agotarse se resiembra sola si hay siembras.
 - Población: empiezas con 5 y tope 5; cada casa +5 (máx. 200). Los aldeanos se compran en el Centro.
-- 5 eras (Aldea, Señorío, Ciudad-Estado, Reino, Imperio): cuestan recursos y piden edificios.
+- 5 eras o niveles (I Aldea Primitiva, II Era Tribal, III Era de Piedra, IV Era de los Metales, V Era Imperial): cuestan recursos y piden edificios.
   Cambian el vestuario (taparrabo → túnica → penachos → oro) y los edificios (paja → adobe →
   piedra → estuco).
 - Combate: vida, ataque, armadura, alcance, flechas; torres/centro/castillo disparan.
@@ -58,3 +58,10 @@ El nombre "Conquista" es provisional.
 
 - Españoles, incas, etc., y después temporadas de fantasía (orcos...). Todas con las mismas reglas;
   cambian modificadores, aspecto (`look.style`) y unidad única. Ver `docs/CIVILIZACIONES.md`.
+
+## Terreno y tipos de mapa (2026-11-04)
+- Terreno en bloques con altura (MapData.height, LEVEL_H = 2.2): mesetas con barrancos (suelo CLIFF, no se camina) y 2 rampas cada una; mar en esquinas con playa ancha; acantilados donde una meseta toca el agua; agua animada (TerrainView, turquesa en la orilla, azul hondo, espuma).
+- Las figuras se paran a la altura del suelo (MapData.ground_y); un edificio solo se pone si todas sus casillas están a la misma altura.
+- Tipos (Defs.MAP_TYPES): Al azar (por defecto), Valle, Costa, Mesetas, Tierra de lagos, Selva, Desierto, Mar interior. El terreno siempre se genera al azar con la semilla de la partida; el tipo cambia el carácter. En línea el anfitrión elige el tipo; con rango siempre "Al azar".
+- Desarrollo: `-- --seed=N --tipo=costa --mapinfo --at=x,y,dist --reveal --shot=archivo.png`.
+- Pendiente: barcos (pesca, guerra, transporte) para aprovechar el mar.

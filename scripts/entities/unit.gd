@@ -81,7 +81,7 @@ func init(g: Game, k: String, owner: int, p: Vector2) -> void:
 	radius = 0.28 if k != "jinete" else 0.38
 	pos = p
 	prev_pos = p
-	position = Vector3(p.x, 0, p.y)
+	position = Vector3(p.x, MapData.ground_y(p), p.y)
 	_build_visual()
 
 
@@ -664,7 +664,7 @@ func render(alpha: float, dt: float) -> void:
 				queue_free()
 		return
 	var p := prev_pos.lerp(pos, alpha)
-	position = Vector3(p.x, 0, p.y)
+	position = Vector3(p.x, MapData.ground_y(p), p.y)
 	tick_bar(dt)
 	var v := pos - prev_pos
 	var walking := v.length_squared() > 0.000001

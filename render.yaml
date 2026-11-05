@@ -8,3 +8,10 @@ services:
     startCommand: node server.js
     healthCheckPath: /salud
     plan: free
+    envVars:
+      # Mismo proyecto de Supabase que Zombie War (Kodyn Games). Sin estas dos el rango
+      # funciona en "modo prueba" (puntos en memoria). Ver docs/ONLINE.md.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false

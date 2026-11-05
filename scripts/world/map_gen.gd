@@ -15,11 +15,19 @@ var _two_teams := false
 var fords: Array[Vector2] = []
 
 
-func generate(m: MapData, player_count: int, teams: Array, seed_v: int) -> Dictionary:
+var mt: Dictionary = {}       # parámetros del tipo de mapa (Defs.MAP_TYPES)
+var map_type := ""
+
+
+func generate(m: MapData, player_count: int, teams: Array, seed_v: int, wanted_type := "azar") -> Dictionary:
 	map = m
 	rng.seed = seed_v
 	noise.seed = seed_v
 	noise.frequency = 0.045
+	map_type = wanted_type
+	if not Defs.MAP_TYPES.has(map_type) or map_type == "azar":
+		map_type = Defs.MAP_TYPE_ORDER[1 + rng.randi() % (Defs.MAP_TYPE_ORDER.size() - 1)]
+	mt = Defs.MAP_TYPES[map_type]
 	var s := map.w
 	_place_starts(player_count, teams)
 	_ground_and_lakes()
@@ -30,7 +38,12 @@ func generate(m: MapData, player_count: int, teams: Array, seed_v: int) -> Dicti
 	_extra_mines()
 	_wild_animals()
 	_fish()
-	return {"starts": starts, "nodes": nodes, "animals": animals, "size": s}
+	if "--mapinfo" in OS.get_cmdline_user_args():
+		for q in plateaus:
+			print("meseta ", q["c"], " r=", q["r"])
+		for i in starts.size():
+			print("base ", _start_center(i))
+	return {"starts": starts, "nodes": nodes, "animals": animals, "size": s, "type": map_type}
 
 
 func _start_center(i: int) -> Vector2:
@@ -92,8 +105,12 @@ func _ground_and_lakes() -> void:
 			elif b < -0.32:
 				g = MapData.JUNGLE
 			map.ground[y * s + x] = g
+	plateau.resize(s * s)
+	plateau.fill(0)
+	_seas()
+	_plan_plateaus()
 	# Lagos lejos de las bases.
-	var lakes := 2 + s / 60
+	var lakes := roundi((2 + s / 60) * float(mt.get("lakes", 1.0)))
 	var tries := 0
 	while lakes > 0 and tries < 200:
 		tries += 1
@@ -113,7 +130,7 @@ func _ground_and_lakes() -> void:
 				continue
 			_blob(p, 3.2, MapData.WATER)
 			break
-	if _two_teams and s >= 120:
+	if _two_teams and s >= 120 and mt.get("river", true):
 		_river()
 	# Arena en las orillas.
 	var sand: Array[int] = []
@@ -127,6 +144,223 @@ func _ground_and_lakes() -> void:
 					break
 	for i in sand:
 		map.ground[i] = MapData.SAND
+	_cliffs()
+
+
+# ---------------- mar, mesetas y barrancos ----------------
+
+var plateau := PackedByteArray()   # casilla -> número de meseta + 1 (0 = llano)
+var plateaus: Array = []           # {c: Vector2, r: float}
+
+
+## Mar en las esquinas más lejanas de las bases, con playa ancha.
+func _seas() -> void:
+	var s := map.w
+	var corners: Array = [Vector2(0, 0), Vector2(s, 0), Vector2(0, s), Vector2(s, s)]
+	var far := func(cn: Vector2) -> float:
+		var d := INF
+		for i in starts.size():
+			d = minf(d, _start_center(i).distance_to(cn))
+		return d
+	corners.sort_custom(func(a: Vector2, b: Vector2) -> bool: return far.call(a) > far.call(b))
+	var count: int = int(mt.get("seas", -1))
+	if count < 0:
+		count = 1 if s < 140 else 2
+	var center := Vector2(s, s) * 0.5
+	if mt.get("inner_sea", false):
+		_inner_sea()
+	for k in mini(count, 4):
+		var cn: Vector2 = corners[k]
+		var radius := s * float(mt.get("sea_r", 0.27))
+		for y in s:
+			for x in s:
+				var p := Vector2(x + 0.5, y + 0.5)
+				var d := p.distance_to(cn)
+				if d > radius * 1.4:
+					continue
+				var wob := noise.get_noise_2d(x * 0.6, y * 0.6) * radius * 0.25
+				var t := Vector2i(x, y)
+				if taken.has(t):
+					continue
+				if d < radius + wob and not _near_start(p, 24.0):
+					map.ground[map.idx(t)] = MapData.WATER
+				elif d < radius + wob + 3.0 and not _near_start(p, 18.0):
+					map.ground[map.idx(t)] = MapData.SAND
+		# Una meseta sobre la costa: acantilados que caen al mar.
+		var dir := (center - cn).normalized().rotated(rng.randf_range(-0.6, 0.6))
+		var pc := cn + dir * radius * 1.02
+		var r := rng.randf_range(7.5, 10.5)
+		if not _near_start(pc, 22.0 + r):
+			plateaus.append({"c": pc, "r": r})
+
+
+## Mar en el centro del mapa, con playas y una meseta en su costa.
+func _inner_sea() -> void:
+	var s := map.w
+	var c := Vector2(s, s) * 0.5
+	var radius := s * 0.16
+	for y in s:
+		for x in s:
+			var p := Vector2(x + 0.5, y + 0.5)
+			var d := p.distance_to(c)
+			if d > radius * 1.5:
+				continue
+			var t := Vector2i(x, y)
+			if taken.has(t):
+				continue
+			var wob := noise.get_noise_2d(x * 0.6, y * 0.6) * radius * 0.3
+			if d < radius + wob and not _near_start(p, 22.0):
+				map.ground[map.idx(t)] = MapData.WATER
+			elif d < radius + wob + 2.5 and not _near_start(p, 16.0):
+				map.ground[map.idx(t)] = MapData.SAND
+	var pc := c + Vector2.from_angle(rng.randf() * TAU) * radius
+	var r := rng.randf_range(7.0, 9.5)
+	if not _near_start(pc, 22.0 + r):
+		plateaus.append({"c": pc, "r": r})
+
+
+func _plan_plateaus() -> void:
+	var s := map.w
+	var want := roundi((1 + s / 70) * float(mt.get("plateaus", 1.0)))
+	var tries := 0
+	while want > 0 and tries < 300:
+		tries += 1
+		var p := Vector2(rng.randf_range(16, s - 16), rng.randf_range(16, s - 16))
+		var r := rng.randf_range(7.0, 11.5)
+		if _near_start(p, 24.0 + r):
+			continue
+		var ok := true
+		for q in plateaus:
+			if q["c"].distance_to(p) < q["r"] + r + 10.0:
+				ok = false
+		if not ok:
+			continue
+		plateaus.append({"c": p, "r": r})
+		want -= 1
+	for k in plateaus.size():
+		var c: Vector2 = plateaus[k]["c"]
+		var r: float = plateaus[k]["r"]
+		for y in range(floori(c.y - r - 3), ceili(c.y + r + 3)):
+			for x in range(floori(c.x - r - 3), ceili(c.x + r + 3)):
+				var t := Vector2i(x, y)
+				if not map.inside(t) or taken.has(t) or x < 2 or y < 2 or x > s - 3 or y > s - 3:
+					continue
+				var d := Vector2(x + 0.5, y + 0.5).distance_to(c)
+				var wob := noise.get_noise_2d(x * 2.0 + 300.0, y * 2.0) * 2.2
+				if d < r + wob:
+					plateau[map.idx(t)] = k + 1
+
+
+func _low_land(t: Vector2i) -> bool:
+	return map.inside(t) and plateau[map.idx(t)] == 0 and map.ground[map.idx(t)] != MapData.WATER
+
+
+## Borde de cada meseta = barranco, salvo las rampas. Mesetas sin rampa útil se aplanan.
+func _cliffs() -> void:
+	var s := map.w
+	var border := {}
+	for y in s:
+		for x in s:
+			var i := y * s + x
+			if plateau[i] == 0 or map.ground[i] == MapData.WATER:
+				continue
+			var t := Vector2i(x, y)
+			for d in MapData.N8:
+				var n: Vector2i = t + d
+				if not map.inside(n) or plateau[map.idx(n)] == 0 or map.ground[map.idx(n)] == MapData.WATER:
+					border[t] = true
+					break
+	var ramps := {}
+	var outs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	# Casillas del borde de cada meseta (en orden fijo: igual en todos los equipos en línea).
+	var borders_of: Array = []
+	for k in plateaus.size():
+		borders_of.append([])
+	for y in s:
+		for x in s:
+			var t := Vector2i(x, y)
+			if border.has(t):
+				borders_of[plateau[map.idx(t)] - 1].append(t)
+	for k in plateaus.size():
+		var c: Vector2 = plateaus[k]["c"]
+		# Candidatas: casilla del borde con tierra baja (no agua) enfrente, 2 casillas de fondo.
+		var cands: Array = []
+		for t in borders_of[k]:
+			for out in outs:
+				var inner: Vector2i = t - out
+				if _low_land(t + out) and _low_land(t + out * 2) and map.inside(inner) and plateau[map.idx(inner)] == k + 1 \
+						and not border.has(inner):
+					cands.append([t, out])
+					break
+		var made := 0
+		var used: Array = []
+		var want_ang := rng.randf() * TAU
+		for j in 2:
+			var best: Array = []
+			var best_score := -INF
+			for cd in cands:
+				var t: Vector2i = cd[0]
+				var score := 0.0
+				if used.is_empty():
+					var ang := (MapData.center(t) - c).angle()
+					score = -absf(angle_difference(ang, want_ang))
+				else:
+					score = INF
+					for u in used:
+						score = minf(score, Vector2(t).distance_to(Vector2(u)))
+					if score < 6.0:
+						continue
+				if score > best_score:
+					best_score = score
+					best = cd
+			if best.is_empty():
+				break
+			var t0: Vector2i = best[0]
+			var out: Vector2i = best[1]
+			var side := Vector2i(out.y, out.x)
+			used.append(t0)
+			# Rampa de hasta 3 de ancho: los lados solo si también dan a tierra baja.
+			for q in [t0, t0 + side, t0 - side]:
+				if q != t0 and not (border.has(q) and plateau[map.idx(q)] == k + 1 and _low_land(q + out)):
+					continue
+				ramps[q] = true
+				taken[q] = true
+				for e in [q + out, q + out * 2, q - out]:
+					if map.inside(e):
+						taken[e] = true
+			made += 1
+		if "--mapinfo" in OS.get_cmdline_user_args():
+			print("rampas meseta ", k, ": ", made)
+		if made == 0:
+			for i in plateau.size():
+				if plateau[i] == k + 1:
+					plateau[i] = 0
+	for y in s:
+		for x in s:
+			var i := y * s + x
+			if plateau[i] == 0 or map.ground[i] == MapData.WATER:
+				continue
+			var t := Vector2i(x, y)
+			if ramps.has(t):
+				map.height[i] = MapData.LEVEL_H * 0.5
+				map.ground[i] = MapData.DIRT
+			elif border.has(t) and plateau[i] != 0:
+				var still := false
+				for d in MapData.N8:
+					var n: Vector2i = t + d
+					if not map.inside(n) or plateau[map.idx(n)] == 0 or map.ground[map.idx(n)] == MapData.WATER:
+						still = true
+						break
+				if still:
+					map.ground[i] = MapData.CLIFF
+					map.height[i] = MapData.LEVEL_H
+					taken[t] = true
+				else:
+					map.height[i] = MapData.LEVEL_H
+			else:
+				map.height[i] = MapData.LEVEL_H
+				if map.ground[i] == MapData.SAND:
+					map.ground[i] = MapData.DRY
 
 
 ## Río entre los dos equipos, con vados (arena) para cruzar a pie.
@@ -164,7 +398,7 @@ var biome := FastNoiseLite.new()
 
 ## Valor de bioma (-1 selva .. +1 desierto), atenuado cerca de las bases.
 func _biome_at(p: Vector2) -> float:
-	var b := biome.get_noise_2d(p.x, p.y) * 1.6
+	var b := biome.get_noise_2d(p.x, p.y) * 1.6 + float(mt.get("bias", 0.0))
 	var near := INF
 	for i in starts.size():
 		near = minf(near, _start_center(i).distance_to(p))
@@ -184,7 +418,7 @@ func _blob(p: Vector2, r: float, g: int) -> void:
 
 
 func _free(t: Vector2i) -> bool:
-	return map.inside(t) and not taken.has(t) and map.ground[map.idx(t)] != MapData.WATER \
+	return map.inside(t) and not taken.has(t) and not map.ground_blocks(map.idx(t)) \
 		and t.x > 0 and t.y > 0 and t.x < map.w - 1 and t.y < map.h - 1
 
 
@@ -287,7 +521,7 @@ func _forests() -> void:
 			var e := mini(mini(x, y), mini(s - 1 - x, s - 1 - y))
 			if e < 2 or (e < 4 and rng.randf() < 0.5):
 				var t := Vector2i(x, y)
-				if not taken.has(t) and map.ground[map.idx(t)] != MapData.WATER:
+				if not taken.has(t) and not map.ground_blocks(map.idx(t)):
 					taken[t] = true
 					nodes.append({"kind": "arbol", "tile": t})
 
