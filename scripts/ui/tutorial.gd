@@ -19,6 +19,7 @@ var target_pos := Vector2.ZERO
 var target_r := 0.0
 var _t := 0.0
 var _villager: Unit
+var _villager2: Unit   # el segundo aldeano (para la comida)
 var _spot := Vector2.ZERO          # lugar marcado para "mueve el aldeano aquí"
 var _start_vills := 0
 var _marker: MeshInstance3D
@@ -126,7 +127,7 @@ func _steps() -> Array:
 				_villager = _a_villager()
 				game.camera.focus(_villager.pos),
 			"target": func() -> Array: return _ent(_villager, 0.4, 0.35),
-			"tap_select": true,
+			"tap_select": func() -> Unit: return _villager,
 			"done": func() -> bool:
 				# Vale cualquier aldeano tuyo: seguimos con el que eligió.
 				for u in game.controller.own_units_selected():
@@ -149,8 +150,21 @@ func _steps() -> Array:
 				game.camera.focus(_tree().center()),
 			"target": func() -> Array: return _ent(_tree(), 0.6, 0.6),
 			"done": func() -> bool: return _anyone("madera")},
+		{"title": "Elige otro aldeano",
+			"text": "Tu primer aldeano ya está cortando madera. Ahora %s este otro aldeano [b]sin tarea[/b]." % tap.to_lower(),
+			"start": func() -> void:
+				_villager2 = _a_villager(_villager)
+				game.camera.focus(_villager2.pos),
+			"target": func() -> Array: return _ent(_villager2, 0.4, 0.35),
+			"tap_select": func() -> Unit: return _villager2,
+			"done": func() -> bool:
+				for u in game.controller.own_units_selected():
+					if u.is_villager() and u != _villager:
+						_villager2 = u
+						return true
+				return false},
 		{"title": "Junta comida",
-			"text": "Elige otro aldeano y %s estas [b]bayas[/b]. La comida sirve para comprar más aldeanos.
+			"text": "Con este aldeano elegido, %s estas [b]bayas[/b]. La comida sirve para comprar más aldeanos.
 [i](Las cabras se pueden pastorear: más adelante te dan comida sin matarlas.)[/i]" % order,
 			"start": func() -> void: game.camera.focus(_food().center()),
 			"target": func() -> Array: return _ent(_food(), 0.4, 0.5),
@@ -227,17 +241,18 @@ func _finish(to_menu: bool) -> void:
 ## En el paso "selecciona un aldeano", tocar dentro del círculo lo elige siempre,
 ## aunque haya otro aldeano más cerca del dedo.
 func _input(ev: InputEvent) -> void:
-	if i < 0 or i >= steps.size() or not steps[i].get("tap_select", false):
+	if i < 0 or i >= steps.size() or not steps[i].has("tap_select"):
 		return
 	if not (ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT):
 		return
-	if target_r <= 0.0 or not Entity.live(_villager):
+	var who: Unit = steps[i]["tap_select"].call()
+	if target_r <= 0.0 or not Entity.live(who):
 		return
 	if ev.position.distance_to(target_pos) > maxf(target_r, 40.0) + 16.0:
 		return
 	get_viewport().set_input_as_handled()
 	if not ev.pressed:
-		game.controller.set_selection([_villager])
+		game.controller.set_selection([who])
 
 
 func _process(dt: float) -> void:
@@ -309,12 +324,12 @@ func _vills() -> int:
 	return n
 
 
-func _a_villager() -> Unit:
+func _a_villager(except: Unit = null) -> Unit:
 	for u in game.units:
-		if u.owner_id == game.local_id and u.is_villager() and not u.dead and u.is_idle():
+		if u != except and u.owner_id == game.local_id and u.is_villager() and not u.dead and u.is_idle():
 			return u
 	for u in game.units:
-		if u.owner_id == game.local_id and u.is_villager() and not u.dead:
+		if u != except and u.owner_id == game.local_id and u.is_villager() and not u.dead:
 			return u
 	return null
 

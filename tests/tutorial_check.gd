@@ -83,19 +83,28 @@ func _ready() -> void:
 	check(tut.i == 3, "al llegar a la marca pasa a 'Junta madera'")
 	g.order_units([tut._villager], tut._tree(), tut._tree().center(), false)
 	await _wait(g, 6.0)
-	check(tut.i == 4, "al cortar el árbol pasa a 'Junta comida'")
-	var other: Unit = null
-	for u in g.units:
-		if u.owner_id == g.local_id and u.is_villager() and u != tut._villager:
-			other = u
-			break
+	check(tut.i == 4, "al cortar el árbol pasa a 'Elige otro aldeano'")
+	g.controller.set_selection([])
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for pressed in [true, false]:
+		var ev2 := InputEventMouseButton.new()
+		ev2.button_index = MOUSE_BUTTON_LEFT
+		ev2.pressed = pressed
+		ev2.position = tut.target_pos
+		Input.parse_input_event(ev2)
+		await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var other: Unit = tut._villager2
+	check(tut.i == 5 and other != tut._villager and other in g.controller.own_units_selected(), "al tocar el otro aldeano pasa a 'Junta comida'")
 	var f := tut._food()
 	g.order_units([other], f, f.center(), false)
 	await _wait(g, 10.0)
-	check(tut.i == 5, "al juntar comida pasa a 'Compra un aldeano'")
+	check(tut.i == 6, "al juntar comida pasa a 'Compra un aldeano'")
 	g.issue({"k": "train", "e": g.main_center(g.local_id).id, "b": "aldeano"})
 	await _wait(g, 0.5)
-	check(tut.i == 6, "al comprar pasa a 'Construye una casa'")
+	check(tut.i == 7, "al comprar pasa a 'Construye una casa'")
 	var c := g.main_center(g.local_id).center()
 	var placed := false
 	for r in range(5, 14):
@@ -105,12 +114,12 @@ func _ready() -> void:
 				g.issue({"k": "place", "b": "casa", "tiles": [[t.x, t.y]], "u": [], "q": false})
 				placed = true
 	await _wait(g, 0.5)
-	check(tut.i == 7, "al poner la casa pasa a 'Tus recursos'")
+	check(tut.i == 8, "al poner la casa pasa a 'Tus recursos'")
 	tut._on_next()
 	await get_tree().process_frame
 	tut._on_next()
 	await get_tree().process_frame
-	check(tut.i == 9 and steps_last(tut), "último paso: '¡Listo!' con Seguir jugando / Ir al menú")
+	check(tut.i == 10 and steps_last(tut), "último paso: '¡Listo!' con Seguir jugando / Ir al menú")
 	tut._skip()
 	check(Account.tutorial_done(), "queda guardado que ya hizo el tutorial")
 	print("RESULTADO: %s (%d fallos)" % ["BIEN" if fails == 0 else "MAL", fails])
