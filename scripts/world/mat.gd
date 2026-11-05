@@ -57,6 +57,46 @@ static func of(c: Color) -> ShaderMaterial:
 	return m
 
 
+const TEX_SHADER_CODE := """
+shader_type spatial;
+render_mode diffuse_lambert, specular_disabled;
+uniform vec4 albedo : source_color = vec4(1.0);
+uniform sampler2D albedo_tex : source_color, filter_linear_mipmap;
+uniform sampler2D fog_tex : filter_linear, repeat_disable;
+uniform vec2 map_size = vec2(160.0);
+varying vec3 wpos;
+void vertex() {
+	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+	float f = texture(fog_tex, wpos.xz / map_size).r;
+	float m = f < 0.43 ? f * 1.16 : 0.5 + (f - 0.43) * 0.877;
+	ALBEDO = albedo.rgb * texture(albedo_tex, UV).rgb * m;
+}
+"""
+static var _tex_shader: Shader
+static var _tex_cache: Dictionary = {}
+
+
+## Material con textura (modelos .glb) que también se oscurece con la niebla de guerra.
+static func textured(tex: Texture2D, c: Color) -> ShaderMaterial:
+	var key := "%s|%s|%s" % [str(tex.get_rid()) if tex else "-", c.to_html(), str(fog_tex.get_rid()) if fog_tex else "-"]
+	if _tex_cache.has(key):
+		return _tex_cache[key]
+	if _tex_shader == null:
+		_tex_shader = Shader.new()
+		_tex_shader.code = TEX_SHADER_CODE
+	var m := ShaderMaterial.new()
+	m.shader = _tex_shader
+	m.set_shader_parameter("albedo", c)
+	if tex:
+		m.set_shader_parameter("albedo_tex", tex)
+	m.set_shader_parameter("fog_tex", fog_tex)
+	m.set_shader_parameter("map_size", map_size)
+	_tex_cache[key] = m
+	return m
+
+
 ## Material sin luz ni niebla (anillos de selección, barras de vida, fantasmas).
 static func flat(c: Color, billboard := false) -> StandardMaterial3D:
 	var key := c.to_html() + str(billboard)

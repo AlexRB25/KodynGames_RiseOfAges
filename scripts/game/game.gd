@@ -62,6 +62,8 @@ func start_match() -> void:
 			seed_v = int(arg.get_slice("=", 1))
 		elif arg.begins_with("--tipo="):
 			Setup.map_type = arg.get_slice("=", 1)
+		elif arg.begins_with("--civ=") and not Setup.players.is_empty():
+			Setup.players[Setup.local_player]["civ"] = arg.get_slice("=", 1)
 	map.setup(size)
 	var teams: Array = []
 	for i in cfg.size():
@@ -190,6 +192,8 @@ func _dev_args() -> void:
 				camera.dist = 14.0
 				camera.target_dist = 14.0
 				controller.set_selection([co])
+		elif a.begins_with("--tab=") and hud:
+			hud.set_tab(a.get_slice("=", 1))
 		elif a.begins_with("--sel=") and controller:
 			var sc := main_center(int(a.get_slice("=", 1)))
 			if sc:

@@ -81,7 +81,24 @@ static func fitted(ps: PackedScene, width: float) -> Node3D:
 	inst.scale = Vector3.ONE * s
 	var c := box.get_center()
 	inst.position = Vector3(-c.x * s, -box.position.y * s, -c.z * s)
+	_fog_materials(inst)
 	return holder
+
+
+## Cambia los materiales del modelo por unos que se oscurecen con la niebla de guerra.
+static func _fog_materials(n: Node) -> void:
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		var mi := n as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i)
+			var tex: Texture2D = null
+			var col := Color.WHITE
+			if m is BaseMaterial3D:
+				tex = (m as BaseMaterial3D).albedo_texture
+				col = (m as BaseMaterial3D).albedo_color
+			mi.set_surface_override_material(i, Mat.textured(tex, col))
+	for ch in n.get_children():
+		_fog_materials(ch)
 
 
 static func _bounds(n: Node, xf: Transform3D) -> AABB:

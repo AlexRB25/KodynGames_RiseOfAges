@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bb6ieg2fxo535"
-path="res://.godot/imported/nivel3.png-7fbe1f674fb48292123cd5eb76744ba5.ctex"
+uid="uid://cr24ylfjr0isb"
+path="res://.godot/imported/nivel2.vista.png-aa66e3bee986924d9165d76b976477c3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/civs/maya/edificios/templo/nivel3.png"
-dest_files=["res://.godot/imported/nivel3.png-7fbe1f674fb48292123cd5eb76744ba5.ctex"]
+source_file="res://assets/modelos/maya/centro/nivel2.vista.png"
+dest_files=["res://.godot/imported/nivel2.vista.png-aa66e3bee986924d9165d76b976477c3.ctex"]
 
 [params]
 

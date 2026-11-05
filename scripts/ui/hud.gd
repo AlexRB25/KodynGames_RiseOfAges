@@ -32,6 +32,7 @@ const TEXT := Color(0.96, 0.91, 0.78)
 
 func setup(g: Game) -> void:
 	game = g
+	Thumbs.clear()
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -189,7 +190,7 @@ func _build_bottom(root: Control) -> void:
 	tabs_row.add_theme_constant_override("separation", 4)
 	act.add_child(tabs_row)
 	actions = GridContainer.new()
-	actions.columns = 4
+	actions.columns = 5
 	actions.add_theme_constant_override("h_separation", 4)
 	actions.add_theme_constant_override("v_separation", 4)
 	act.add_child(actions)
@@ -534,7 +535,7 @@ func _build_button(k: String) -> void:
 			var r := game.build_block_reason(game.local_id, k)
 			if r == "" and game.controller.any_villager() == null:
 				return "No tienes aldeanos."
-			return r)
+			return r, Thumbs.get_icon(game, k))
 
 
 func _seed_button() -> void:
@@ -559,7 +560,8 @@ func _villager_tab() -> void:
 					_try(game.train_block_reason(game.local_id, cc, "aldeano"), {"k": "train", "e": cc.id, "b": "aldeano"}),
 			func() -> String:
 				var cc := game.main_center(game.local_id)
-				return game.train_block_reason(game.local_id, cc, "aldeano") if cc else "Sin centro.")
+				return game.train_block_reason(game.local_id, cc, "aldeano") if cc else "Sin centro.",
+			Thumbs.get_icon(game, "aldeano"))
 		_age_button(c)
 	_add_btn("Sin tarea", "Ir al siguiente aldeano sin tarea (tecla .)",
 		func() -> void: game.controller.select_next_idle(),
@@ -597,7 +599,8 @@ func _age_button(c: Building) -> void:
 				_try(game.age_block_reason(game.local_id, cc), {"k": "age", "e": cc.id}),
 		func() -> String:
 			var cc := game.main_center(game.local_id)
-			return game.age_block_reason(game.local_id, cc) if cc else "Sin centro.")
+			return game.age_block_reason(game.local_id, cc) if cc else "Sin centro.",
+		Art.era(p.civ, p.age + 1))
 
 
 func _selection_tab() -> void:
@@ -623,7 +626,8 @@ func _selection_tab() -> void:
 				(" · Alcance %d" % d["range"]) if d["range"] > 0 else "", d["desc"]],
 				func() -> void:
 					_try(game.train_block_reason(game.local_id, bb, kk), {"k": "train", "e": bb.id, "b": kk}),
-				func() -> String: return game.train_block_reason(game.local_id, bb, kk))
+				func() -> String: return game.train_block_reason(game.local_id, bb, kk),
+				Thumbs.get_icon(game, kk))
 		if b.kind == "mercado":
 			for r in ["comida", "madera", "piedra"]:
 				var rr: String = r
@@ -651,12 +655,20 @@ func _try(reason: String, cmd: Dictionary) -> void:
 		notify(reason, Vector2.INF)
 
 
-func _add_btn(text: String, tip: String, on_press: Callable, block: Callable) -> void:
+func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, icon: Texture2D = null) -> void:
 	var btn := Button.new()
 	btn.text = text
 	btn.tooltip_text = tip
-	btn.custom_minimum_size = Vector2(138, 40)
+	btn.custom_minimum_size = Vector2(108, 40)
 	btn.clip_text = true
+	if icon:
+		# Miniatura arriba y el nombre abajo, para reconocerlo de un vistazo.
+		btn.icon = icon
+		btn.expand_icon = true
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.custom_minimum_size = Vector2(108, 82)
+		btn.add_theme_font_size_override("font_size", 12)
 	btn.pressed.connect(on_press)
 	actions.add_child(btn)
 	_btn_specs.append([btn, block, tip])
