@@ -25,83 +25,125 @@ static func palette(age: int) -> Dictionary:
 			return {"wall": Color(0.95, 0.92, 0.84), "roof": Color(0.66, 0.22, 0.16), "trim": GOLD, "stone": Color(0.80, 0.77, 0.70)}
 
 
-## Penacho en abanico sobre la cabeza.
+## Penacho en abanico detrás de la cabeza (plumas en bloques, estilo voxel).
 static func penacho(parent: Node3D, head_y: float, n: int, length: float, colors: Array) -> void:
 	for i in n:
-		var a := (float(i) / maxf(n - 1, 1) - 0.5) * 1.6 if n > 1 else 0.0
+		var a := (float(i) / maxf(n - 1, 1) - 0.5) * 1.9 if n > 1 else 0.0
 		var f := Node3D.new()
-		f.position = Vector3(-0.05, head_y + 0.06, 0)
-		f.rotation = Vector3(a, 0, 0.35)
+		f.position = Vector3(-0.1, head_y, 0)
+		f.rotation = Vector3(a, 0, 0.45)
 		parent.add_child(f)
-		Mat.box(f, Vector3(0.03, length, 0.07), Vector3(0, length * 0.5, 0), colors[i % colors.size()])
+		Mat.box(f, Vector3(0.05, length, 0.09), Vector3(0, length * 0.5, 0), colors[i % colors.size()])
+		Mat.box(f, Vector3(0.055, length * 0.25, 0.095), Vector3(0, length * 0.9, 0), colors[i % colors.size()].lightened(0.25))
 
 
-## Cuerpo de una persona según la era. Devuelve {arm, legs, y0}.
-static var SKIN_NOW := SKIN
-
-
+## Persona chibi voxel (como el arte del juego): cabeza cúbica grande, pelo en
+## bloque con fleco, ojos cuadrados y cuerpo corto. Mira hacia +X.
+## La ropa cambia por era. Devuelve {arm, legs}.
 static func person(body: Node3D, kind: String, age: int, team: Color, y0: float, skin: Color = SKIN) -> Dictionary:
-	var SKIN := skin
 	var legs: Array[Node3D] = []
-	if kind != "jinete":
-		for lz in [-0.07, 0.07]:
-			legs.append(Mat.box(body, Vector3(0.08, 0.34, 0.08), Vector3(0, 0.17, lz), SKIN))
-		if age >= 3:
-			for lz in [-0.07, 0.07]:
-				Mat.box(body, Vector3(0.1, 0.04, 0.1), Vector3(0.01, 0.02, lz), Color(0.45, 0.32, 0.2))
 	var villager := kind == "aldeano"
-	var torso: Color
-	var cloth: Color
-	if villager:
-		torso = [SKIN, Color(0.82, 0.78, 0.66), Color(0.92, 0.89, 0.80), Color(0.94, 0.92, 0.84), team.lightened(0.35)][age - 1]
-		cloth = [Color(0.50, 0.40, 0.28), team.darkened(0.2), team, team, GOLD][age - 1]
-	else:
-		torso = [SKIN, Color(0.93, 0.90, 0.82), team, team, team][age - 1]
-		cloth = [team.darkened(0.15), team, Color(0.93, 0.90, 0.82), GOLD.darkened(0.1), GOLD][age - 1]
-	# torso y taparrabo / faja
-	Mat.box(body, Vector3(0.2, 0.36, 0.3), Vector3(0, y0 + 0.52, 0), torso)
-	Mat.box(body, Vector3(0.21, 0.08 + (0.06 if age == 1 else 0.0), 0.31), Vector3(0, y0 + 0.38, 0), cloth)
-	if age >= 2 and kind != "jinete":
-		# falda de la túnica
-		Mat.box(body, Vector3(0.22, 0.12, 0.32), Vector3(0, y0 + 0.30, 0), torso.darkened(0.06))
-	if age >= 3 and not villager:
-		# capa
-		Mat.box(body, Vector3(0.04, 0.42, 0.3), Vector3(-0.12, y0 + 0.45, 0), team.darkened(0.25))
+	var white := Color(0.93, 0.90, 0.80)
+	var red := Color(0.78, 0.18, 0.14)
+	var cloth_dark := white.darkened(0.15)
+	# piernas
+	if kind != "jinete":
+		for lz in [-0.065, 0.065]:
+			var leg := Mat.box(body, Vector3(0.09, 0.2, 0.1), Vector3(0, 0.1, lz), skin)
+			legs.append(leg)
+			Mat.box(leg, Vector3(0.11, 0.04, 0.11), Vector3(0.01, -0.08, 0), skin.darkened(0.25) if age < 3 else Color(0.45, 0.32, 0.2))
+	# torso
+	var torso := skin
+	if villager and age >= 4:
+		torso = white
+	elif not villager and age >= 2:
+		torso = [skin, white, team, team, team][age - 1]
+	Mat.box(body, Vector3(0.18, 0.22, 0.26), Vector3(0, y0 + 0.37, 0), torso)
+	# taparrabo / falda
+	Mat.box(body, Vector3(0.2, 0.09, 0.28), Vector3(0, y0 + 0.24, 0), white if villager else (team.darkened(0.2) if age < 3 else white))
+	var flap := white
+	if villager and age >= 3:
+		flap = red
+	elif not villager:
+		flap = team
+	Mat.box(body, Vector3(0.03, 0.13, 0.1), Vector3(0.1, y0 + 0.2, 0), flap)
+	if villager and age == 2:
+		# banda blanca cruzada sobre el pecho
+		Mat.box(body, Vector3(0.19, 0.06, 0.06), Vector3(0.005, y0 + 0.4, 0), white, Vector3(0.8, 0, 0))
+	if villager and age >= 4:
+		Mat.box(body, Vector3(0.185, 0.04, 0.265), Vector3(0, y0 + 0.28, 0), red)   # orilla roja de la túnica
+	if age >= 3:
+		# collar de jade (oro en era 5)
+		Mat.box(body, Vector3(0.2, 0.045, 0.28), Vector3(0, y0 + 0.47, 0), GOLD if age >= 5 else JADE)
 	if age >= 5:
-		# collar de oro / jade
-		Mat.box(body, Vector3(0.22, 0.05, 0.32), Vector3(0, y0 + 0.68, 0), GOLD if not villager else JADE)
-	# cabeza
-	Mat.ball(body, 0.12, Vector3(0, y0 + 0.82, 0), SKIN, 6)
-	Mat.box(body, Vector3(0.2, 0.08, 0.22), Vector3(-0.02, y0 + 0.9, 0), HAIR)
+		Mat.box(body, Vector3(0.21, 0.05, 0.29), Vector3(0, y0 + 0.29, 0), GOLD)   # cinturón
+		Mat.box(body, Vector3(0.04, 0.34, 0.3), Vector3(-0.12, y0 + 0.36, 0), red if villager else team.darkened(0.2))  # capa
+	elif not villager and age >= 3:
+		Mat.box(body, Vector3(0.04, 0.32, 0.28), Vector3(-0.11, y0 + 0.36, 0), team.darkened(0.25))
+	if villager and age == 4:
+		# canasta en la espalda
+		Mat.box(body, Vector3(0.12, 0.2, 0.22), Vector3(-0.16, y0 + 0.4, 0), Color(0.62, 0.45, 0.22))
+		Mat.box(body, Vector3(0.13, 0.03, 0.23), Vector3(-0.16, y0 + 0.47, 0), Color(0.5, 0.35, 0.16))
+	# cabeza grande
+	var hy := y0 + 0.64
+	Mat.box(body, Vector3(0.3, 0.29, 0.3), Vector3(0, hy, 0), skin)
+	# ojos y boca
+	for ez in [-0.065, 0.065]:
+		Mat.box(body, Vector3(0.02, 0.07, 0.045), Vector3(0.151, hy - 0.01, ez), Color(0.08, 0.06, 0.05))
+	Mat.box(body, Vector3(0.015, 0.02, 0.06), Vector3(0.151, hy - 0.09, 0), skin.darkened(0.3))
+	# pelo: casco, nuca y fleco
+	Mat.box(body, Vector3(0.32, 0.09, 0.32), Vector3(-0.005, hy + 0.15, 0), HAIR)
+	Mat.box(body, Vector3(0.12, 0.25, 0.32), Vector3(-0.105, hy + 0.02, 0), HAIR)
+	Mat.box(body, Vector3(0.04, 0.06, 0.3), Vector3(0.14, hy + 0.1, 0.0), HAIR)
+	for sz in [-0.15, 0.15]:
+		Mat.box(body, Vector3(0.18, 0.14, 0.03), Vector3(-0.04, hy + 0.06, sz), HAIR)
 	if villager:
-		if age >= 4:
-			Mat.box(body, Vector3(0.21, 0.04, 0.23), Vector3(0, y0 + 0.88, 0), team)
-			penacho(body, y0 + 0.82, 1 if age == 4 else 2, 0.22, FEATHERS)
-		if age >= 5:
-			Mat.ball(body, 0.025, Vector3(0, y0 + 0.78, 0.12), GOLD, 4)
-			Mat.ball(body, 0.025, Vector3(0, y0 + 0.78, -0.12), GOLD, 4)
+		match age:
+			2:
+				Mat.box(body, Vector3(0.315, 0.05, 0.315), Vector3(0, hy + 0.09, 0), white)
+				Mat.box(body, Vector3(0.317, 0.018, 0.317), Vector3(0, hy + 0.09, 0), red)
+			3:
+				Mat.box(body, Vector3(0.1, 0.1, 0.1), Vector3(-0.08, hy + 0.23, 0), HAIR)   # chongo
+				Mat.box(body, Vector3(0.11, 0.03, 0.11), Vector3(-0.08, hy + 0.2, 0), red)
+				for ez in [-0.155, 0.155]:
+					Mat.box(body, Vector3(0.05, 0.05, 0.02), Vector3(0.0, hy - 0.04, ez), JADE)
+			4:
+				Mat.box(body, Vector3(0.32, 0.07, 0.32), Vector3(0, hy + 0.12, 0), GOLD)    # diadema
+				Mat.box(body, Vector3(0.03, 0.08, 0.08), Vector3(0.165, hy + 0.12, 0), JADE)
+				for ez in [-0.16, 0.16]:
+					Mat.box(body, Vector3(0.06, 0.06, 0.03), Vector3(0.0, hy - 0.04, ez), JADE)
+			5:
+				Mat.box(body, Vector3(0.33, 0.1, 0.33), Vector3(0, hy + 0.14, 0), GOLD)
+				Mat.box(body, Vector3(0.04, 0.12, 0.12), Vector3(0.17, hy + 0.16, 0), JADE)
+				for ez in [-0.165, 0.165]:
+					Mat.box(body, Vector3(0.07, 0.07, 0.03), Vector3(0.0, hy - 0.04, ez), GOLD)
+				penacho(body, hy + 0.14, 7, 0.34, [Color(0.10, 0.62, 0.45), Color(0.12, 0.55, 0.40), Color(0.15, 0.70, 0.52)])
 	else:
 		match age:
 			1:
-				Mat.box(body, Vector3(0.21, 0.04, 0.23), Vector3(0, y0 + 0.88, 0), team.darkened(0.2))
+				Mat.box(body, Vector3(0.315, 0.04, 0.315), Vector3(0, hy + 0.09, 0), team.darkened(0.2))
 			2:
-				Mat.box(body, Vector3(0.21, 0.05, 0.23), Vector3(0, y0 + 0.88, 0), team)
-				penacho(body, y0 + 0.82, 1, 0.22, [FEATHERS[0]])
+				Mat.box(body, Vector3(0.315, 0.05, 0.315), Vector3(0, hy + 0.1, 0), team)
+				penacho(body, hy + 0.14, 1, 0.24, [FEATHERS[0]])
 			3:
-				Mat.box(body, Vector3(0.23, 0.06, 0.25), Vector3(0, y0 + 0.9, 0), team)
-				penacho(body, y0 + 0.82, 3, 0.28, FEATHERS)
+				Mat.box(body, Vector3(0.33, 0.07, 0.33), Vector3(0, hy + 0.12, 0), team)
+				penacho(body, hy + 0.14, 3, 0.28, FEATHERS)
 			4:
 				# casco de jaguar/águila
-				Mat.box(body, Vector3(0.26, 0.14, 0.27), Vector3(0.02, y0 + 0.92, 0), Color(0.85, 0.65, 0.2))
-				Mat.box(body, Vector3(0.1, 0.06, 0.2), Vector3(0.14, y0 + 0.9, 0), Color(0.95, 0.85, 0.5))
-				penacho(body, y0 + 0.86, 5, 0.34, FEATHERS)
+				Mat.box(body, Vector3(0.34, 0.16, 0.34), Vector3(0.0, hy + 0.12, 0), Color(0.85, 0.65, 0.2))
+				Mat.box(body, Vector3(0.12, 0.06, 0.26), Vector3(0.17, hy + 0.11, 0), Color(0.95, 0.85, 0.5))
+				penacho(body, hy + 0.16, 5, 0.34, FEATHERS)
 			_:
-				Mat.box(body, Vector3(0.27, 0.15, 0.28), Vector3(0.02, y0 + 0.92, 0), GOLD)
-				penacho(body, y0 + 0.88, 7, 0.46, FEATHERS)
+				Mat.box(body, Vector3(0.35, 0.17, 0.35), Vector3(0.0, hy + 0.13, 0), GOLD)
+				penacho(body, hy + 0.18, 7, 0.44, FEATHERS)
+	# brazos (uno se mueve al trabajar/atacar; el otro queda quieto)
+	var sleeve := torso if (villager and age >= 4) or (not villager and age >= 2) else skin
+	Mat.box(body, Vector3(0.07, 0.22, 0.07), Vector3(0, y0 + 0.37, -0.165), sleeve)
 	var arm := Node3D.new()
-	arm.position = Vector3(0, y0 + 0.66, 0.2)
+	arm.position = Vector3(0, y0 + 0.47, 0.165)
 	body.add_child(arm)
-	Mat.box(arm, Vector3(0.07, 0.28, 0.07), Vector3(0, -0.12, 0), torso if age >= 2 and villager else SKIN)
-	if age >= 4:
-		Mat.box(arm, Vector3(0.08, 0.04, 0.08), Vector3(0, -0.2, 0), GOLD if age >= 5 else JADE)
+	Mat.box(arm, Vector3(0.07, 0.22, 0.07), Vector3(0, -0.1, 0), sleeve)
+	Mat.box(arm, Vector3(0.075, 0.06, 0.075), Vector3(0, -0.2, 0), skin)
+	if age >= 3:
+		Mat.box(arm, Vector3(0.08, 0.035, 0.08), Vector3(0, -0.05, 0), GOLD if age >= 4 else JADE)
 	return {"arm": arm, "legs": legs}

@@ -539,7 +539,7 @@ func _build_button(k: String) -> void:
 
 
 func _seed_button() -> void:
-	_add_btn("Comprar siembra", "Comprar 1 siembra (%s) en el Centro.\nCada siembra = 1 granja de 4 cuadros.\nPuedes guardar varias: cuando una granja se acaba, se resiembra sola." % Defs.cost_text(Defs.SEED_COST),
+	_add_btn("Siembra", "Comprar 1 siembra (%s) en el Centro.\nCada siembra = 1 granja de 4 cuadros.\nPuedes guardar varias: cuando una granja se acaba, se resiembra sola." % Defs.cost_text(Defs.SEED_COST),
 		func() -> void:
 			if game.players[game.local_id].can_afford(Defs.SEED_COST):
 				game.issue({"k": "seed"})
@@ -553,7 +553,7 @@ func _villager_tab() -> void:
 	var c := game.main_center(game.local_id)
 	if c:
 		var d: Dictionary = Defs.UNITS["aldeano"]
-		_add_btn("Entrenar aldeano", "Comprar un aldeano en el Centro principal.\nCosto: %s\nNecesitas espacio de población (casas)." % Defs.cost_text(Defs.cost_of("aldeano", game.players[game.local_id].civ)),
+		_add_btn("Aldeano", "Entrenar un aldeano en el Centro principal.\nCosto: %s\nNecesitas espacio de población (casas)." % Defs.cost_text(Defs.cost_of("aldeano", game.players[game.local_id].civ)),
 			func() -> void:
 				var cc := game.main_center(game.local_id)
 				if cc:
@@ -566,7 +566,7 @@ func _villager_tab() -> void:
 	_add_btn("Sin tarea", "Ir al siguiente aldeano sin tarea (tecla .)",
 		func() -> void: game.controller.select_next_idle(),
 		func() -> String: return "" if not game.controller.idle_villagers().is_empty() else "Todos trabajan.")
-	_add_btn("Todos los aldeanos", "Seleccionar a todos tus aldeanos",
+	_add_btn("Todos", "Seleccionar a todos tus aldeanos",
 		func() -> void:
 			var all: Array = []
 			for u in game.units:
@@ -591,7 +591,7 @@ func _age_button(c: Building) -> void:
 	var req := ""
 	for r in nxt["req"]:
 		req += "\n· " + r[2]
-	_add_btn("Avanzar a %s" % nxt["name"], "Avanzar a la era %s (en el Centro)\nCosto: %s\nRequisitos:%s" % [
+	_add_btn("Subir de era", "Avanzar a la era %s (en el Centro)\nCosto: %s\nRequisitos:%s" % [
 		nxt["name"], Defs.cost_text(nxt["cost"]), req],
 		func() -> void:
 			var cc := game.main_center(game.local_id)

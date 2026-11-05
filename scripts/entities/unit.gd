@@ -683,7 +683,7 @@ func _build_visual() -> void:
 			Mat.box(body, Vector3(0.08, 0.32, 0.08), Vector3(-0.14, y0 + 0.6, 0.05), Color(0.5, 0.35, 0.2), Vector3(0.3, 0, 0))
 		"jinete":
 			Mat.box(arm, Vector3(0.03, 1.1, 0.03), Vector3(0.1, -0.1, 0), wood, Vector3(0, 0, 1.3))
-	carry_box = Mat.box(body, Vector3(0.14, 0.14, 0.14), Vector3(-0.17, y0 + 0.58, 0), Color.WHITE)
+	carry_box = Mat.box(body, Vector3(0.14, 0.14, 0.14), Vector3(-0.17, y0 + 0.42, 0), Color.WHITE)
 	carry_box.visible = false
 	idle_label = Label3D.new()
 	idle_label.text = "!"
@@ -692,7 +692,7 @@ func _build_visual() -> void:
 	idle_label.modulate = Color(1, 0.85, 0.2)
 	idle_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	idle_label.no_depth_test = true
-	idle_label.position = Vector3(0, y0 + 1.35, 0)
+	idle_label.position = Vector3(0, y0 + 1.25, 0)
 	idle_label.pixel_size = 0.006
 	idle_label.visible = idle_notice != "" and owner_id == game.local_id
 	add_child(idle_label)

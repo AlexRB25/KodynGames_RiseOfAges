@@ -192,6 +192,18 @@ func _dev_args() -> void:
 				camera.dist = 14.0
 				camera.target_dist = 14.0
 				controller.set_selection([co])
+		elif a == "--desfile":
+			# Desarrollo: aldeanos y guerreros de las 5 eras en fila junto a tu centro.
+			var dc := main_center(local_id).center() + Vector2(5, -3)
+			var real_age := players[local_id].age
+			for era in range(1, 6):
+				players[local_id].age = era
+				spawn_unit("aldeano", local_id, dc + Vector2(era * 1.1, 0))
+				spawn_unit("guerrero", local_id, dc + Vector2(era * 1.1, -1.4))
+			players[local_id].age = real_age
+			camera.focus(dc + Vector2(3.3, -0.7))
+			camera.dist = 7.0
+			camera.target_dist = 7.0
 		elif a.begins_with("--tab=") and hud:
 			hud.set_tab(a.get_slice("=", 1))
 		elif a.begins_with("--sel=") and controller:
