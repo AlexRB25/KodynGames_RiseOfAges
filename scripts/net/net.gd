@@ -66,6 +66,11 @@ func join_room(name: String, code: String) -> void:
 ## Buscar partida con rango (1v1, 2v2 o 4v4): el servidor empareja por puntos.
 func queue(mode: String, civ: String) -> void:
 	player_name = Account.player_name if Account.player_name != "" else player_name
+	if Account.accounts_ready() and not Account.signed_in():
+		var err: String = await Account.sign_in()
+		if err != "":
+			failed.emit(err)
+			return
 	var token: String = await Account.server_token()
 	open_and({"t": "queue", "v": PROTOCOL, "mode": mode, "civ": civ, "name": player_name, "token": token})
 	queue_info = {"mode": mode, "waiting": 0, "need": 0}
