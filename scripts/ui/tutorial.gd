@@ -126,7 +126,14 @@ func _steps() -> Array:
 				_villager = _a_villager()
 				game.camera.focus(_villager.pos),
 			"target": func() -> Array: return _ent(_villager, 0.4, 0.35),
-			"done": func() -> bool: return _villager in game.controller.own_units_selected()},
+			"tap_select": true,
+			"done": func() -> bool:
+				# Vale cualquier aldeano tuyo: seguimos con el que eligió.
+				for u in game.controller.own_units_selected():
+					if u.is_villager():
+						_villager = u
+						return true
+				return false},
 		{"title": "Muévelo",
 			"text": ("Ahora toca el lugar marcado: tu aldeano caminará hasta ahí.\n[i](También puedes dejar el dedo sobre el aldeano y arrastrarlo.)[/i]" if _touch()
 				else "Con el aldeano elegido, haz [b]clic derecho[/b] en el lugar marcado para que camine hasta ahí."),
@@ -215,6 +222,22 @@ func _finish(to_menu: bool) -> void:
 		get_tree().change_scene_to_file("res://scenes/menu.tscn")
 		return
 	queue_free()
+
+
+## En el paso "selecciona un aldeano", tocar dentro del círculo lo elige siempre,
+## aunque haya otro aldeano más cerca del dedo.
+func _input(ev: InputEvent) -> void:
+	if i < 0 or i >= steps.size() or not steps[i].get("tap_select", false):
+		return
+	if not (ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if target_r <= 0.0 or not Entity.live(_villager):
+		return
+	if ev.position.distance_to(target_pos) > maxf(target_r, 40.0) + 16.0:
+		return
+	get_viewport().set_input_as_handled()
+	if not ev.pressed:
+		game.controller.set_selection([_villager])
 
 
 func _process(dt: float) -> void:

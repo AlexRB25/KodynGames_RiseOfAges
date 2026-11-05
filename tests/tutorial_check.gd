@@ -42,10 +42,20 @@ func _ready() -> void:
 	tut._on_next()
 	await get_tree().process_frame
 	check(tut.i == 1, "paso 2: seleccionar un aldeano")
-	g.controller.set_selection([tut._villager])
+	# Tocar dentro del círculo (como con el dedo), no por código.
+	g.controller.set_selection([])
 	await get_tree().process_frame
 	await get_tree().process_frame
-	check(tut.i == 2, "al elegirlo pasa a 'Muévelo'")
+	for pressed in [true, false]:
+		var ev := InputEventMouseButton.new()
+		ev.button_index = MOUSE_BUTTON_LEFT
+		ev.pressed = pressed
+		ev.position = tut.target_pos + Vector2(0, tut.target_r * 0.7)
+		Input.parse_input_event(ev)
+		await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(tut.i == 2, "al tocar el círculo pasa a 'Muévelo'")
 	g.order_units([tut._villager], null, tut._spot, false)
 	await _wait(g, 8.0)
 	check(tut.i == 3, "al llegar a la marca pasa a 'Junta madera'")
