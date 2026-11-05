@@ -217,6 +217,21 @@ func _build_bottom(root: Control) -> void:
 	info.add_child(info_body)
 	queue_box = HBoxContainer.new()
 	info.add_child(queue_box)
+	preview_row = HBoxContainer.new()
+	preview_row.add_theme_constant_override("separation", 8)
+	preview_row.visible = false
+	info.add_child(preview_row)
+	preview_ok = Button.new()
+	preview_ok.custom_minimum_size = Vector2(150, 44)
+	preview_ok.add_theme_font_size_override("font_size", 17)
+	preview_ok.pressed.connect(_preview_confirm)
+	preview_row.add_child(preview_ok)
+	var back := Button.new()
+	back.text = "Volver"
+	back.custom_minimum_size = Vector2(110, 44)
+	back.add_theme_font_size_override("font_size", 17)
+	back.pressed.connect(func() -> void: _set_preview({}))
+	preview_row.add_child(back)
 	# Minimapa en rombo abajo a la derecha (PC/Web). En celular/tablet: botón "Mapa".
 	minimap = Minimap.new()
 	minimap.custom_minimum_size = Vector2(400, 200)
@@ -509,6 +524,7 @@ func _rebuild_actions() -> void:
 	for c in actions.get_children():
 		c.queue_free()
 	_btn_specs.clear()
+	_preview = {}
 	match tab:
 		"campo":
 			for k in CAMPO:
@@ -669,7 +685,35 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.custom_minimum_size = Vector2(108, 82)
 		btn.add_theme_font_size_override("font_size", 12)
-	btn.pressed.connect(on_press)
+	# Lo que cuesta algo se puede ver antes de comprarlo: en celular el primer toque
+	# muestra la información con "Comprar"; en PC, al pasar el mouse.
+	var costs := tip.contains("Costo") or text.begins_with("Comprar") or text.begins_with("Vender") or text == "Siembra"
+	if costs:
+		var verb := "Comprar"
+		var close := false
+		if tip.contains("Si no tienes aldeanos seleccionados"):
+			verb = "Construir"
+			close = true
+		elif text == "Subir de era":
+			verb = "Subir de era"
+			close = true
+		elif text.begins_with("Vender"):
+			verb = "Vender"
+		var spec := {"name": text, "tip": tip, "press": on_press, "block": block, "icon": icon, "verb": verb, "close": close}
+		btn.pressed.connect(func() -> void:
+			if is_touch():
+				_set_preview(spec)
+			else:
+				on_press.call())
+		btn.mouse_entered.connect(func() -> void:
+			if not is_touch():
+				spec["hover"] = true
+				_set_preview(spec))
+		btn.mouse_exited.connect(func() -> void:
+			if not is_touch() and _preview.get("name", "") == text:
+				_set_preview({}))
+	else:
+		btn.pressed.connect(on_press)
 	actions.add_child(btn)
 	_btn_specs.append([btn, block, tip])
 
@@ -685,9 +729,64 @@ func _refresh_buttons() -> void:
 		btn.tooltip_text = s[2] + ("\n\n" + reason if reason != "" else "")
 
 
+var preview_row: HBoxContainer
+var preview_ok: Button
+var _preview: Dictionary = {}
+
+
+func _set_preview(spec: Dictionary) -> void:
+	_preview = spec
+	_refresh_info()
+
+
+func _preview_confirm() -> void:
+	if _preview.is_empty():
+		return
+	var spec := _preview
+	spec["press"].call()
+	if spec.get("close", false):
+		_set_preview({})
+	else:
+		_refresh_info()
+
+
+## Costo con los iconos de cada recurso, para leerlo de un vistazo.
+static func _cost_icons(t: String) -> String:
+	var re := RegEx.new()
+	re.compile("(\\d+) (alimento|madera|oro|piedra)")
+	return re.sub(t, "[img=22]res://assets/ui/iconos/$2.png[/img] [b]$1[/b]", true)
+
+
+func _render_preview() -> void:
+	var spec := _preview
+	info_title.text = String(spec["name"])
+	var reason: String = spec["block"].call()
+	var lines: Array[String] = []
+	for ln in String(spec["tip"]).split("\n"):
+		if ln.begins_with("Costo:"):
+			lines.append("Costo: " + _cost_icons(ln.trim_prefix("Costo:").strip_edges()))
+		elif ln.strip_edges() != "" and ln != spec["name"] and not ln.begins_with("Si no tienes aldeanos"):
+			lines.append(ln)
+	if reason != "":
+		lines.append("[color=#ff8a7a]%s[/color]" % ("Te faltan recursos." if reason == "Faltan recursos." else reason))
+	info_body.text = "\n".join(lines)
+	var ic: Texture2D = spec.get("icon")
+	portrait.texture = ic
+	portrait.visible = ic != null
+	var hover: bool = spec.get("hover", false)
+	preview_row.visible = not hover
+	preview_ok.text = String(spec["verb"])
+	preview_ok.disabled = reason != ""
+
+
 func _refresh_info() -> void:
 	for c in queue_box.get_children():
 		c.queue_free()
+	if not _preview.is_empty():
+		_render_preview()
+		return
+	if preview_row:
+		preview_row.visible = false
 	var sel: Array = []
 	for e in game.controller.selection:
 		if Entity.valid(e):

@@ -206,6 +206,12 @@ func _dev_args() -> void:
 			camera.target_dist = 7.0
 		elif a.begins_with("--tab=") and hud:
 			hud.set_tab(a.get_slice("=", 1))
+		elif a.begins_with("--ver=") and hud:
+			# Desarrollo: abrir la información de un botón como si se tocara en el celular.
+			var want := a.get_slice("=", 1)
+			for spec in hud._btn_specs:
+				if spec[0].text == want:
+					spec[0].pressed.emit()
 		elif a.begins_with("--sel=") and controller:
 			var sc := main_center(int(a.get_slice("=", 1)))
 			if sc:
@@ -791,7 +797,7 @@ func build_block_reason(owner: int, k: String) -> String:
 	var d: Dictionary = Defs.BUILDINGS[k]
 	var p := players[owner]
 	if d.get("age", 1) > p.age:
-		return "Requiere la era %s." % Defs.AGES[d["age"] - 1]["name"]
+		return "Requiere el nivel %d (%s)." % [d["age"], Defs.AGES[d["age"] - 1]["name"]]
 	if d.get("seed", false) and p.seeds <= 0:
 		return "No tienes siembras. Cómpralas en el Centro."
 	if d.has("needs") and count_buildings(owner, [d["needs"]]) == 0:
@@ -849,7 +855,7 @@ func train_block_reason(owner: int, b: Building, k: String) -> String:
 	if not b.can_train(k):
 		return "Este edificio no lo entrena."
 	if Defs.UNITS[k].get("age", 1) > p.age:
-		return "Requiere la era %s." % Defs.AGES[Defs.UNITS[k]["age"] - 1]["name"]
+		return "Requiere el nivel %d (%s)." % [Defs.UNITS[k]["age"], Defs.AGES[Defs.UNITS[k]["age"] - 1]["name"]]
 	if b.queue.size() >= 10:
 		return "La cola está llena."
 	if not p.can_afford(Defs.cost_of(k, p.civ)):
