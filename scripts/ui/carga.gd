@@ -28,6 +28,8 @@ var game: Game
 
 
 func _ready() -> void:
+	# Esta escena se queda como base de la partida: no debe quedarse con los toques.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui = CanvasLayer.new()
 	ui.layer = 50
 	add_child(ui)
@@ -122,6 +124,8 @@ func _on_loaded() -> void:
 	bar.value = 1.0
 	status.text = "¡Listo!"
 	var root: Control = ui.get_child(0)
+	# Mientras se desvanece ya se puede tocar el mapa.
+	root.propagate_call("set_mouse_filter", [Control.MOUSE_FILTER_IGNORE])
 	var tw := create_tween()
 	tw.tween_interval(0.15)
 	tw.tween_property(root, "modulate:a", 0.0, 0.45)

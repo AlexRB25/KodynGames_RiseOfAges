@@ -15,9 +15,13 @@ $proj = $proj -replace 'config/version="[^"]*"', "config/version=""$nueva"""
 [IO.File]::WriteAllText("$raiz\project.godot", $proj, (New-Object Text.UTF8Encoding $false))
 Write-Host "Versión: V$nueva"
 
-# 2. Exportar la web.
+# 2. Exportar la web (Godot escribe avisos en stderr: no deben detener el script).
+$ErrorActionPreference = "Continue"
+$antes = (Get-Item server/public/jugar/index.pck -ErrorAction SilentlyContinue).LastWriteTime
 & $godot --headless --path . --export-release "Web" server/public/jugar/index.html 2>&1 | Out-Null
-if (-not (Test-Path server/public/jugar/index.pck)) { throw "La exportación web falló" }
+$despues = (Get-Item server/public/jugar/index.pck -ErrorAction SilentlyContinue).LastWriteTime
+if ($null -eq $despues -or $despues -eq $antes) { throw "La exportación web falló" }
+$ErrorActionPreference = "Stop"
 Remove-Item server/public/jugar/*.import -ErrorAction SilentlyContinue
 
 # 3. Commit y push.
