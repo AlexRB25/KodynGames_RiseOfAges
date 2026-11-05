@@ -43,10 +43,17 @@ function serveStatic(req, res) {
       return res.end('No encontrado');
     }
     const ext = path.extname(file).toLowerCase();
+    // El juego (.pck/.wasm/.js) y las páginas: el navegador siempre pregunta si cambió
+    // (si no, recibe 304 sin volver a bajarlo); así una versión nueva llega al recargar.
+    const fresh = ['.html', '.pck', '.wasm', '.js', '.json'].includes(ext);
+    const etag = '"' + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
     const headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
+      'Cache-Control': fresh ? 'no-cache' : 'public, max-age=3600',
+      'ETag': etag,
+      'Last-Modified': st.mtime.toUTCString(),
     };
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
     const gzipOk = /\bgzip\b/.test(req.headers['accept-encoding'] || '') &&
       ['.wasm', '.pck', '.js', '.html', '.css', '.json', '.svg'].includes(ext);
     if (!gzipOk) {
