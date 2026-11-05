@@ -428,6 +428,7 @@ func notify(text: String, _p: Vector2) -> void:
 func _process(dt: float) -> void:
 	if game == null:
 		return
+	_tick_hold(dt)
 	var p := game.players[game.local_id]
 	for r in Defs.RES:
 		res_labels[r].text = str(int(p.res[r]))
@@ -701,10 +702,18 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 			verb = "Vender"
 		var spec := {"name": text, "tip": tip, "press": on_press, "block": block, "icon": icon, "verb": verb, "close": close}
 		btn.pressed.connect(func() -> void:
-			if is_touch():
-				_set_preview(spec)
-			else:
+			if not is_touch():
 				on_press.call())
+		# Celular: toque corto = ver información; dejar el dedo = comprar (barra que se llena).
+		btn.button_down.connect(func() -> void:
+			if is_touch():
+				_hold = {"spec": spec, "btn": btn, "t": 0.0, "fired": false})
+		btn.button_up.connect(func() -> void:
+			if is_touch() and _hold.get("btn") == btn:
+				var fired: bool = _hold["fired"]
+				_end_hold()
+				if not fired:
+					_set_preview(spec))
 		btn.mouse_entered.connect(func() -> void:
 			if not is_touch():
 				spec["hover"] = true
@@ -732,6 +741,77 @@ func _refresh_buttons() -> void:
 var preview_row: HBoxContainer
 var preview_ok: Button
 var _preview: Dictionary = {}
+
+
+const HOLD_TIME := 1.2   # segundos con el dedo encima para comprar uno
+var _hold: Dictionary = {}
+
+
+func _hold_bar(btn: Button) -> ProgressBar:
+	var bar := btn.get_node_or_null("Llenado") as ProgressBar
+	if bar == null:
+		bar = ProgressBar.new()
+		bar.name = "Llenado"
+		bar.show_percentage = false
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		bar.offset_top = 3
+		bar.offset_left = 4
+		bar.offset_right = -4
+		bar.offset_bottom = 10
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color(0, 0, 0, 0.6)
+		bg.set_corner_radius_all(3)
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = Color(1.0, 0.8, 0.3)
+		fill.set_corner_radius_all(3)
+		bar.add_theme_stylebox_override("background", bg)
+		bar.add_theme_stylebox_override("fill", fill)
+		bar.max_value = 1.0
+		btn.add_child(bar)
+	return bar
+
+
+func _tick_hold(dt: float) -> void:
+	if _hold.is_empty():
+		return
+	var btn: Button = _hold["btn"]
+	if not is_instance_valid(btn):
+		_hold = {}
+		return
+	var spec: Dictionary = _hold["spec"]
+	if _hold["t"] < -1.0:
+		return   # ya compró lo que tocaba; espera a que suelte el dedo
+	_hold["t"] += dt
+	var bar := _hold_bar(btn)
+	bar.visible = true
+	bar.value = clampf(_hold["t"] / HOLD_TIME, 0.0, 1.0)
+	if _hold["t"] < HOLD_TIME:
+		return
+	_hold["t"] = 0.0
+	_hold["fired"] = true
+	var reason: String = spec["block"].call()
+	if reason != "":
+		notify("Te faltan recursos." if reason == "Faltan recursos." else reason, Vector2.INF)
+		_end_hold(true)
+		return
+	spec["press"].call()
+	if spec.get("close", false):
+		_end_hold(true)   # construir o subir de era: solo una vez
+
+
+func _end_hold(keep_fired := false) -> void:
+	if _hold.is_empty():
+		return
+	var btn: Button = _hold["btn"]
+	if is_instance_valid(btn):
+		var bar := btn.get_node_or_null("Llenado")
+		if bar:
+			bar.visible = false
+	if keep_fired:
+		_hold["t"] = -INF   # sigue "presionado" pero ya no compra más hasta soltar
+	else:
+		_hold = {}
 
 
 func _set_preview(spec: Dictionary) -> void:

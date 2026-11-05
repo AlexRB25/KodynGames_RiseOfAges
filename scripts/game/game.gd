@@ -206,6 +206,12 @@ func _dev_args() -> void:
 			camera.target_dist = 7.0
 		elif a.begins_with("--tab=") and hud:
 			hud.set_tab(a.get_slice("=", 1))
+		elif a.begins_with("--mantener=") and hud:
+			# Desarrollo: simula dejar el dedo sobre un botón.
+			var want2 := a.get_slice("=", 1)
+			for spec in hud._btn_specs:
+				if spec[0].text == want2:
+					spec[0].button_down.emit()
 		elif a.begins_with("--ver=") and hud:
 			# Desarrollo: abrir la información de un botón como si se tocara en el celular.
 			var want := a.get_slice("=", 1)
