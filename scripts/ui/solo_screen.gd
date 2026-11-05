@@ -282,4 +282,4 @@ func _play() -> void:
 	Setup.map_size = ["pequeno", "mediano", "grande"][size_opt.selected]
 	Setup.map_type = Defs.MAP_TYPE_ORDER[type_opt.selected]
 	Setup.seed_value = 0
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	get_tree().change_scene_to_file("res://scenes/carga.tscn")

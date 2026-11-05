@@ -194,7 +194,7 @@ func _ready() -> void:
 			return
 		lobby_box.visible = false
 		online_box.visible = true)
-	Net.started.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/game.tscn"))
+	Net.started.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/carga.tscn"))
 	Setup.online = false
 	Net.close()
 	# Pantalla principal nueva (tu aldeano, formas de juego, tienda, configuración).
@@ -256,7 +256,7 @@ func start_tutorial() -> void:
 	Setup.map_size = "pequeno"
 	Setup.map_type = "valle"
 	Setup.seed_value = 4242
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	get_tree().change_scene_to_file("res://scenes/carga.tscn")
 
 
 ## Tu civilización favorita queda elegida en todas las formas de juego.
@@ -401,7 +401,7 @@ func _start() -> void:
 	Setup.map_size = ["pequeno", "mediano", "grande"][size_opt.selected]
 	Setup.map_type = Defs.MAP_TYPE_ORDER[type_opt.selected]
 	Setup.seed_value = 0
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	get_tree().change_scene_to_file("res://scenes/carga.tscn")
 
 
 func _warn(t: String) -> void:

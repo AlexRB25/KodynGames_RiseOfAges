@@ -9,6 +9,7 @@ var seed_value := 0
 var local_player := 0
 var online := false
 var tutorial := false   # partida guiada (rival que no ataca)
+var loading := false    # se está creando desde la pantalla de carga (avisa el avance)
 
 
 func _ready() -> void:

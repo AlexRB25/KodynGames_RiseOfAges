@@ -46,9 +46,22 @@ var _local_cmds: Array = []
 var stop_at_tick := -1                # pruebas: no pasar de este paso
 
 
+signal loading(p: float, text: String)   # avance para la pantalla de carga
+signal loaded
+
+
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
 	start_match()
+
+
+## Avisa el avance a la pantalla de carga y la deja dibujarse (solo si hay pantalla de carga).
+func _phase(p: float, text: String) -> void:
+	if not Setup.loading:
+		return
+	loading.emit(p, text)
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 
 func start_match() -> void:
@@ -69,6 +82,7 @@ func start_match() -> void:
 			seed_v = 4242
 		elif arg.begins_with("--civ=") and not Setup.players.is_empty():
 			Setup.players[Setup.local_player]["civ"] = arg.get_slice("=", 1)
+	await _phase(0.05, "Creando el mapa…")
 	map.setup(size)
 	var teams: Array = []
 	for i in cfg.size():
@@ -92,6 +106,7 @@ func start_match() -> void:
 		teams.append(p.team)
 	var plan := MapGen.new().generate(map, cfg.size(), teams, seed_v, Setup.map_type)
 	map_type = String(plan.get("type", ""))
+	await _phase(0.45, "Dibujando el terreno…")
 	fog.setup(map)
 	Mat.setup(fog.texture, Vector2(size, size))
 
@@ -102,6 +117,7 @@ func start_match() -> void:
 	var tv := TerrainView.new()
 	tv.build(map, fog.texture)
 	_world.add_child(tv)
+	await _phase(0.7, "Poniendo árboles y animales…")
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
@@ -120,6 +136,7 @@ func start_match() -> void:
 	for p in players:
 		if p.is_bot:
 			bots.append(Bot.new(self, p.id))
+	await _phase(0.92, "Preparando tu pueblo…")
 
 	if not headless:
 		camera = RtsCamera.new()
@@ -142,6 +159,8 @@ func start_match() -> void:
 	_update_fog()
 	if online:
 		Net.attach(self)
+	_started = true
+	loaded.emit()
 	_dev_args()
 
 
@@ -445,7 +464,12 @@ func on_attacked(e: Entity, from: Entity) -> void:
 
 # ---------------- simulación ----------------
 
+var _started := false   # ya terminó de crear la partida
+
+
 func _process(delta: float) -> void:
+	if not _started:
+		return
 	if online:
 		_process_online(delta)
 	elif not paused and not over:
