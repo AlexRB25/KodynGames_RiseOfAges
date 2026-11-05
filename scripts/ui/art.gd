@@ -68,19 +68,36 @@ static func model(civ: String, id: String, age: int) -> PackedScene:
 	return null
 
 
+## Modelo de una etapa de un recurso: assets/modelos/recursos/<tipo>/etapaN.glb
+## (N = 100, 75, 50, 25 o 0). null si no existe.
+static func stage_model(kind: String, stage: int) -> PackedScene:
+	return stage_model_file(kind, "etapa%d" % stage)
+
+
+## Otro modelo de un recurso o animal: assets/modelos/recursos/<tipo>/<nombre>.glb
+static func stage_model_file(kind: String, file: String) -> PackedScene:
+	var rel := "modelos/recursos/%s/%s.glb" % [kind, file]
+	if not _cache.has(rel):
+		var path := ROOT + rel
+		_cache[rel] = load(path) if ResourceLoader.exists(path) else null
+	return _cache[rel]
+
+
 ## Instancia un modelo y lo ajusta: base en el suelo, centrado, y lo ancho del
-## modelo ocupa "width" unidades (las casillas del edificio).
-static func fitted(ps: PackedScene, width: float) -> Node3D:
+## modelo ocupa "width" unidades (las casillas del edificio). by_x: medir solo
+## el ancho de frente (el del dibujo) en vez del lado más largo.
+## sink: fracción del alto que queda bajo el suelo (la base de pasto del dibujo).
+static func fitted(ps: PackedScene, width: float, by_x := false, sink := 0.0) -> Node3D:
 	var inst := ps.instantiate() as Node3D
 	var box := _bounds(inst, Transform3D.IDENTITY)
 	var holder := Node3D.new()
 	holder.add_child(inst)
 	if box.size == Vector3.ZERO:
 		return holder
-	var s := width / maxf(box.size.x, box.size.z)
+	var s := width / (box.size.x if by_x else maxf(box.size.x, box.size.z))
 	inst.scale = Vector3.ONE * s
 	var c := box.get_center()
-	inst.position = Vector3(-c.x * s, -box.position.y * s, -c.z * s)
+	inst.position = Vector3(-c.x * s, -(box.position.y + box.size.y * sink) * s, -c.z * s)
 	_fog_materials(inst)
 	return holder
 

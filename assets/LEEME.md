@@ -62,6 +62,18 @@ assets/modelos/<civilizacion>/<edificio>/nivelN.glb     ej. assets/modelos/maya/
 - **Después de agregar modelos:** primero `godot --headless --path . --import`, luego `python tools/ajustar_texturas_modelos.py` y otra vez el import. Así las texturas quedan en 512 px: cada edificio pesa unos 260 KB en la web en vez de 6 MB.
 - **La imagen para Meshy:** un solo edificio, vista 3/4 desde arriba, completo y sin cortar, con fondo liso o transparente, sin pasto alrededor ni texto.
 
+**Recursos del mapa por etapas** (árbol, pino, arbusto, oro, piedra, cabra):
+
+```
+assets/modelos/recursos/<tipo>/etapa100.glb  etapa75  etapa50  etapa25   (árbol: también etapa0 = tocón)
+assets/modelos/recursos/cabra/viva.glb       la cabra viva (sin pasto); muerta usa etapa75/50/25
+```
+
+- Cambian de modelo según lo que les queda (más de 75 %, 50 %, 25 %…).
+- Al acabarse un árbol queda su tocón 2-3 minutos y luego desaparece.
+- La base de pasto del dibujo se hunde bajo el suelo para que el recurso quede sobre el piso del mapa (STAGE_SINK en `scripts/entities/resource_node.gd`).
+- Vista rápida de todas las etapas: `godot --path . tests/recursos_vista.tscn -- --shot=vista.png`.
+
 Los personajes (aldeanos, guerreros) todavía son figuras hechas por código. Con Meshy se pueden hacer con esqueleto y animaciones, pero primero hay que probar el rendimiento con muchos en pantalla.
 
 ## Si no quieres acomodarlo tú

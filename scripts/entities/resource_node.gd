@@ -10,6 +10,29 @@ var felled := false
 var _fall_t := 0.0
 var _rng_seed := 0
 
+## Etapas con el arte en 3D (assets/modelos/recursos/<tipo>/etapaN.glb): 100, 75, 50
+## y 25 % de lo que le queda; los árboles tienen además el tocón (0), que se queda
+## 2-3 minutos después de talarlo. Si falta el modelo se usa la figura por código.
+const STAGE_W := {"arbol": 1.3, "pino": 1.05, "arbusto": 0.9, "oro": 1.05, "piedra": 0.95}
+## Ancho de cada etapa en el dibujo (px): así guardan su tamaño entre ellas.
+const STAGE_PX := {
+	"arbol": {100: 295, 75: 257, 50: 230, 25: 216, 0: 205},
+	"pino": {100: 263, 75: 224, 50: 203, 25: 202, 0: 190},
+	"arbusto": {100: 381, 75: 354, 50: 350, 25: 345},
+	"oro": {100: 413, 75: 390, 50: 367, 25: 360},
+	"piedra": {100: 264, 75: 258, 50: 256, 25: 254},
+}
+## Parte del alto que se hunde bajo el suelo: la base de pasto del dibujo no se ve
+## y el recurso queda sobre el piso del mapa.
+const STAGE_SINK := {"arbol": 0.07, "pino": 0.07, "arbusto": 0.08, "oro": 0.06, "piedra": 0.08}
+const STUMP_SINK := 0.16
+const STAGE_SINK_X := {"oro": {50: 0.13, 25: 0.2}}   # etapas bajas: la base pesa más
+const STUMP_TIME := Vector2(120.0, 180.0)   # segundos que dura el tocón
+
+var art_kind := ""     # "arbol", "pino", "arbusto", "oro", "piedra" si hay modelos
+var _stage := -1
+var _yaw := 0.0
+
 const TREE_GREENS := [Color(0.25, 0.45, 0.18), Color(0.30, 0.50, 0.20), Color(0.22, 0.40, 0.20), Color(0.36, 0.52, 0.22)]
 
 
@@ -51,11 +74,48 @@ func init(g: Game, k: String, tile: Vector2i, seed_v: int) -> void:
 	_build_visual()
 
 
+## Etapa del arte según lo que le queda (fracción 0-1).
+static func stage_of(f: float) -> int:
+	if f > 0.75:
+		return 100
+	if f > 0.5:
+		return 75
+	if f > 0.25:
+		return 50
+	return 25
+
+
+## Modelo de una etapa ya ajustado a su tamaño en el mapa (null si no hay arte).
+static func stage_node(ak: String, stage: int, yaw: float) -> Node3D:
+	if not STAGE_W.has(ak):
+		return null
+	var ps := Art.stage_model("arbol" if stage == 0 else ak, stage)
+	if ps == null:
+		return null
+	var px: Dictionary = STAGE_PX[ak]
+	var n := Art.fitted(ps, STAGE_W[ak] * float(px.get(stage, px[100])) / float(px[100]), true,
+		STUMP_SINK if stage == 0 else STAGE_SINK_X.get(ak, {}).get(stage, STAGE_SINK[ak]))
+	n.rotation.y = yaw
+	return n
+
+
 func _build_visual() -> void:
 	visual = Node3D.new()
 	add_child(visual)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _rng_seed
+	# Arte en 3D por etapas, si existe.
+	if kind in ["arbol", "oro", "piedra", "arbusto"]:
+		var ak := kind
+		if kind == "arbol":
+			ak = "pino" if rng.randf() < 0.5 else "arbol"
+		# vistos de frente o un poco de lado, como en el dibujo
+		_yaw = rng.randf_range(-0.6, 0.6)
+		if Art.stage_model(ak, 100):
+			art_kind = ak
+			visual.position = Vector3(rng.randf_range(-0.1, 0.1), 0, rng.randf_range(-0.1, 0.1))
+			_set_stage(100)
+			return
 	match kind:
 		"arbol":
 			var s := rng.randf_range(0.8, 1.2)
@@ -123,16 +183,48 @@ func take_resource(a: float) -> float:
 	amount -= t
 	if kind == "arbol" and not felled:
 		felled = true
-		_fall_t = 0.001
-		game.release_static(self, false)   # el árbol cae: su casilla se puede caminar
+		if art_kind == "":
+			_fall_t = 0.001   # figura por código: el árbol cae
+		game.release_static(self, false)   # ya talado, su casilla se puede caminar
 	_refresh_scale()
 	if amount <= 0.0:
+		_leave_stump()
 		game.remove_entity(self)
 	return t
 
 
+## Al acabarse un árbol queda su tocón unos minutos.
+func _leave_stump() -> void:
+	if kind != "arbol" or art_kind == "" or game.headless:
+		return
+	var n := stage_node(art_kind, 0, _yaw)
+	if n == null:
+		return
+	var st := Stump.new()
+	get_parent().add_child(st)
+	st.position = position + visual.position
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng_seed
+	st.setup(game, rect, n, rng.randf_range(STUMP_TIME.x, STUMP_TIME.y))
+
+
+func _set_stage(stage: int) -> void:
+	if stage == _stage:
+		return
+	var n := stage_node(art_kind, stage, _yaw)
+	if n == null:
+		return
+	_stage = stage
+	for c in visual.get_children():
+		c.queue_free()
+	visual.add_child(n)
+
+
 func _refresh_scale() -> void:
 	var f := clampf(amount / max_amount, 0.0, 1.0)
+	if art_kind != "":
+		_set_stage(stage_of(f))
+		return
 	match kind:
 		"oro", "piedra", "arbusto":
 			visual.scale = Vector3.ONE * (0.45 + 0.55 * f)

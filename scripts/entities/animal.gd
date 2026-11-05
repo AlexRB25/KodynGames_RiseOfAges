@@ -26,6 +26,13 @@ var graze_tick := -10                 # último paso en que pastó en un corral
 var held_tick := -10                  # último paso en que un aldeano lo estaba pastoreando
 var herd_claims := {}                 # jugador -> último paso en que lo pastoreó
 var _collar: Node3D
+## Arte en 3D (assets/modelos/recursos/<animal>/): viva.glb y, ya muerto, etapa75/50/25
+## según la carne que le queda. Si no hay, la figura por código.
+const ART_W := {"cabra": 0.62}
+const ART_YAW := {"cabra": PI * 0.5}   # giro para que la cabeza del modelo mire hacia +X
+const DEAD_SINK := {75: 0.2, 50: 0.2, 25: 0.3}   # su base de pasto queda bajo el suelo
+var art := false
+var _stage := -1
 
 
 func is_mobile() -> bool:
@@ -148,6 +155,13 @@ func _build_visual() -> void:
 	body = Node3D.new()
 	visual.add_child(body)
 	var c: Color = def["color"]
+	var live := Art.stage_model_file(kind, "viva") if ART_W.has(kind) else null
+	if live:
+		art = true
+		var n := Art.fitted(live, ART_W[kind])
+		n.rotation.y = ART_YAW[kind]
+		body.add_child(n)
+		return
 	match kind:
 		"guajolote":
 			Mat.ball(body, 0.17, Vector3(0, 0.25, 0), c, 6)
@@ -250,6 +264,20 @@ func render(alpha: float, dt: float) -> void:
 	var p := prev_pos.lerp(pos, alpha)
 	position = Vector3(p.x, MapData.ground_y(p), p.y)
 	tick_bar(dt)
+	if dead and art:
+		var st := 75 if food > max_food * 0.66 else (50 if food > max_food * 0.33 else 25)
+		if st != _stage:
+			var ps := Art.stage_model(kind, st)
+			if ps:
+				_stage = st
+				body.visible = false
+				for ch in visual.get_children():
+					if ch != body:
+						ch.queue_free()
+				var n := Art.fitted(ps, ART_W[kind] * 1.25, false, DEAD_SINK[st])
+				n.rotation.y = ART_YAW[kind]
+				visual.add_child(n)
+		return
 	if dead:
 		if _death_t < 1.0:
 			_death_t = minf(1.0, _death_t + dt * 2.5)
@@ -264,8 +292,12 @@ func render(alpha: float, dt: float) -> void:
 		_anim += dt * 12.0
 		for i in legs.size():
 			legs[i].rotation.z = sin(_anim + i * PI * 0.5) * 0.5
-		body.position.y = absf(sin(_anim)) * 0.03
+		body.position.y = absf(sin(_anim)) * (0.06 if art else 0.03)
+		if art:
+			body.rotation.x = sin(_anim) * 0.06
 	else:
+		body.position.y = 0.0
+		body.rotation.x = 0.0
 		for l in legs:
 			l.rotation.z = 0
 
