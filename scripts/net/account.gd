@@ -118,12 +118,12 @@ func _headers(token: String) -> PackedStringArray:
 static func error_text(res: Dictionary) -> String:
 	var d = res.get("data")
 	if res.get("code", 0) == 0:
-		return "Sin conexión con el servidor de cuentas"
+		return Lang.t("Sin conexión con el servidor de cuentas")
 	if d is Dictionary:
 		for k in ["msg", "message", "error_description", "error"]:
 			if d.has(k):
 				return str(d[k])
-	return "Error %d" % res.get("code", 0)
+	return Lang.t("Error %d") % res.get("code", 0)
 
 
 # --- Sesión -------------------------------------------------------------------------
@@ -141,7 +141,7 @@ func sign_in() -> String:
 	if not ok:
 		var res := await _request(HTTPClient.METHOD_POST, supabase_url + "/auth/v1/signup", _headers(anon_key), {"data": {}})
 		if res["code"] != 200 or not res["data"] is Dictionary:
-			return "No se pudo crear tu cuenta de invitado: " + error_text(res)
+			return Lang.t("No se pudo crear tu cuenta de invitado: ") + error_text(res)
 		_take_session(res["data"])
 	return await refresh_profile()
 
@@ -149,7 +149,7 @@ func sign_in() -> String:
 func refresh_profile() -> String:
 	var res := await rpc_call("roa_ensure_profile", {"p_name": player_name})
 	if res["code"] != 200 or not res["data"] is Dictionary:
-		return "No se pudo cargar tu perfil: " + error_text(res)
+		return Lang.t("No se pudo cargar tu perfil: ") + error_text(res)
 	profile = res["data"]
 	if player_name == "":
 		set_player_name(String(profile.get("name", "")))

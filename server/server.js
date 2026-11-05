@@ -277,7 +277,7 @@ wss.on('connection', ws => {
         leave(ws);
         enqueue(ws, m).catch(e => {
           console.log('cola:', e.message);
-          send(ws, { t: 'error', msg: 'No se pudo entrar a la cola: ' + e.message });
+          send(ws, { t: 'error', msg: 'No se pudo entrar a la cola.' });
         });
         break;
       }

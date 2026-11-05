@@ -61,7 +61,7 @@ func _ready() -> void:
 	box.add_theme_constant_override("separation", 12)
 	root.add_child(box)
 	var tt := Label.new()
-	tt.text = "Consejo"
+	tt.text = Lang.t("Consejo")
 	tt.add_theme_font_override("font", font)
 	tt.add_theme_font_size_override("font_size", 30)
 	tt.add_theme_color_override("font_color", Color(0.96, 0.76, 0.30))
@@ -69,7 +69,7 @@ func _ready() -> void:
 	var tip := RichTextLabel.new()
 	tip.bbcode_enabled = true
 	tip.fit_content = true
-	tip.text = TIPS[randi() % TIPS.size()]
+	tip.text = Lang.t(TIPS[randi() % TIPS.size()])
 	tip.add_theme_font_size_override("normal_font_size", 26)
 	tip.add_theme_font_size_override("bold_font_size", 26)
 	tip.add_theme_color_override("default_color", Color(0.98, 0.93, 0.80))
@@ -81,7 +81,7 @@ func _ready() -> void:
 	status.add_theme_font_override("font", font)
 	status.add_theme_font_size_override("font_size", 22)
 	status.add_theme_color_override("font_color", Color(0.98, 0.93, 0.80))
-	status.text = "Preparando la partida…"
+	status.text = Lang.t("Preparando la partida…")
 	box.add_child(status)
 	bar = ProgressBar.new()
 	bar.show_percentage = false
@@ -122,7 +122,7 @@ func _on_progress(p: float, text: String) -> void:
 func _on_loaded() -> void:
 	Setup.loading = false
 	bar.value = 1.0
-	status.text = "¡Listo!"
+	status.text = Lang.t("¡Listo!")
 	var root: Control = ui.get_child(0)
 	# Mientras se desvanece ya se puede tocar el mapa.
 	root.propagate_call("set_mouse_filter", [Control.MOUSE_FILTER_IGNORE])

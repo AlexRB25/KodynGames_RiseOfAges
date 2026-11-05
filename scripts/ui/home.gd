@@ -125,14 +125,14 @@ func _build() -> void:
 	chip.add_theme_font_size_override("normal_font_size", 20)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip_panel.add_child(chip)
-	var shop := art_button("Tienda", Vector2(140, 58), 24, Color(0.16, 0.42, 0.22))
-	shop.pressed.connect(func() -> void: _soon("Tienda", "Aquí podrás conseguir civilizaciones especiales, vestimentas y estandartes para tu pueblo.\n\nPróximamente."))
+	var shop := art_button(Lang.t("Tienda"), Vector2(140, 58), 24, Color(0.16, 0.42, 0.22))
+	shop.pressed.connect(func() -> void: _soon(Lang.t("Tienda"), Lang.t("Aquí podrás conseguir civilizaciones especiales, vestimentas y estandartes para tu pueblo.\n\nPróximamente.")))
 	top.add_child(shop)
-	var cfg := art_button("Configuración", Vector2(200, 58), 24, Color(0.25, 0.22, 0.20))
+	var cfg := art_button(Lang.t("Configuración"), Vector2(200, 58), 24, Color(0.25, 0.22, 0.20))
 	cfg.pressed.connect(_config)
 	top.add_child(cfg)
 	if not OS.has_feature("web"):
-		var quit := art_button("Salir", Vector2(110, 58), 24, Color(0.25, 0.22, 0.20))
+		var quit := art_button(Lang.t("Salir"), Vector2(110, 58), 24, Color(0.25, 0.22, 0.20))
 		quit.pressed.connect(func() -> void: get_tree().quit())
 		top.add_child(quit)
 	# Al centro-izquierda: tu aldeano nivel 5 girando sobre un pedestal.
@@ -153,7 +153,7 @@ func _build() -> void:
 	civ_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	civ_desc.add_theme_constant_override("outline_size", 6)
 	left.add_child(civ_desc)
-	var ch := art_button("Cambiar civilización", Vector2(360, 60), 26)
+	var ch := art_button(Lang.t("Cambiar civilización"), Vector2(360, 60), 26)
 	ch.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ch.pressed.connect(_civ_picker)
 	left.add_child(ch)
@@ -165,11 +165,11 @@ func _build() -> void:
 	right.anchor_bottom = 0.92
 	right.add_theme_constant_override("separation", 16)
 	add_child(right)
-	right.add_child(_mode("UN JUGADOR", "Contra bots, de 1 vs 1 hasta 4 vs 4", func() -> void: menu.open_mode("solo")))
-	right.add_child(_mode("JUGAR CON RANGO", "En línea: te emparejamos con alguien de tu nivel", func() -> void: menu.open_mode("rango")))
-	right.add_child(_mode("SALA CON AMIGOS", "Crea una sala y comparte el código", func() -> void: menu.open_mode("amigos")))
-	right.add_child(_mode("TORNEOS", "Próximamente", func() -> void:
-		_soon("Torneos", "Torneos rápidos que empiezan solos y torneos especiales con hora fija, con premios para los mejores.\n\nPróximamente."), Color(0.30, 0.24, 0.16)))
+	right.add_child(_mode(Lang.t("UN JUGADOR"), Lang.t("Contra bots, de 1 vs 1 hasta 4 vs 4"), func() -> void: menu.open_mode("solo")))
+	right.add_child(_mode(Lang.t("JUGAR CON RANGO"), Lang.t("En línea: te emparejamos con alguien de tu nivel"), func() -> void: menu.open_mode("rango")))
+	right.add_child(_mode(Lang.t("SALA CON AMIGOS"), Lang.t("Crea una sala y comparte el código"), func() -> void: menu.open_mode("amigos")))
+	right.add_child(_mode(Lang.t("TORNEOS"), Lang.t("Próximamente"), func() -> void:
+		_soon(Lang.t("Torneos"), Lang.t("Torneos rápidos que empiezan solos y torneos especiales con hora fija, con premios para los mejores.\n\nPróximamente.")), Color(0.30, 0.24, 0.16)))
 
 
 func _mode(title: String, sub: String, cb: Callable, color := RED) -> Button:
@@ -202,8 +202,8 @@ func _mode(title: String, sub: String, cb: Callable, color := RED) -> Button:
 func _show_civ() -> void:
 	var civ := Account.fav_civ()
 	var d: Dictionary = Defs.CIVS.get(civ, {})
-	civ_label.text = String(d.get("name", civ))
-	civ_desc.text = String(d.get("desc", ""))
+	civ_label.text = Lang.t(d.get("name", civ))
+	civ_desc.text = Lang.t(d.get("desc", ""))
 	fig_view.set_civ(civ)
 
 
@@ -213,9 +213,9 @@ func _refresh_chip() -> void:
 	if n != "":
 		t += "[color=#f5e8c7]%s[/color]  " % n
 	if Account.profile.has("points"):
-		t += "[color=#ffd75a]Nivel %d[/color] · %d pts" % [Account.level(), Account.points()]
+		t += Lang.t("[color=#ffd75a]Nivel %d[/color] · %d pts") % [Account.level(), Account.points()]
 	else:
-		t += "[color=#cbb894]Nivel en línea: juega con rango[/color]"
+		t += Lang.t("[color=#cbb894]Nivel en línea: juega con rango[/color]")
 	chip.text = t + "[/center]"
 
 
@@ -256,16 +256,16 @@ func _soon(title: String, text: String) -> void:
 	l.add_theme_font_size_override("font_size", 20)
 	l.add_theme_color_override("font_color", CREAM)
 	vb.add_child(l)
-	var ok := art_button("Cerrar", Vector2(200, 56), 24)
+	var ok := art_button(Lang.t("Cerrar"), Vector2(200, 56), 24)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(_close_overlay)
 	vb.add_child(ok)
 
 
 func _welcome() -> void:
-	var vb := _window("¡Bienvenido a Rise of Ages!", 600)
+	var vb := _window(Lang.t("¡Bienvenido a Rise of Ages!"), 600)
 	var l := Label.new()
-	l.text = "¿Aprendemos lo básico? Te enseñamos a mover aldeanos, juntar recursos, comprar aldeanos y construir. Son unos 2 minutos."
+	l.text = Lang.t("¿Aprendemos lo básico? Te enseñamos a mover aldeanos, juntar recursos, comprar aldeanos y construir. Son unos 2 minutos.")
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 20)
@@ -275,10 +275,10 @@ func _welcome() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 14)
 	vb.add_child(row)
-	var go := art_button("Empezar tutorial", Vector2(260, 60), 26, Color(0.16, 0.42, 0.22))
+	var go := art_button(Lang.t("Empezar tutorial"), Vector2(260, 60), 26, Color(0.16, 0.42, 0.22))
 	go.pressed.connect(func() -> void: menu.start_tutorial())
 	row.add_child(go)
-	var skip := art_button("Omitir", Vector2(160, 60), 26, Color(0.25, 0.22, 0.20))
+	var skip := art_button(Lang.t("Omitir"), Vector2(160, 60), 26, Color(0.25, 0.22, 0.20))
 	skip.pressed.connect(func() -> void:
 		Account.set_tutorial_done(true)
 		_close_overlay())
@@ -286,7 +286,7 @@ func _welcome() -> void:
 
 
 func _civ_picker() -> void:
-	var vb := _window("Elige tu civilización", 980)
+	var vb := _window(Lang.t("Elige tu civilización"), 980)
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
@@ -295,10 +295,10 @@ func _civ_picker() -> void:
 	for c in Defs.CIV_ORDER:
 		var d: Dictionary = Defs.CIVS[c]
 		var mine: bool = c == Account.fav_civ()
-		var b := art_button(String(d["name"]), Vector2(310, 150), 28, Color(0.35, 0.10, 0.08) if not mine else Color(0.62, 0.42, 0.12))
+		var b := art_button(Lang.t(d["name"]), Vector2(310, 150), 28, Color(0.35, 0.10, 0.08) if not mine else Color(0.62, 0.42, 0.12))
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var desc := Label.new()
-		desc.text = String(d.get("desc", ""))
+		desc.text = Lang.t(d.get("desc", ""))
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc.add_theme_font_size_override("font_size", 13)
 		desc.add_theme_color_override("font_color", Color(1, 0.92, 0.75))
@@ -320,48 +320,70 @@ func _civ_picker() -> void:
 			menu.apply_fav_civ()
 			_close_overlay())
 		grid.add_child(b)
-	var back := art_button("Volver", Vector2(200, 56), 24, Color(0.25, 0.22, 0.20))
+	var back := art_button(Lang.t("Volver"), Vector2(200, 56), 24, Color(0.25, 0.22, 0.20))
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back.pressed.connect(_close_overlay)
 	vb.add_child(back)
 
 
 func _config() -> void:
-	var vb := _window("Configuración", 560)
+	var vb := _window(Lang.t("Configuración"), 560)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	vb.add_child(row)
 	var nl := Label.new()
-	nl.text = "Tu nombre:"
+	nl.text = Lang.t("Tu nombre:")
 	nl.add_theme_font_size_override("font_size", 20)
 	row.add_child(nl)
 	var ne := LineEdit.new()
 	ne.text = Account.player_name
 	ne.max_length = 16
 	ne.custom_minimum_size = Vector2(300, 44)
-	ne.placeholder_text = "Nombre"
+	ne.placeholder_text = Lang.t("Nombre")
 	row.add_child(ne)
 	var fs := CheckBox.new()
-	fs.text = "Pantalla completa"
+	fs.text = Lang.t("Pantalla completa")
 	fs.add_theme_font_size_override("font_size", 20)
 	fs.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
 	fs.toggled.connect(func(on: bool) -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED))
 	vb.add_child(fs)
+	# Idioma: al cambiarlo se vuelve a armar el menú para que todo salga en el nuevo idioma.
+	var lrow := HBoxContainer.new()
+	lrow.add_theme_constant_override("separation", 12)
+	vb.add_child(lrow)
+	var ll := Label.new()
+	ll.text = Lang.t("Idioma:")
+	ll.add_theme_font_size_override("font_size", 20)
+	lrow.add_child(ll)
+	var lang_opt := OptionButton.new()
+	lang_opt.custom_minimum_size = Vector2(220, 44)
+	lang_opt.add_theme_font_size_override("font_size", 20)
+	lang_opt.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # cada idioma con su propio nombre
+	var codes: Array = Lang.LANGS.keys()
+	for c in codes:
+		lang_opt.add_item(Lang.LANGS[c])
+	lang_opt.select(codes.find(Lang.code))
+	lang_opt.item_selected.connect(func(i: int) -> void:
+		if ne.text.strip_edges().length() >= 2:
+			Account.set_player_name(ne.text.strip_edges())
+		Lang.set_lang(codes[i])
+		get_tree().reload_current_scene())
+	lrow.add_child(lang_opt)
 	var acc := Label.new()
 	acc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acc.add_theme_font_size_override("font_size", 16)
 	acc.add_theme_color_override("font_color", Color(0.85, 0.8, 0.68))
 	if Account.signed_in() and not Account.is_anonymous:
-		acc.text = "Cuenta Kodyn Games: %s" % Account.email
+		acc.text = Lang.t("Cuenta Kodyn Games: %s") % Account.email
 	else:
-		acc.text = "Tu cuenta es de invitado. En \"Jugar con rango\" puedes guardar tu progreso con correo o entrar con tu cuenta de Kodyn Games (la de Zombie War)."
+		acc.text = Lang.t("Tu cuenta es de invitado. En \"Jugar con rango\" puedes guardar tu progreso con correo o entrar con tu cuenta de Kodyn Games (la de Zombie War).")
 	vb.add_child(acc)
-	var tut := art_button("Repetir tutorial", Vector2(240, 52), 22, Color(0.16, 0.42, 0.22))
+	var tut := art_button(Lang.t("Repetir tutorial"), Vector2(240, 52), 22, Color(0.16, 0.42, 0.22))
 	tut.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	tut.pressed.connect(func() -> void: menu.start_tutorial())
 	vb.add_child(tut)
-	var ok := art_button("Guardar", Vector2(200, 56), 24)
+	var ok := art_button(Lang.t("Guardar"), Vector2(200, 56), 24)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(func() -> void:
 		if ne.text.strip_edges().length() >= 2:

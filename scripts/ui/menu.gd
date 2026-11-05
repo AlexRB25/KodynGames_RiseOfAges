@@ -62,13 +62,13 @@ func _ready() -> void:
 		root.add_child(lt)
 	else:
 		var title := Label.new()
-		title.text = "RISE OF AGES"
+		title.text = Lang.t("RISE OF AGES")
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.add_theme_font_size_override("font_size", 52)
 		title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.38))
 		root.add_child(title)
 	var sub := Label.new()
-	sub.text = "Beta · Civilizaciones de Mesoamérica"
+	sub.text = Lang.t("Beta · Civilizaciones de Mesoamérica")
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(sub)
 	profile_label = RichTextLabel.new()
@@ -82,21 +82,21 @@ func _ready() -> void:
 	main_box = VBoxContainer.new()
 	main_box.add_theme_constant_override("separation", 10)
 	root.add_child(main_box)
-	var solo := _big_button("Un jugador (contra bots)")
+	var solo := _big_button(Lang.t("Un jugador (contra bots)"))
 	solo.pressed.connect(func() -> void:
 		main_box.visible = false
 		setup_box.visible = true)
 	main_box.add_child(solo)
-	var rk := _big_button("Jugar con rango (en línea)")
-	rk.tooltip_text = "Te emparejamos con alguien de tu nivel. Ganar suma puntos, perder resta."
+	var rk := _big_button(Lang.t("Jugar con rango (en línea)"))
+	rk.tooltip_text = Lang.t("Te emparejamos con alguien de tu nivel. Ganar suma puntos, perder resta.")
 	rk.pressed.connect(_open_ranked)
 	main_box.add_child(rk)
-	var online := _big_button("Sala con amigos (código)")
+	var online := _big_button(Lang.t("Sala con amigos (código)"))
 	online.pressed.connect(func() -> void:
 		main_box.visible = false
 		online_box.visible = true)
 	main_box.add_child(online)
-	var quit := _big_button("Salir")
+	var quit := _big_button(Lang.t("Salir"))
 	quit.pressed.connect(func() -> void: get_tree().quit())
 	if OS.has_feature("web"):
 		quit.visible = false
@@ -110,17 +110,17 @@ func _ready() -> void:
 	presets.add_theme_constant_override("separation", 6)
 	setup_box.add_child(presets)
 	var pl := Label.new()
-	pl.text = "Rápido:"
+	pl.text = Lang.t("Rápido:")
 	presets.add_child(pl)
-	for pr in [["1 vs 1", [1, 2]], ["2 vs 2", [1, 1, 2, 2]], ["3 vs 3", [1, 1, 1, 2, 2, 2]],
-			["4 vs 4", [1, 1, 1, 1, 2, 2, 2, 2]], ["1 vs 3", [1, 2, 2, 2]], ["Todos contra todos (4)", [1, 2, 3, 4]]]:
+	for pr in [[Lang.t("1 vs 1"), [1, 2]], [Lang.t("2 vs 2"), [1, 1, 2, 2]], [Lang.t("3 vs 3"), [1, 1, 1, 2, 2, 2]],
+			[Lang.t("4 vs 4"), [1, 1, 1, 1, 2, 2, 2, 2]], [Lang.t("1 vs 3"), [1, 2, 2, 2]], [Lang.t("Todos contra todos (4)"), [1, 2, 3, 4]]]:
 		var b := Button.new()
 		b.text = pr[0]
 		var teams: Array = pr[1]
 		b.pressed.connect(func() -> void: _preset(teams))
 		presets.add_child(b)
 	var head := HBoxContainer.new()
-	for h in [["Jugador", 170], ["Civilización", 170], ["Equipo", 110], ["Color", 120]]:
+	for h in [[Lang.t("Jugador"), 170], [Lang.t("Civilización"), 170], [Lang.t("Equipo"), 110], [Lang.t("Color"), 120]]:
 		var l := Label.new()
 		l.text = h[0]
 		l.custom_minimum_size = Vector2(h[1], 0)
@@ -132,16 +132,16 @@ func _ready() -> void:
 		_add_row(i)
 	var opts := HBoxContainer.new()
 	var ml := Label.new()
-	ml.text = "Mapa:"
+	ml.text = Lang.t("Mapa:")
 	opts.add_child(ml)
 	size_opt = OptionButton.new()
-	size_opt.add_item("Pequeño (120)")
-	size_opt.add_item("Mediano (160)")
-	size_opt.add_item("Grande (220)")
+	size_opt.add_item(Lang.t("Pequeño (120)"))
+	size_opt.add_item(Lang.t("Mediano (160)"))
+	size_opt.add_item(Lang.t("Grande (220)"))
 	size_opt.select(1)
 	opts.add_child(size_opt)
 	var tl := Label.new()
-	tl.text = "  Tipo:"
+	tl.text = Lang.t("  Tipo:")
 	opts.add_child(tl)
 	type_opt = _type_pick("azar", true, func(_v: String) -> void: pass)
 	opts.add_child(type_opt)
@@ -152,18 +152,18 @@ func _ready() -> void:
 	civ_info.custom_minimum_size = Vector2(600, 0)
 	var txt := ""
 	for c in Defs.CIV_ORDER:
-		txt += "%s: %s\n" % [Defs.CIVS[c]["name"], Defs.CIVS[c]["desc"]]
+		txt += "%s: %s\n" % [Lang.t(Defs.CIVS[c]["name"]), Lang.t(Defs.CIVS[c]["desc"])]
 	civ_info.text = txt
 	setup_box.add_child(civ_info)
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 10)
 	setup_box.add_child(bh)
-	var back := _big_button("Volver")
+	var back := _big_button(Lang.t("Volver"))
 	back.pressed.connect(func() -> void:
 		setup_box.visible = false
 		main_box.visible = true)
 	bh.add_child(back)
-	var start := _big_button("¡Comenzar!")
+	var start := _big_button(Lang.t("¡Comenzar!"))
 	start.pressed.connect(_start)
 	bh.add_child(start)
 	# Dos columnas: jugadores a la izquierda, civilizaciones a la derecha (cabe sin desplazarse).
@@ -188,7 +188,7 @@ func _ready() -> void:
 			rk_status.text = msg)
 	Net.closed.connect(func() -> void:
 		_lobby_civ_sent = false
-		_status("Se cerró la conexión.")
+		_status(Lang.t("Se cerró la conexión."))
 		if ranked_box.visible:
 			_refresh_queue()
 			return
@@ -247,8 +247,8 @@ func start_tutorial() -> void:
 	var fav := Account.fav_civ()
 	var other: String = Defs.CIV_ORDER[1] if Defs.CIV_ORDER[0] == fav else Defs.CIV_ORDER[0]
 	Setup.players = [
-		{"name": Account.player_name if Account.player_name != "" else "Tú", "civ": fav, "team": 1, "color": 0, "bot": false, "difficulty": "normal"},
-		{"name": "Rival de práctica", "civ": other, "team": 2, "color": 1, "bot": false, "difficulty": "normal"},
+		{"name": Account.player_name if Account.player_name != "" else Lang.t("Tú"), "civ": fav, "team": 1, "color": 0, "bot": false, "difficulty": "normal"},
+		{"name": Lang.t("Rival de práctica"), "civ": other, "team": 2, "color": 1, "bot": false, "difficulty": "normal"},
 	]
 	Setup.local_player = 0
 	Setup.online = false
@@ -342,18 +342,18 @@ func _add_row(i: int) -> void:
 	hb.add_child(type)
 	var civ := OptionButton.new()
 	for c in Defs.CIV_ORDER:
-		civ.add_item(Defs.CIVS[c]["name"])
+		civ.add_item(Lang.t(Defs.CIVS[c]["name"]))
 	civ.select(i % Defs.CIV_ORDER.size())
 	civ.custom_minimum_size = Vector2(170, 0)
 	hb.add_child(civ)
 	var team := OptionButton.new()
 	for t in 4:
-		team.add_item("Equipo %d" % (t + 1))
+		team.add_item(Lang.t("Equipo %d") % (t + 1))
 	team.custom_minimum_size = Vector2(110, 0)
 	hb.add_child(team)
 	var col := OptionButton.new()
 	for c in Defs.COLOR_NAMES.size():
-		col.add_item(Defs.COLOR_NAMES[c])
+		col.add_item(Lang.t(Defs.COLOR_NAMES[c]))
 	col.select(i)
 	col.custom_minimum_size = Vector2(120, 0)
 	hb.add_child(col)
@@ -381,7 +381,7 @@ func _start() -> void:
 		if t == 0:
 			continue
 		players.append({
-			"name": "Tú" if t == 1 else "%s (%s)" % [Defs.CIVS[Defs.CIV_ORDER[r["civ"].selected]]["name"], TYPES[t].replace("Bot ", "")],
+			"name": Lang.t("Tú") if t == 1 else "%s (%s)" % [Lang.t(Defs.CIVS[Defs.CIV_ORDER[r["civ"].selected]]["name"]), Lang.t(TYPES[t]).replace("Bot ", "")],
 			"civ": Defs.CIV_ORDER[r["civ"].selected],
 			"team": r["team"].selected + 1,
 			"color": r["color"].selected,
@@ -392,7 +392,7 @@ func _start() -> void:
 	for p in players:
 		teams[p["team"]] = true
 	if teams.size() < 2:
-		_warn("Debe haber al menos dos equipos distintos.")
+		_warn(Lang.t("Debe haber al menos dos equipos distintos."))
 		return
 	Setup.players = players
 	Setup.online = false
@@ -424,40 +424,40 @@ func _build_online(root: VBoxContainer) -> void:
 	online_box.add_theme_constant_override("separation", 10)
 	root.add_child(online_box)
 	var l := Label.new()
-	l.text = "Tu nombre:"
+	l.text = Lang.t("Tu nombre:")
 	online_box.add_child(l)
 	name_edit = LineEdit.new()
 	name_edit.max_length = 16
-	name_edit.placeholder_text = "Nombre"
+	name_edit.placeholder_text = Lang.t("Nombre")
 	name_edit.text = Account.player_name
 	name_edit.custom_minimum_size = Vector2(320, 44)
 	online_box.add_child(name_edit)
-	var create := _big_button("Crear sala")
+	var create := _big_button(Lang.t("Crear sala"))
 	create.pressed.connect(func() -> void:
 		if _name() == "":
-			_status("Escribe tu nombre.")
+			_status(Lang.t("Escribe tu nombre."))
 			return
-		_status("Conectando…")
+		_status(Lang.t("Conectando…"))
 		Net.create_room(_name()))
 	online_box.add_child(create)
 	var jl := Label.new()
-	jl.text = "¿Tu amigo ya creó una sala? Escribe su código:"
+	jl.text = Lang.t("¿Tu amigo ya creó una sala? Escribe su código:")
 	online_box.add_child(jl)
 	var jh := HBoxContainer.new()
 	online_box.add_child(jh)
 	code_edit = LineEdit.new()
 	code_edit.max_length = 4
-	code_edit.placeholder_text = "CÓDIGO"
+	code_edit.placeholder_text = Lang.t("CÓDIGO")
 	code_edit.custom_minimum_size = Vector2(150, 48)
 	code_edit.add_theme_font_size_override("font_size", 22)
 	jh.add_child(code_edit)
-	var join := _big_button("Unirse")
+	var join := _big_button(Lang.t("Unirse"))
 	join.custom_minimum_size = Vector2(160, 48)
 	join.pressed.connect(func() -> void:
 		if _name() == "" or code_edit.text.strip_edges().length() < 4:
-			_status("Escribe tu nombre y el código de 4 letras.")
+			_status(Lang.t("Escribe tu nombre y el código de 4 letras."))
 			return
-		_status("Conectando…")
+		_status(Lang.t("Conectando…"))
 		Net.join_room(_name(), code_edit.text))
 	jh.add_child(join)
 	status_label = Label.new()
@@ -465,7 +465,7 @@ func _build_online(root: VBoxContainer) -> void:
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.custom_minimum_size = Vector2(320, 0)
 	online_box.add_child(status_label)
-	var back := _big_button("Volver")
+	var back := _big_button(Lang.t("Volver"))
 	back.pressed.connect(func() -> void:
 		Net.close()
 		online_box.visible = false
@@ -493,11 +493,11 @@ func _refresh_profile() -> void:
 	if n == "" and Account.profile.is_empty():
 		profile_label.text = ""
 		return
-	var txt := "[center][b]%s[/b]" % (n if n != "" else String(Account.profile.get("name", "Jugador")))
+	var txt := "[center][b]%s[/b]" % (n if n != "" else String(Account.profile.get("name", Lang.t("Jugador"))))
 	if not Account.profile.is_empty():
-		txt += "  ·  [color=#ffd75a]Nivel %d[/color]  ·  %d puntos" % [Account.level(), Account.points()]
+		txt += Lang.t("  ·  [color=#ffd75a]Nivel %d[/color]  ·  %d puntos") % [Account.level(), Account.points()]
 		if Account.profile.has("wins"):
-			txt += "  ·  %d ganadas / %d perdidas" % [int(Account.profile["wins"]), int(Account.profile["losses"])]
+			txt += Lang.t("  ·  %d ganadas / %d perdidas") % [int(Account.profile["wins"]), int(Account.profile["losses"])]
 	profile_label.text = txt + "[/center]"
 
 
@@ -508,7 +508,7 @@ func _open_ranked() -> void:
 	_refresh_account()
 	_refresh_queue()
 	if Account.accounts_ready():
-		rk_status.text = "Conectando tu cuenta…"
+		rk_status.text = Lang.t("Conectando tu cuenta…")
 		var err: String = await Account.sign_in()
 		rk_status.text = err
 		rk_name.text = Account.player_name
@@ -521,29 +521,29 @@ func _build_ranked(root: VBoxContainer) -> void:
 	ranked_box.add_theme_constant_override("separation", 10)
 	root.add_child(ranked_box)
 	var info := Label.new()
-	info.text = "Te emparejamos con el jugador en línea más cercano a tu nivel.\nGanar suma puntos y perder resta; cada 100 puntos subes de nivel."
+	info.text = Lang.t("Te emparejamos con el jugador en línea más cercano a tu nivel.\nGanar suma puntos y perder resta; cada 100 puntos subes de nivel.")
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ranked_box.add_child(info)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	ranked_box.add_child(row)
 	var nl := Label.new()
-	nl.text = "Nombre:"
+	nl.text = Lang.t("Nombre:")
 	row.add_child(nl)
 	rk_name = LineEdit.new()
 	rk_name.max_length = 16
-	rk_name.placeholder_text = "Tu nombre"
+	rk_name.placeholder_text = Lang.t("Tu nombre")
 	rk_name.custom_minimum_size = Vector2(220, 44)
 	row.add_child(rk_name)
 	var cl := Label.new()
-	cl.text = "Civilización:"
+	cl.text = Lang.t("Civilización:")
 	row.add_child(cl)
 	rk_civ = _civ_pick(Defs.CIV_ORDER[0], true, func(_v: String) -> void: pass)
 	row.add_child(rk_civ)
 	rk_modes = HBoxContainer.new()
 	rk_modes.add_theme_constant_override("separation", 8)
 	ranked_box.add_child(rk_modes)
-	for md in [["1v1", "Buscar 1 vs 1"], ["2v2", "Buscar 2 vs 2"], ["4v4", "Buscar 4 vs 4"]]:
+	for md in [["1v1", Lang.t("Buscar 1 vs 1")], ["2v2", Lang.t("Buscar 2 vs 2")], ["4v4", Lang.t("Buscar 4 vs 4")]]:
 		var b := _big_button(md[1])
 		b.custom_minimum_size = Vector2(200, 52)
 		var mode: String = md[0]
@@ -555,16 +555,16 @@ func _build_ranked(root: VBoxContainer) -> void:
 	rk_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rk_status.custom_minimum_size = Vector2(600, 0)
 	ranked_box.add_child(rk_status)
-	rk_cancel = _big_button("Cancelar búsqueda")
+	rk_cancel = _big_button(Lang.t("Cancelar búsqueda"))
 	rk_cancel.pressed.connect(func() -> void:
 		Net.unqueue()
-		rk_status.text = "Búsqueda cancelada."
+		rk_status.text = Lang.t("Búsqueda cancelada.")
 		_refresh_queue())
 	ranked_box.add_child(rk_cancel)
 	acct_box = VBoxContainer.new()
 	acct_box.add_theme_constant_override("separation", 6)
 	ranked_box.add_child(acct_box)
-	var back := _big_button("Volver")
+	var back := _big_button(Lang.t("Volver"))
 	back.pressed.connect(func() -> void:
 		if not Net.queue_info.is_empty():
 			Net.unqueue()
@@ -576,20 +576,20 @@ func _build_ranked(root: VBoxContainer) -> void:
 func _search(mode: String) -> void:
 	var n := rk_name.text.strip_edges()
 	if n.length() < 2:
-		rk_status.text = "Escribe tu nombre (mínimo 2 letras)."
+		rk_status.text = Lang.t("Escribe tu nombre (mínimo 2 letras).")
 		return
 	var changed_name := n != Account.player_name
 	Account.set_player_name(n)
 	if Account.accounts_ready():
 		if not Account.signed_in():
-			rk_status.text = "Conectando tu cuenta…"
+			rk_status.text = Lang.t("Conectando tu cuenta…")
 			var err: String = await Account.sign_in()
 			if err != "":
 				rk_status.text = err
 				return
 		elif changed_name:
 			await Account.refresh_profile()
-	rk_status.text = "Conectando…"
+	rk_status.text = Lang.t("Conectando…")
 	Net.queue(mode, Defs.CIV_ORDER[rk_civ.selected])
 
 
@@ -604,8 +604,8 @@ func _refresh_queue() -> void:
 	rk_civ.disabled = searching
 	if searching:
 		var need := int(q.get("need", 0))
-		var names := {"1v1": "1 vs 1", "2v2": "2 vs 2", "4v4": "4 vs 4"}
-		rk_status.text = "Buscando partida %s…  (%d de %d jugadores en la cola)\nSi no hay nadie de tu nivel, te toca con quien esté conectado." % [
+		var names := {"1v1": Lang.t("1 vs 1"), "2v2": Lang.t("2 vs 2"), "4v4": Lang.t("4 vs 4")}
+		rk_status.text = Lang.t("Buscando partida %s…  (%d de %d jugadores en la cola)\nSi no hay nadie de tu nivel, te toca con quien esté conectado.") % [
 			names.get(String(q.get("mode", "")), ""), int(q.get("waiting", 0)), need]
 
 
@@ -614,7 +614,7 @@ func _refresh_account() -> void:
 		c.queue_free()
 	if not Account.accounts_ready():
 		var l := Label.new()
-		l.text = "Modo prueba: los puntos se guardan en el servidor por nombre y se borran si se reinicia."
+		l.text = Lang.t("Modo prueba: los puntos se guardan en el servidor por nombre y se borran si se reinicia.")
 		l.add_theme_font_size_override("font_size", 13)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		acct_box.add_child(l)
@@ -622,10 +622,10 @@ func _refresh_account() -> void:
 	if Account.signed_in() and not Account.is_anonymous:
 		var hb := HBoxContainer.new()
 		var l := Label.new()
-		l.text = "Cuenta Kodyn Games: %s" % Account.email
+		l.text = Lang.t("Cuenta Kodyn Games: %s") % Account.email
 		hb.add_child(l)
 		var out := Button.new()
-		out.text = "Cerrar sesión"
+		out.text = Lang.t("Cerrar sesión")
 		out.pressed.connect(func() -> void:
 			Account.logout()
 			_refresh_account())
@@ -633,7 +633,7 @@ func _refresh_account() -> void:
 		acct_box.add_child(hb)
 		return
 	var t := Label.new()
-	t.text = "Juegas como invitado. Guarda tu progreso con correo, o entra con tu cuenta de Kodyn Games (la misma de Zombie War):"
+	t.text = Lang.t("Juegas como invitado. Guarda tu progreso con correo, o entra con tu cuenta de Kodyn Games (la misma de Zombie War):")
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.custom_minimum_size = Vector2(600, 0)
 	t.add_theme_font_size_override("font_size", 13)
@@ -646,21 +646,21 @@ func _refresh_account() -> void:
 	em.custom_minimum_size = Vector2(220, 40)
 	hb2.add_child(em)
 	var pw := LineEdit.new()
-	pw.placeholder_text = "contraseña"
+	pw.placeholder_text = Lang.t("contraseña")
 	pw.secret = true
 	pw.custom_minimum_size = Vector2(160, 40)
 	hb2.add_child(pw)
 	var save := Button.new()
-	save.text = "Guardar progreso"
+	save.text = Lang.t("Guardar progreso")
 	save.pressed.connect(func() -> void:
 		var e: String = await Account.link_email(em.text.strip_edges(), pw.text)
-		rk_status.text = e if e != "" else "Listo: revisa tu correo para confirmarlo.")
+		rk_status.text = e if e != "" else Lang.t("Listo: revisa tu correo para confirmarlo."))
 	hb2.add_child(save)
 	var enter := Button.new()
-	enter.text = "Ya tengo cuenta: entrar"
+	enter.text = Lang.t("Ya tengo cuenta: entrar")
 	enter.pressed.connect(func() -> void:
 		var e: String = await Account.login(em.text.strip_edges(), pw.text)
-		rk_status.text = e if e != "" else "Entraste."
+		rk_status.text = e if e != "" else Lang.t("Entraste.")
 		rk_name.text = Account.player_name
 		_refresh_account())
 	hb2.add_child(enter)
@@ -676,13 +676,13 @@ func _refresh_lobby() -> void:
 		c.queue_free()
 	var host := Net.is_host()
 	var title := Label.new()
-	title.text = "Sala  %s" % r.get("code", "")
+	title.text = Lang.t("Sala  %s") % r.get("code", "")
 	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.38))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_box.add_child(title)
 	var hint := Label.new()
-	hint.text = "Pásale este código a tu amigo para que se una." + ("" if host else "\nEl anfitrión elige el mapa y los bots y comienza la partida.")
+	hint.text = Lang.t("Pásale este código a tu amigo para que se una.") + ("" if host else Lang.t("\nEl anfitrión elige el mapa y los bots y comienza la partida."))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_box.add_child(hint)
 	var me := int(r.get("you", -1))
@@ -709,21 +709,21 @@ func _refresh_lobby() -> void:
 		var idx := i
 		var hb := HBoxContainer.new()
 		var n := Label.new()
-		n.text = "   Bot %s" % Defs.DIFFICULTY.get(String(bt["difficulty"]), {"name": ""})["name"]
+		n.text = Lang.t("   Bot %s") % Lang.t(Defs.DIFFICULTY.get(String(bt["difficulty"]), {"name": ""})["name"])
 		n.custom_minimum_size = Vector2(190, 0)
 		hb.add_child(n)
 		hb.add_child(_civ_pick(String(bt["civ"]), host, func(v: String) -> void: _edit_bot(idx, "civ", v)))
 		hb.add_child(_team_pick(int(bt["team"]), host, func(v: int) -> void: _edit_bot(idx, "team", v)))
 		var dif := OptionButton.new()
 		for d in Defs.DIFF_ORDER:
-			dif.add_item(Defs.DIFFICULTY[d]["name"])
+			dif.add_item(Lang.t(Defs.DIFFICULTY[d]["name"]))
 		dif.select(maxi(0, Defs.DIFF_ORDER.find(String(bt["difficulty"]))))
 		dif.disabled = not host
 		dif.item_selected.connect(func(j: int) -> void: _edit_bot(idx, "difficulty", Defs.DIFF_ORDER[j]))
 		hb.add_child(dif)
 		if host:
 			var del := Button.new()
-			del.text = "Quitar"
+			del.text = Lang.t("Quitar")
 			del.pressed.connect(func() -> void:
 				var bl: Array = Net.room.get("bots", []).duplicate(true)
 				bl.remove_at(idx)
@@ -732,11 +732,11 @@ func _refresh_lobby() -> void:
 		lobby_box.add_child(hb)
 	var opts := HBoxContainer.new()
 	var ml := Label.new()
-	ml.text = "Mapa:"
+	ml.text = Lang.t("Mapa:")
 	opts.add_child(ml)
 	var mo := OptionButton.new()
 	var maps := ["pequeno", "mediano", "grande"]
-	for m in ["Pequeño", "Mediano", "Grande"]:
+	for m in [Lang.t("Pequeño"), Lang.t("Mediano"), Lang.t("Grande")]:
 		mo.add_item(m)
 	mo.select(maxi(0, maps.find(String(r.get("map", "mediano")))))
 	mo.disabled = not host
@@ -746,7 +746,7 @@ func _refresh_lobby() -> void:
 		Net.set_config(String(Net.room.get("map", "mediano")), Net.room.get("bots", []), v)))
 	if host:
 		var add := Button.new()
-		add.text = "+ Agregar bot"
+		add.text = Lang.t("+ Agregar bot")
 		add.disabled = r.get("players", []).size() + bots.size() >= 8
 		add.pressed.connect(func() -> void:
 			var bl: Array = Net.room.get("bots", []).duplicate(true)
@@ -761,7 +761,7 @@ func _refresh_lobby() -> void:
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 10)
 	lobby_box.add_child(bh)
-	var leave := _big_button("Salir de la sala")
+	var leave := _big_button(Lang.t("Salir de la sala"))
 	leave.custom_minimum_size = Vector2(220, 48)
 	leave.pressed.connect(func() -> void:
 		Net.close()
@@ -770,7 +770,7 @@ func _refresh_lobby() -> void:
 		status_label = null)
 	bh.add_child(leave)
 	if host:
-		var go := _big_button("¡Comenzar!")
+		var go := _big_button(Lang.t("¡Comenzar!"))
 		go.custom_minimum_size = Vector2(220, 48)
 		go.pressed.connect(func() -> void: Net.start_game())
 		bh.add_child(go)
@@ -786,7 +786,7 @@ func _edit_bot(i: int, key: String, v) -> void:
 func _civ_pick(cur: String, enabled: bool, on_pick: Callable) -> OptionButton:
 	var o := OptionButton.new()
 	for c in Defs.CIV_ORDER:
-		o.add_item(Defs.CIVS[c]["name"])
+		o.add_item(Lang.t(Defs.CIVS[c]["name"]))
 	o.select(maxi(0, Defs.CIV_ORDER.find(cur)))
 	o.disabled = not enabled
 	o.custom_minimum_size = Vector2(150, 0)
@@ -798,11 +798,11 @@ func _type_pick(cur: String, enabled: bool, on_pick: Callable) -> OptionButton:
 	var o := OptionButton.new()
 	for i in Defs.MAP_TYPE_ORDER.size():
 		var k: String = Defs.MAP_TYPE_ORDER[i]
-		o.add_item(Defs.MAP_TYPES[k]["name"])
-		o.set_item_tooltip(i, Defs.MAP_TYPES[k]["desc"])
+		o.add_item(Lang.t(Defs.MAP_TYPES[k]["name"]))
+		o.set_item_tooltip(i, Lang.t(Defs.MAP_TYPES[k]["desc"]))
 	o.select(maxi(0, Defs.MAP_TYPE_ORDER.find(cur)))
 	o.disabled = not enabled
-	o.tooltip_text = "Tipo de mapa. El terreno se genera al azar en cada partida."
+	o.tooltip_text = Lang.t("Tipo de mapa. El terreno se genera al azar en cada partida.")
 	o.item_selected.connect(func(j: int) -> void: on_pick.call(Defs.MAP_TYPE_ORDER[j]))
 	return o
 
@@ -810,7 +810,7 @@ func _type_pick(cur: String, enabled: bool, on_pick: Callable) -> OptionButton:
 func _team_pick(cur: int, enabled: bool, on_pick: Callable) -> OptionButton:
 	var o := OptionButton.new()
 	for t in 4:
-		o.add_item("Equipo %d" % (t + 1))
+		o.add_item(Lang.t("Equipo %d") % (t + 1))
 	o.select(clampi(cur - 1, 0, 3))
 	o.disabled = not enabled
 	o.item_selected.connect(func(j: int) -> void: on_pick.call(j + 1))
@@ -820,7 +820,7 @@ func _team_pick(cur: int, enabled: bool, on_pick: Callable) -> OptionButton:
 func _color_pick(cur: int, enabled: bool, on_pick: Callable) -> OptionButton:
 	var o := OptionButton.new()
 	for c in Defs.COLOR_NAMES.size():
-		o.add_item(Defs.COLOR_NAMES[c])
+		o.add_item(Lang.t(Defs.COLOR_NAMES[c]))
 	o.select(clampi(cur, 0, Defs.COLOR_NAMES.size() - 1))
 	o.disabled = not enabled
 	o.item_selected.connect(func(j: int) -> void: on_pick.call(j))

@@ -72,7 +72,7 @@ func _make_opt_theme() -> Theme:
 
 
 func _build() -> void:
-	var title := home._label("UN JUGADOR", 46, Home.GOLD)
+	var title := home._label(Lang.t("UN JUGADOR"), 46, Home.GOLD)
 	title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	title.offset_top = 10
 	title.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -87,7 +87,7 @@ func _build() -> void:
 	row.offset_bottom = 136
 	add_child(row)
 	for pr in PRESETS:
-		var b := home.art_button(pr[1], Vector2(150 if pr[0] != "ffa" else 290, 56), 24)
+		var b := home.art_button(Lang.t(pr[1]), Vector2(150 if pr[0] != "ffa" else 290, 56), 24)
 		var id: String = pr[0]
 		b.pressed.connect(func() -> void: _set_preset(id))
 		row.add_child(b)
@@ -110,34 +110,34 @@ func _build() -> void:
 	bottom.offset_top = -108
 	bottom.offset_bottom = -22
 	add_child(bottom)
-	var back := home.art_button("Volver", Vector2(170, 76), 26, Color(0.25, 0.22, 0.20))
+	var back := home.art_button(Lang.t("Volver"), Vector2(170, 76), 26, Color(0.25, 0.22, 0.20))
 	back.pressed.connect(queue_free)
 	bottom.add_child(back)
 	var ml := Label.new()
-	ml.text = "Mapa:"
+	ml.text = Lang.t("Mapa:")
 	bottom.add_child(ml)
 	size_opt = OptionButton.new()
-	for t in ["Pequeño", "Mediano", "Grande"]:
+	for t in [Lang.t("Pequeño"), Lang.t("Mediano"), Lang.t("Grande")]:
 		size_opt.add_item(t)
 	size_opt.select(1)
 	size_opt.custom_minimum_size = Vector2(150, 50)
 	size_opt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(size_opt)
 	var tl := Label.new()
-	tl.text = "Tipo:"
+	tl.text = Lang.t("Tipo:")
 	bottom.add_child(tl)
 	type_opt = OptionButton.new()
 	for i in Defs.MAP_TYPE_ORDER.size():
 		var k: String = Defs.MAP_TYPE_ORDER[i]
-		type_opt.add_item(Defs.MAP_TYPES[k]["name"])
-		type_opt.set_item_tooltip(i, Defs.MAP_TYPES[k]["desc"])
+		type_opt.add_item(Lang.t(Defs.MAP_TYPES[k]["name"]))
+		type_opt.set_item_tooltip(i, Lang.t(Defs.MAP_TYPES[k]["desc"]))
 	type_opt.custom_minimum_size = Vector2(210, 50)
 	type_opt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(type_opt)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(sp)
-	var play := home.art_button("¡JUGAR!", Vector2(300, 80), 40, GREEN)
+	var play := home.art_button(Lang.t("¡JUGAR!"), Vector2(300, 80), 40, GREEN)
 	play.pressed.connect(_play)
 	bottom.add_child(play)
 
@@ -181,7 +181,7 @@ func _rebuild() -> void:
 	area.add_child(row)
 	for ti in team_ids.size():
 		if ti > 0:
-			var vs := home._label("VS", 64, Home.GOLD)
+			var vs := home._label(Lang.t("VS"), 64, Home.GOLD)
 			vs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(vs)
 		var side_slots: Array = []
@@ -210,16 +210,16 @@ func _card(i: int, big: bool, per_side: int, n_teams: int) -> Control:
 	var p := PanelContainer.new()
 	p.theme = opt_theme
 	p.add_theme_stylebox_override("panel", home._box(Color(0.14, 0.09, 0.06, 0.9), col.lightened(0.15), 14, 4))
-	var who := ("Tú" if Account.player_name == "" else Account.player_name) if not s["bot"] else "Bot %d" % i
+	var who := (Lang.t("Tú") if Account.player_name == "" else Account.player_name) if not s["bot"] else Lang.t("Bot %d") % i
 	var civ_opt := OptionButton.new()
 	for c in Defs.CIV_ORDER:
-		civ_opt.add_item(Defs.CIVS[c]["name"])
+		civ_opt.add_item(Lang.t(Defs.CIVS[c]["name"]))
 	civ_opt.select(maxi(0, Defs.CIV_ORDER.find(s["civ"])))
 	var dif_opt: OptionButton = null
 	if s["bot"]:
 		dif_opt = OptionButton.new()
 		for d in Defs.DIFF_ORDER:
-			dif_opt.add_item("Nivel: " + String(Defs.DIFFICULTY[d]["name"]))
+			dif_opt.add_item(Lang.t("Nivel: ") + Lang.t(Defs.DIFFICULTY[d]["name"]))
 		dif_opt.select(maxi(0, Defs.DIFF_ORDER.find(s["difficulty"])))
 		dif_opt.item_selected.connect(func(j: int) -> void: slots[i]["difficulty"] = Defs.DIFF_ORDER[j])
 	if big:
@@ -270,9 +270,9 @@ func _play() -> void:
 	var players: Array = []
 	for i in slots.size():
 		var s: Dictionary = slots[i]
-		var nm := "Tú" if Account.player_name == "" else Account.player_name
+		var nm := Lang.t("Tú") if Account.player_name == "" else Account.player_name
 		if s["bot"]:
-			nm = "%s (%s)" % [Defs.CIVS[s["civ"]]["name"], Defs.DIFFICULTY[s["difficulty"]]["name"]]
+			nm = "%s (%s)" % [Lang.t(Defs.CIVS[s["civ"]]["name"]), Lang.t(Defs.DIFFICULTY[s["difficulty"]]["name"])]
 		players.append({"name": nm, "civ": s["civ"], "team": s["team"], "color": s["color"],
 			"bot": s["bot"], "difficulty": s["difficulty"]})
 	Setup.players = players

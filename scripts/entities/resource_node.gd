@@ -34,7 +34,7 @@ func remaining() -> float:
 
 
 func display_name() -> String:
-	return def["name"]
+	return Lang.t(def["name"])
 
 
 func init(g: Game, k: String, tile: Vector2i, seed_v: int) -> void:

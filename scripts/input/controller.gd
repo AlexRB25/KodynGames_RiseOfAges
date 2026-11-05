@@ -424,7 +424,7 @@ func select_next_idle() -> void:
 func start_placing(k: String) -> void:
 	var reason := game.build_block_reason(game.local_id, k)
 	if reason == "" and any_villager() == null:
-		reason = "No tienes aldeanos."
+		reason = Lang.t("No tienes aldeanos.")
 	if reason != "":
 		game.hud.notify(reason, Vector2.INF)
 		return
@@ -578,7 +578,7 @@ func _place_at(sp: Vector2, keep: bool) -> void:
 	var k := placing
 	var t := _ghost_tile(sp)
 	if not game.can_place_ui(k, t):
-		game.hud.notify("No se puede construir ahÃ­.", Vector2.INF)
+		game.hud.notify(Lang.t("No se puede construir ahí."), Vector2.INF)
 		return
 	var reason := game.build_block_reason(game.local_id, k)
 	if reason != "":
@@ -598,7 +598,7 @@ func _place_wall(sp: Vector2, keep: bool) -> void:
 			tiles.append(t)
 	wall_start = Vector2i(-1, -1)
 	if tiles.is_empty():
-		game.hud.notify("No se puede construir ahÃ­.", Vector2.INF)
+		game.hud.notify(Lang.t("No se puede construir ahí."), Vector2.INF)
 	else:
 		_issue_place(k, tiles, keep)
 	if not keep:

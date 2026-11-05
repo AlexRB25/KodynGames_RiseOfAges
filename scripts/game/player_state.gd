@@ -54,4 +54,4 @@ func give(cost: Dictionary) -> void:
 
 
 func age_name() -> String:
-	return Defs.AGES[age - 1]["name"]
+	return Lang.t(Defs.AGES[age - 1]["name"])

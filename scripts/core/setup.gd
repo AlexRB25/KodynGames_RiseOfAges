@@ -19,8 +19,8 @@ func _ready() -> void:
 
 func default_skirmish() -> void:
 	players = [
-		{"name": "Jugador", "civ": "mexica", "team": 1, "color": 0, "bot": false, "difficulty": "normal"},
-		{"name": "Bot 1", "civ": "maya", "team": 2, "color": 1, "bot": true, "difficulty": "normal"},
+		{"name": Lang.t("Jugador"), "civ": "mexica", "team": 1, "color": 0, "bot": false, "difficulty": "normal"},
+		{"name": Lang.t("Bot 1"), "civ": "maya", "team": 2, "color": 1, "bot": true, "difficulty": "normal"},
 	]
 	local_player = 0
 	online = false

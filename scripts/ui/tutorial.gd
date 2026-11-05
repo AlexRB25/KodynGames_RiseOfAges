@@ -86,7 +86,7 @@ func setup(g: Game) -> void:
 	row.add_theme_constant_override("separation", 10)
 	vb.add_child(row)
 	skip_btn = Button.new()
-	skip_btn.text = "Omitir tutorial"
+	skip_btn.text = Lang.t("Omitir tutorial")
 	skip_btn.custom_minimum_size = Vector2(170, 42)
 	skip_btn.pressed.connect(_skip)
 	row.add_child(skip_btn)
@@ -114,15 +114,15 @@ func _touch() -> bool:
 ## Los pasos. "target" devuelve [posición en pantalla, radio] o [] para ninguno;
 ## "done" devuelve true cuando el jugador ya lo hizo; sin "done", hay botón Siguiente.
 func _steps() -> Array:
-	var tap := "Toca" if _touch() else "Haz clic en"
-	var order := "toca" if _touch() else "haz [b]clic derecho[/b] en"
+	var tap := Lang.t("Toca") if _touch() else Lang.t("Haz clic en")
+	var order := Lang.t("toca") if _touch() else Lang.t("haz [b]clic derecho[/b] en")
 	return [
-		{"title": "¡Bienvenido a Rise of Ages!",
-			"text": "Este es tu [b]Centro[/b], el corazón de tu pueblo: aquí llegan los recursos y se compran aldeanos.\nSi te quedas sin Centros, pierdes.",
+		{"title": Lang.t("¡Bienvenido a Rise of Ages!"),
+			"text": Lang.t("Este es tu [b]Centro[/b], el corazón de tu pueblo: aquí llegan los recursos y se compran aldeanos.\nSi te quedas sin Centros, pierdes."),
 			"start": func() -> void: game.camera.focus(_centro().center()),
 			"target": func() -> Array: return _ent(_centro(), 2.0, 1.2)},
-		{"title": "Selecciona un aldeano",
-			"text": "%s este aldeano para elegirlo." % tap,
+		{"title": Lang.t("Selecciona un aldeano"),
+			"text": Lang.t("%s este aldeano para elegirlo.") % tap,
 			"start": func() -> void:
 				_villager = _a_villager()
 				game.camera.focus(_villager.pos),
@@ -135,23 +135,23 @@ func _steps() -> Array:
 						_villager = u
 						return true
 				return false},
-		{"title": "Muévelo",
-			"text": ("Ahora toca el lugar marcado: tu aldeano caminará hasta ahí.\n[i](También puedes dejar el dedo sobre el aldeano y arrastrarlo.)[/i]" if _touch()
-				else "Con el aldeano elegido, haz [b]clic derecho[/b] en el lugar marcado para que camine hasta ahí."),
+		{"title": Lang.t("Muévelo"),
+			"text": (Lang.t("Ahora toca el lugar marcado: tu aldeano caminará hasta ahí.\n[i](También puedes dejar el dedo sobre el aldeano y arrastrarlo.)[/i]") if _touch()
+				else Lang.t("Con el aldeano elegido, haz [b]clic derecho[/b] en el lugar marcado para que camine hasta ahí.")),
 			"start": func() -> void:
 				_spot = _free_spot(_villager.pos, 5.0)
 				_show_marker(_spot),
 			"target": func() -> Array: return _point(_spot, 0.9),
 			"done": func() -> bool: return Entity.live(_villager) and _villager.pos.distance_to(_spot) < 1.6},
-		{"title": "Junta madera",
-			"text": "Para construir necesitas madera. Con el aldeano elegido, %s este [b]árbol[/b]: lo cortará y llevará la madera al Centro él solo." % order,
+		{"title": Lang.t("Junta madera"),
+			"text": Lang.t("Para construir necesitas madera. Con el aldeano elegido, %s este [b]árbol[/b]: lo cortará y llevará la madera al Centro él solo.") % order,
 			"start": func() -> void:
 				_hide_marker()
 				game.camera.focus(_tree().center()),
 			"target": func() -> Array: return _ent(_tree(), 0.6, 0.6),
 			"done": func() -> bool: return _anyone("madera")},
-		{"title": "Elige otro aldeano",
-			"text": "Tu primer aldeano ya está cortando madera. Ahora %s este otro aldeano [b]sin tarea[/b]." % tap.to_lower(),
+		{"title": Lang.t("Elige otro aldeano"),
+			"text": Lang.t("Tu primer aldeano ya está cortando madera. Ahora %s este otro aldeano [b]sin tarea[/b].") % tap.to_lower(),
 			"start": func() -> void:
 				_villager2 = _a_villager(_villager)
 				game.camera.focus(_villager2.pos),
@@ -163,35 +163,34 @@ func _steps() -> Array:
 						_villager2 = u
 						return true
 				return false},
-		{"title": "Junta comida",
-			"text": "Con este aldeano elegido, %s estas [b]bayas[/b]. La comida sirve para comprar más aldeanos.
-[i](Las cabras se pueden pastorear: más adelante te dan comida sin matarlas.)[/i]" % order,
+		{"title": Lang.t("Junta comida"),
+			"text": Lang.t("Con este aldeano elegido, %s estas [b]bayas[/b]. La comida sirve para comprar más aldeanos.\n[i](Las cabras se pueden pastorear: más adelante te dan comida sin matarlas.)[/i]") % order,
 			"start": func() -> void: game.camera.focus(_food().center()),
 			"target": func() -> Array: return _ent(_food(), 0.4, 0.5),
 			"done": func() -> bool: return _anyone("comida")},
-		{"title": "Compra un aldeano",
-			"text": ("Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b] y luego [b]Comprar[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]" if _touch()
-				else "Abajo, en la pestaña [b]Aldeanos[/b], haz clic en [b]Aldeano[/b]. Cuesta 50 de comida."),
+		{"title": Lang.t("Compra un aldeano"),
+			"text": (Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b] y luego [b]Comprar[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]") if _touch()
+				else Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], haz clic en [b]Aldeano[/b]. Cuesta 50 de comida.")),
 			"start": func() -> void: game.hud.set_tab("aldeanos"),
-			"target": func() -> Array: return _button("Aldeano"),
+			"target": func() -> Array: return _button(Lang.t("Aldeano")),
 			"done": func() -> bool: return _centro().queue.has("aldeano") or _vills() > _start_vills},
-		{"title": "Construye una casa",
-			"text": "Cada casa te deja tener 5 personas más. Abre [b]Edificios[/b], elige [b]Casa[/b] y %s un lugar libre del mapa." % ("toca" if _touch() else "haz clic en"),
+		{"title": Lang.t("Construye una casa"),
+			"text": Lang.t("Cada casa te deja tener 5 personas más. Abre [b]Edificios[/b], elige [b]Casa[/b] y %s un lugar libre del mapa.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),
 			"target": func() -> Array:
 				if game.hud.tab != "edificios":
 					return _tab("edificios")
 				if game.controller.placing == "":
-					return _button("Casa")
+					return _button(Lang.t("Casa"))
 				return [],
 			"done": func() -> bool: return game.count_buildings(game.local_id, ["casa"], false) > 0},
-		{"title": "Tus recursos",
-			"text": "Arriba ves tu [b]alimento, madera, oro, piedra[/b] y tu [b]población[/b]. Los aldeanos sin tarea muestran un [b]![/b] y te avisan.",
+		{"title": Lang.t("Tus recursos"),
+			"text": Lang.t("Arriba ves tu [b]alimento, madera, oro, piedra[/b] y tu [b]población[/b]. Los aldeanos sin tarea muestran un [b]![/b] y te avisan."),
 			"target": func() -> Array: return _rect(game.hud.res_labels["comida"].get_parent().get_parent())},
-		{"title": "Sube de era",
-			"text": "Al centro de arriba está tu [b]era[/b] (nivel 1 a 5). Para subir necesitas recursos y ciertos edificios; el Centro te dice cuáles faltan. Cada era, tu gente y tus edificios se ven mejor.",
+		{"title": Lang.t("Sube de era"),
+			"text": Lang.t("Al centro de arriba está tu [b]era[/b] (nivel 1 a 5). Para subir necesitas recursos y ciertos edificios; el Centro te dice cuáles faltan. Cada era, tu gente y tus edificios se ven mejor."),
 			"target": func() -> Array: return _rect(game.hud.era_tex)},
-		{"title": "¡Listo!",
-			"text": "Ya sabes lo básico. Junta recursos, crece tu pueblo, arma un ejército y deja al rival [b]sin ningún Centro[/b] para ganar.\nEn esta partida el rival no ataca: sigue practicando o vuelve al menú.",
+		{"title": Lang.t("¡Listo!"),
+			"text": Lang.t("Ya sabes lo básico. Junta recursos, crece tu pueblo, arma un ejército y deja al rival [b]sin ningún Centro[/b] para ganar.\nEn esta partida el rival no ataca: sigue practicando o vuelve al menú."),
 			"target": func() -> Array: return [],
 			"last": true},
 	]
@@ -211,8 +210,8 @@ func _go(n: int) -> void:
 		st["start"].call()
 	var waits := st.has("done")
 	next_btn.visible = not waits
-	next_btn.text = "Ir al menú" if st.get("last", false) else "Siguiente"
-	skip_btn.text = "Seguir jugando" if st.get("last", false) else "Omitir tutorial"
+	next_btn.text = Lang.t("Ir al menú") if st.get("last", false) else Lang.t("Siguiente")
+	skip_btn.text = Lang.t("Seguir jugando") if st.get("last", false) else Lang.t("Omitir tutorial")
 
 
 func _on_next() -> void:

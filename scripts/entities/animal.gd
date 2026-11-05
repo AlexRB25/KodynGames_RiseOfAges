@@ -49,7 +49,7 @@ func remaining() -> float:
 
 
 func display_name() -> String:
-	return def["name"] + (" (cazado)" if dead else "")
+	return Lang.t(def["name"]) + (Lang.t(" (cazado)") if dead else "")
 
 
 func grazing() -> bool:
@@ -80,8 +80,8 @@ func set_herd_owner(pid: int) -> void:
 					best = b
 		if best:
 			cmd_move(best.center())
-		game.notify(pid, "Un%s %s ya es de tu pueblo.%s" % ["a" if kind == "cabra" else "", def["name"].to_lower(),
-			" Va hacia tu corral." if best else " Construye un Corral para que paste."], pos)
+		game.notify(pid, Lang.t("Nuevo animal en tu pueblo: %s.%s") % [Lang.t(def["name"]).to_lower(),
+			Lang.t(" Va hacia tu corral.") if best else Lang.t(" Construye un Corral para que paste.")], pos)
 
 
 ## Orden del dueño: ir a un punto (o al corral, para quedarse pastando ahí).

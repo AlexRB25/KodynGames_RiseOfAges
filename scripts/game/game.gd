@@ -82,14 +82,14 @@ func start_match() -> void:
 			seed_v = 4242
 		elif arg.begins_with("--civ=") and not Setup.players.is_empty():
 			Setup.players[Setup.local_player]["civ"] = arg.get_slice("=", 1)
-	await _phase(0.05, "Creando el mapa…")
+	await _phase(0.05, Lang.t("Creando el mapa…"))
 	map.setup(size)
 	var teams: Array = []
 	for i in cfg.size():
 		var c: Dictionary = cfg[i]
 		var p := PlayerState.new()
 		p.id = i
-		p.name = c.get("name", "Jugador %d" % (i + 1))
+		p.name = c.get("name", Lang.t("Jugador %d") % (i + 1))
 		p.civ = c.get("civ", "mexica")
 		if not Defs.CIVS.has(p.civ):
 			p.civ = Defs.CIV_ORDER[0]
@@ -106,7 +106,7 @@ func start_match() -> void:
 		teams.append(p.team)
 	var plan := MapGen.new().generate(map, cfg.size(), teams, seed_v, Setup.map_type)
 	map_type = String(plan.get("type", ""))
-	await _phase(0.45, "Dibujando el terreno…")
+	await _phase(0.45, Lang.t("Dibujando el terreno…"))
 	fog.setup(map)
 	Mat.setup(fog.texture, Vector2(size, size))
 
@@ -117,7 +117,7 @@ func start_match() -> void:
 	var tv := TerrainView.new()
 	tv.build(map, fog.texture)
 	_world.add_child(tv)
-	await _phase(0.7, "Poniendo árboles y animales…")
+	await _phase(0.7, Lang.t("Poniendo árboles y animales…"))
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
@@ -136,7 +136,7 @@ func start_match() -> void:
 	for p in players:
 		if p.is_bot:
 			bots.append(Bot.new(self, p.id))
-	await _phase(0.92, "Preparando tu pueblo…")
+	await _phase(0.92, Lang.t("Preparando tu pueblo…"))
 
 	if not headless:
 		camera = RtsCamera.new()
@@ -155,7 +155,7 @@ func start_match() -> void:
 			add_child(tut)
 			tut.setup(self)
 		elif Defs.MAP_TYPES.has(map_type):
-			hud.notify("Mapa: %s. %s" % [Defs.MAP_TYPES[map_type]["name"], Defs.MAP_TYPES[map_type]["desc"]], Vector2.INF)
+			hud.notify(Lang.t("Mapa: %s. %s") % [Lang.t(Defs.MAP_TYPES[map_type]["name"]), Lang.t(Defs.MAP_TYPES[map_type]["desc"])], Vector2.INF)
 	_update_fog()
 	if online:
 		Net.attach(self)
@@ -416,13 +416,13 @@ func destroy_building(b: Building, by_attack: bool) -> void:
 		controller.forget(b)
 	recount_pop(b.owner_id)
 	if by_attack:
-		notify(b.owner_id, "Perdiste: %s." % b.display_name(), b.pos)
+		notify(b.owner_id, Lang.t("Perdiste: %s.") % b.display_name(), b.pos)
 		if b.kind == "centro" and not players[b.owner_id].defeated:
 			var nc := main_center(b.owner_id)
 			if nc:
-				notify(b.owner_id, "Destruyeron tu centro. El otro centro es ahora el principal.", nc.pos)
+				notify(b.owner_id, Lang.t("Destruyeron tu centro. El otro centro es ahora el principal."), nc.pos)
 			else:
-				notify(b.owner_id, "¡Destruyeron tu último centro!", b.pos)
+				notify(b.owner_id, Lang.t("¡Destruyeron tu último centro!"), b.pos)
 	var tw := b.create_tween()
 	tw.tween_property(b, "position:y", -3.0, 1.5)
 	tw.tween_callback(b.queue_free)
@@ -446,7 +446,7 @@ func on_building_complete(b: Building) -> void:
 	recount_pop(b.owner_id)
 	players[b.owner_id].stats["edificios"] += 1
 	if b.kind != "muralla" and b.kind != "granja":
-		notify(b.owner_id, "%s terminado." % b.display_name(), b.pos)
+		notify(b.owner_id, Lang.t("%s terminado.") % b.display_name(), b.pos)
 	if hud:
 		hud.refresh_selection()
 
@@ -456,7 +456,7 @@ func on_attacked(e: Entity, from: Entity) -> void:
 		return
 	if e.owner_id == local_id and time - _attack_note_t > 12.0:
 		_attack_note_t = time
-		notify(local_id, "¡Te están atacando!", e.pos)
+		notify(local_id, Lang.t("¡Te están atacando!"), e.pos)
 	for b in bots:
 		if b.pid == e.owner_id:
 			b.on_attacked(e, from)
@@ -638,9 +638,9 @@ func _defeat(pid: int, resigned := false) -> void:
 	var p := players[pid]
 	p.defeated = true
 	if resigned:
-		notify(local_id, "%s se rindió." % p.name if pid != local_id else "Te rendiste.", Vector2.INF)
+		notify(local_id, Lang.t("%s se rindió.") % p.name if pid != local_id else Lang.t("Te rendiste."), Vector2.INF)
 	else:
-		notify(local_id, "%s se quedó sin centros y fue derrotado." % p.name if pid != local_id else "Te quedaste sin centros.", Vector2.INF)
+		notify(local_id, Lang.t("%s se quedó sin centros y fue derrotado.") % p.name if pid != local_id else Lang.t("Te quedaste sin centros."), Vector2.INF)
 	for u in units.duplicate():
 		if u.owner_id == pid:
 			u.take_damage(99999.0, null)
@@ -872,13 +872,13 @@ func build_block_reason(owner: int, k: String) -> String:
 	var d: Dictionary = Defs.BUILDINGS[k]
 	var p := players[owner]
 	if d.get("age", 1) > p.age:
-		return "Requiere el nivel %d (%s)." % [d["age"], Defs.AGES[d["age"] - 1]["name"]]
+		return Lang.t("Requiere el nivel %d (%s).") % [d["age"], Lang.t(Defs.AGES[d["age"] - 1]["name"])]
 	if d.get("seed", false) and p.seeds <= 0:
-		return "No tienes siembras. Cómpralas en el Centro."
+		return Lang.t("No tienes siembras. Cómpralas en el Centro.")
 	if d.has("needs") and count_buildings(owner, [d["needs"]]) == 0:
-		return "Requiere %s." % Defs.BUILDINGS[d["needs"]]["name"]
+		return Lang.t("Requiere %s.") % Lang.t(Defs.BUILDINGS[d["needs"]]["name"])
 	if not p.can_afford(Defs.cost_of(k, p.civ)):
-		return "Faltan recursos."
+		return Lang.t("Faltan recursos.")
 	return ""
 
 
@@ -928,13 +928,13 @@ func buy_seed(owner: int) -> bool:
 func train_block_reason(owner: int, b: Building, k: String) -> String:
 	var p := players[owner]
 	if not b.can_train(k):
-		return "Este edificio no lo entrena."
+		return Lang.t("Este edificio no lo entrena.")
 	if Defs.UNITS[k].get("age", 1) > p.age:
-		return "Requiere el nivel %d (%s)." % [Defs.UNITS[k]["age"], Defs.AGES[Defs.UNITS[k]["age"] - 1]["name"]]
+		return Lang.t("Requiere el nivel %d (%s).") % [Defs.UNITS[k]["age"], Lang.t(Defs.AGES[Defs.UNITS[k]["age"] - 1]["name"])]
 	if b.queue.size() >= 10:
-		return "La cola está llena."
+		return Lang.t("La cola está llena.")
 	if not p.can_afford(Defs.cost_of(k, p.civ)):
-		return "Faltan recursos."
+		return Lang.t("Faltan recursos.")
 	return ""
 
 
@@ -977,27 +977,27 @@ func age_requirements(owner: int) -> Array:
 		return out
 	for r in Defs.AGES[p.age]["req"]:
 		var have := count_buildings(owner, r[0])
-		out.append({"text": r[2], "have": have, "need": r[1], "ok": have >= r[1]})
+		out.append({"text": Lang.t(r[2]), "have": have, "need": r[1], "ok": have >= r[1]})
 	return out
 
 
 func age_block_reason(owner: int, b: Building) -> String:
 	var p := players[owner]
 	if b.kind != "centro" or not b.complete:
-		return "Se investiga en el Centro."
+		return Lang.t("Se investiga en el Centro.")
 	if p.age >= Defs.AGES.size():
-		return "Ya estás en la última era."
+		return Lang.t("Ya estás en la última era.")
 	for bb in buildings:
 		if bb.owner_id == owner and bb.queue.has("era"):
-			return "Ya se está investigando."
+			return Lang.t("Ya se está investigando.")
 	var missing: Array[String] = []
 	for r in age_requirements(owner):
 		if not r["ok"]:
 			missing.append("%s (%d/%d)" % [r["text"], r["have"], r["need"]])
 	if not missing.is_empty():
-		return "Falta: " + ", ".join(missing)
+		return Lang.t("Falta: ") + ", ".join(missing)
 	if not p.can_afford(Defs.AGES[p.age]["cost"]):
-		return "Faltan recursos."
+		return Lang.t("Faltan recursos.")
 	return ""
 
 
@@ -1018,9 +1018,9 @@ func advance_age(owner: int) -> void:
 	for u in units:
 		if u.owner_id == owner:
 			u.refresh_age()
-	notify(owner, "¡Avanzaste a la era %s!" % p.age_name(), Vector2.INF)
+	notify(owner, Lang.t("¡Avanzaste a la era %s!") % p.age_name(), Vector2.INF)
 	if owner != local_id and team_of(owner) != team_of(local_id):
-		notify(local_id, "%s avanzó a la era %s." % [p.name, p.age_name()], Vector2.INF)
+		notify(local_id, Lang.t("%s avanzó a la era %s.") % [p.name, p.age_name()], Vector2.INF)
 	if hud:
 		hud.refresh_selection()
 

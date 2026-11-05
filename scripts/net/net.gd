@@ -15,7 +15,7 @@ const DEFAULT_SERVER := "wss://conquista-srzq.onrender.com/ws"
 
 var ws := WebSocketPeer.new()
 var is_open := false
-var player_name := "Jugador"
+var player_name := Lang.t("Jugador")
 var room: Dictionary = {}      # {code, you, host, players, bots, map}
 var game: Game = null
 var _buffer: Array = []        # turnos que llegan antes de que cargue la partida
@@ -50,7 +50,7 @@ func open_and(first: Dictionary) -> void:
 	var err := ws.connect_to_url(server_url())
 	if err != OK:
 		_want_open = false
-		failed.emit("No se pudo conectar al servidor.")
+		failed.emit(Lang.t("No se pudo conectar al servidor."))
 
 
 func create_room(name: String) -> void:
@@ -160,9 +160,9 @@ func _process(_dt: float) -> void:
 			if was_open:
 				closed.emit()
 				if game and game.hud:
-					game.hud.notify("Se perdió la conexión con el servidor.", Vector2.INF)
+					game.hud.notify(Lang.t("Se perdió la conexión con el servidor."), Vector2.INF)
 			else:
-				failed.emit("No se pudo conectar al servidor (%s)." % server_url())
+				failed.emit(Lang.t("No se pudo conectar al servidor (%s).") % server_url())
 
 
 func _handle(m: Dictionary) -> void:
@@ -174,7 +174,7 @@ func _handle(m: Dictionary) -> void:
 			if not queue_info.is_empty():
 				queue_info = {}
 				queue_changed.emit()
-			failed.emit(String(m.get("msg", "Error")))
+			failed.emit(Lang.t(String(m.get("msg", "Error"))))
 		"queued", "queue":
 			queue_info = {"mode": m.get("mode", ""), "waiting": int(m.get("waiting", 0)), "need": int(m.get("need", 0))}
 			if m.has("points"):
@@ -184,7 +184,7 @@ func _handle(m: Dictionary) -> void:
 			queue_info = {}
 			queue_changed.emit()
 			if m.has("msg"):
-				failed.emit(String(m["msg"]))
+				failed.emit(Lang.t(String(m["msg"])))
 		"rated":
 			last_rated = m
 			if m.get("you") is Dictionary:
@@ -218,7 +218,7 @@ func _handle(m: Dictionary) -> void:
 				_buffer.append([n, cmds])
 		"left":
 			if game and game.hud:
-				game.hud.notify("%s se desconectó." % m.get("name", "Un jugador"), Vector2.INF)
+				game.hud.notify(Lang.t("%s se desconectó.") % m.get("name", Lang.t("Un jugador")), Vector2.INF)
 		"desync":
 			if game and game.hud:
-				game.hud.notify("Aviso: la partida se desincronizó (turno %d)." % int(m.get("n", 0)), Vector2.INF)
+				game.hud.notify(Lang.t("Aviso: la partida se desincronizó (turno %d).") % int(m.get("n", 0)), Vector2.INF)

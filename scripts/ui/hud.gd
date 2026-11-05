@@ -108,7 +108,7 @@ func _build_top(root: Control) -> void:
 	bar.add_child(hb)
 	for r in Defs.RES:
 		var ic := ResIcon.new(r)
-		ic.tooltip_text = Defs.RES_NAMES[r]
+		ic.tooltip_text = Lang.t(Defs.RES_NAMES[r])
 		hb.add_child(ic)
 		var l := Label.new()
 		l.custom_minimum_size = Vector2(58, 0)
@@ -116,7 +116,7 @@ func _build_top(root: Control) -> void:
 		hb.add_child(l)
 		res_labels[r] = l
 	var pi := ResIcon.new("pop")
-	pi.tooltip_text = "Población / máximo"
+	pi.tooltip_text = Lang.t("Población / máximo")
 	hb.add_child(pi)
 	pop_label = Label.new()
 	pop_label.custom_minimum_size = Vector2(66, 0)
@@ -157,17 +157,17 @@ func _build_top(root: Control) -> void:
 	time_label = Label.new()
 	hr.add_child(time_label)
 	idle_btn = Button.new()
-	idle_btn.tooltip_text = "Aldeanos sin tarea (tecla .)"
+	idle_btn.tooltip_text = Lang.t("Aldeanos sin tarea (tecla .)")
 	idle_btn.pressed.connect(func() -> void: game.controller.select_next_idle())
 	hr.add_child(idle_btn)
 	if is_touch():
 		var mapb := Button.new()
-		mapb.text = "Mapa"
+		mapb.text = Lang.t("Mapa")
 		mapb.custom_minimum_size = Vector2(90, 40)
 		mapb.pressed.connect(func() -> void: full_map.visible = not full_map.visible)
 		hr.add_child(mapb)
 	var mb := Button.new()
-	mb.text = "Menú"
+	mb.text = Lang.t("Menú")
 	mb.custom_minimum_size = Vector2(70, 0)
 	mb.pressed.connect(toggle_menu)
 	hr.add_child(mb)
@@ -227,7 +227,7 @@ func _build_bottom(root: Control) -> void:
 	preview_ok.pressed.connect(_preview_confirm)
 	preview_row.add_child(preview_ok)
 	var back := Button.new()
-	back.text = "Volver"
+	back.text = Lang.t("Volver")
 	back.custom_minimum_size = Vector2(110, 44)
 	back.add_theme_font_size_override("font_size", 17)
 	back.pressed.connect(func() -> void: _set_preview({}))
@@ -262,11 +262,11 @@ func _build_full_map(root: Control) -> void:
 	var top := HBoxContainer.new()
 	vb.add_child(top)
 	var t := Label.new()
-	t.text = "Mapa — toca para ir a ese lugar"
+	t.text = Lang.t("Mapa — toca para ir a ese lugar")
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	var close := Button.new()
-	close.text = "Cerrar ✕"
+	close.text = Lang.t("Cerrar ✕")
 	close.custom_minimum_size = Vector2(120, 48)
 	close.pressed.connect(func() -> void: full_map.visible = false)
 	top.add_child(close)
@@ -288,32 +288,32 @@ func _build_menu(root: Control) -> void:
 	vb.add_theme_constant_override("separation", 8)
 	menu_panel.add_child(vb)
 	var t := Label.new()
-	t.text = "Pausa"
+	t.text = Lang.t("Pausa")
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.add_theme_font_size_override("font_size", 24)
 	vb.add_child(t)
 	var cont := Button.new()
-	cont.text = "Continuar"
+	cont.text = Lang.t("Continuar")
 	cont.pressed.connect(toggle_menu)
 	vb.add_child(cont)
 	var speed := OptionButton.new()
-	for s in ["Velocidad x1", "Velocidad x1.5", "Velocidad x2"]:
+	for s in [Lang.t("Velocidad x1"), Lang.t("Velocidad x1.5"), Lang.t("Velocidad x2")]:
 		speed.add_item(s)
 	speed.item_selected.connect(func(i: int) -> void: game.time_scale = [1.0, 1.5, 2.0][i])
 	speed.disabled = game.online
 	vb.add_child(speed)
 	var edge := CheckBox.new()
-	edge.text = "Mover cámara con los bordes"
+	edge.text = Lang.t("Mover cámara con los bordes")
 	edge.button_pressed = true
 	edge.toggled.connect(func(on: bool) -> void: game.camera.edge_scroll = on)
 	vb.add_child(edge)
 	var help := Label.new()
-	help.text = "Clic izq: seleccionar · Arrastrar: recuadro\nClic der: mover / recolectar / atacar\nWASD o bordes: mover · Q/E o rueda central: girar\nRueda: acercar · H: centro · .: aldeano sin tarea\nCtrl+1-9: guardar grupo · Shift: varias obras"
+	help.text = Lang.t("Clic izq: seleccionar · Arrastrar: recuadro\nClic der: mover / recolectar / atacar\nWASD o bordes: mover · Q/E o rueda central: girar\nRueda: acercar · H: centro · .: aldeano sin tarea\nCtrl+1-9: guardar grupo · Shift: varias obras")
 	help.add_theme_font_size_override("font_size", 12)
 	vb.add_child(help)
 	var resign := Button.new()
-	resign.text = "Rendirse"
-	resign.tooltip_text = "Pierdes la partida" + (" (cuenta para tus puntos)." if Net.ranked else ".")
+	resign.text = Lang.t("Rendirse")
+	resign.tooltip_text = Lang.t("Pierdes la partida") + (Lang.t(" (cuenta para tus puntos).") if Net.ranked else ".")
 	resign.pressed.connect(func() -> void:
 		menu_panel.visible = false
 		if not game.online:
@@ -321,7 +321,7 @@ func _build_menu(root: Control) -> void:
 		game.issue({"k": "resign"}))
 	vb.add_child(resign)
 	var quit := Button.new()
-	quit.text = "Salir al menú principal" + (" (cuenta como derrota)" if Net.ranked else "")
+	quit.text = Lang.t("Salir al menú principal") + (Lang.t(" (cuenta como derrota)") if Net.ranked else "")
 	quit.pressed.connect(func() -> void:
 		Net.close()
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
@@ -346,7 +346,7 @@ func show_result(win: bool) -> void:
 	vb.add_theme_constant_override("separation", 10)
 	result_panel.add_child(vb)
 	var t := Label.new()
-	t.text = "¡VICTORIA!" if win else "DERROTA"
+	t.text = Lang.t("¡VICTORIA!") if win else Lang.t("DERROTA")
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.add_theme_font_size_override("font_size", 36)
 	t.add_theme_color_override("font_color", Color(1, 0.85, 0.3) if win else Color(0.9, 0.35, 0.3))
@@ -356,8 +356,8 @@ func show_result(win: bool) -> void:
 	st.fit_content = true
 	var txt := ""
 	for p in game.players:
-		txt += "[color=#%s]■[/color] %s (%s): recolectó %d, entrenó %d, perdió %d unidades\n" % [
-			p.color.to_html(false), p.name, Defs.CIVS[p.civ]["name"], int(p.stats["recolectado"]),
+		txt += Lang.t("[color=#%s]■[/color] %s (%s): recolectó %d, entrenó %d, perdió %d unidades\n") % [
+			p.color.to_html(false), p.name, Lang.t(Defs.CIVS[p.civ]["name"]), int(p.stats["recolectado"]),
 			p.stats["entrenados"], p.stats["muertes"]]
 	st.text = txt
 	vb.add_child(st)
@@ -368,11 +368,11 @@ func show_result(win: bool) -> void:
 	vb.add_child(rating_label)
 	if Net.ranked:
 		rating_label.visible = true
-		rating_label.text = "[center]Calculando tus puntos…[/center]"
+		rating_label.text = Lang.t("[center]Calculando tus puntos…[/center]")
 		if not Net.last_rated.is_empty():
 			show_rating(Net.last_rated)
 	var b := Button.new()
-	b.text = "Volver al menú"
+	b.text = Lang.t("Volver al menú")
 	b.pressed.connect(func() -> void:
 		Net.close()
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
@@ -391,14 +391,14 @@ func show_rating(m: Dictionary) -> void:
 	rating_label.visible = true
 	var you = m.get("you")
 	if not you is Dictionary:
-		rating_label.text = "[center]Esta partida no contó para el rango.[/center]"
+		rating_label.text = Lang.t("[center]Esta partida no contó para el rango.[/center]")
 		return
 	var d := int(you.get("delta", 0))
 	var col := "#7dff7d" if d >= 0 else "#ff8a7a"
-	var txt := "[center][font_size=22][color=%s]%s%d puntos[/color][/font_size]\nAhora: %d puntos · Nivel %d" % [
+	var txt := Lang.t("[center][font_size=22][color=%s]%s%d puntos[/color][/font_size]\nAhora: %d puntos · Nivel %d") % [
 		col, "+" if d >= 0 else "", d, int(you.get("points", 0)), int(you.get("level", 1))]
 	if bool(m.get("forfeit", false)):
-		txt += "\n(el rival abandonó la partida)"
+		txt += Lang.t("\n(el rival abandonó la partida)")
 	rating_label.text = txt + "[/center]"
 
 
@@ -471,12 +471,12 @@ func _process(dt: float) -> void:
 		var et := Art.era(p.civ, p.age)
 		era_tex.texture = et
 		era_tex.visible = et != null
-		age_label.text = ("Nivel %d" % p.age) if et else ("Nivel %d · %s" % [p.age, p.age_name()])
-		age_label.tooltip_text = "%s — %s" % [p.age_name(), Defs.CIVS[p.civ]["name"]]
+		age_label.text = (Lang.t("Nivel %d") % p.age) if et else (Lang.t("Nivel %d · %s") % [p.age, p.age_name()])
+		age_label.tooltip_text = "%s — %s" % [p.age_name(), Lang.t(Defs.CIVS[p.civ]["name"])]
 	var t := int(game.time)
 	time_label.text = "%02d:%02d" % [t / 60, t % 60]
 	var idle := game.controller.idle_villagers().size()
-	idle_btn.text = "Sin tarea: %d" % idle
+	idle_btn.text = Lang.t("Sin tarea: %d") % idle
 	idle_btn.disabled = idle == 0
 	_t -= dt
 	if _t <= 0.0:
@@ -577,45 +577,45 @@ func _rebuild_actions() -> void:
 func _build_button(k: String) -> void:
 	var d: Dictionary = Defs.BUILDINGS[k]
 	var cost := Defs.cost_of(k, game.players[game.local_id].civ)
-	var ctext := Defs.cost_text(cost) if not d.get("seed", false) else "1 siembra (tienes %d)" % game.players[game.local_id].seeds
-	_add_btn(d["name"], "%s\nCosto: %s\n%s\n\nSi no tienes aldeanos seleccionados, va el más cercano sin tarea." % [d["name"], ctext, d["desc"]],
+	var ctext := Defs.cost_text(cost) if not d.get("seed", false) else Lang.t("1 siembra (tienes %d)") % game.players[game.local_id].seeds
+	_add_btn(Lang.t(d["name"]), Lang.t("%s\nCosto: %s\n%s\n\nSi no tienes aldeanos seleccionados, va el más cercano sin tarea.") % [Lang.t(d["name"]), ctext, Lang.t(d["desc"])],
 		func() -> void: game.controller.start_placing(k),
 		func() -> String:
 			var r := game.build_block_reason(game.local_id, k)
 			if r == "" and game.controller.any_villager() == null:
-				return "No tienes aldeanos."
+				return Lang.t("No tienes aldeanos.")
 			return r, Thumbs.get_icon(game, k))
 
 
 func _seed_button() -> void:
-	_add_btn("Siembra", "Comprar 1 siembra (%s) en el Centro.\nCada siembra = 1 granja de 4 cuadros.\nPuedes guardar varias: cuando una granja se acaba, se resiembra sola." % Defs.cost_text(Defs.SEED_COST),
+	_add_btn(Lang.t("Siembra"), Lang.t("Comprar 1 siembra (%s) en el Centro.\nCada siembra = 1 granja de 4 cuadros.\nPuedes guardar varias: cuando una granja se acaba, se resiembra sola.") % Defs.cost_text(Defs.SEED_COST),
 		func() -> void:
 			if game.players[game.local_id].can_afford(Defs.SEED_COST):
 				game.issue({"k": "seed"})
 			else:
-				notify("Faltan recursos.", Vector2.INF),
+				notify(Lang.t("Faltan recursos."), Vector2.INF),
 		func() -> String:
-			return "" if game.players[game.local_id].can_afford(Defs.SEED_COST) else "Faltan recursos.")
+			return "" if game.players[game.local_id].can_afford(Defs.SEED_COST) else Lang.t("Faltan recursos."))
 
 
 func _villager_tab() -> void:
 	var c := game.main_center(game.local_id)
 	if c:
 		var d: Dictionary = Defs.UNITS["aldeano"]
-		_add_btn("Aldeano", "Entrenar un aldeano en el Centro principal.\nCosto: %s\nNecesitas espacio de población (casas)." % Defs.cost_text(Defs.cost_of("aldeano", game.players[game.local_id].civ)),
+		_add_btn(Lang.t("Aldeano"), Lang.t("Entrenar un aldeano en el Centro principal.\nCosto: %s\nNecesitas espacio de población (casas).") % Defs.cost_text(Defs.cost_of("aldeano", game.players[game.local_id].civ)),
 			func() -> void:
 				var cc := game.main_center(game.local_id)
 				if cc:
 					_try(game.train_block_reason(game.local_id, cc, "aldeano"), {"k": "train", "e": cc.id, "b": "aldeano"}),
 			func() -> String:
 				var cc := game.main_center(game.local_id)
-				return game.train_block_reason(game.local_id, cc, "aldeano") if cc else "Sin centro.",
+				return game.train_block_reason(game.local_id, cc, "aldeano") if cc else Lang.t("Sin centro."),
 			Thumbs.get_icon(game, "aldeano"))
 		_age_button(c)
-	_add_btn("Sin tarea", "Ir al siguiente aldeano sin tarea (tecla .)",
+	_add_btn(Lang.t("Sin tarea"), Lang.t("Ir al siguiente aldeano sin tarea (tecla .)"),
 		func() -> void: game.controller.select_next_idle(),
-		func() -> String: return "" if not game.controller.idle_villagers().is_empty() else "Todos trabajan.")
-	_add_btn("Todos", "Seleccionar a todos tus aldeanos",
+		func() -> String: return "" if not game.controller.idle_villagers().is_empty() else Lang.t("Todos trabajan."))
+	_add_btn(Lang.t("Todos"), Lang.t("Seleccionar a todos tus aldeanos"),
 		func() -> void:
 			var all: Array = []
 			for u in game.units:
@@ -623,7 +623,7 @@ func _villager_tab() -> void:
 					all.append(u)
 			game.controller.set_selection(all),
 		func() -> String: return "")
-	_add_btn("Ir al centro", "Ver y seleccionar el centro principal (tecla H)",
+	_add_btn(Lang.t("Ir al centro"), Lang.t("Ver y seleccionar el centro principal (tecla H)"),
 		func() -> void:
 			var cc := game.main_center(game.local_id)
 			if cc:
@@ -639,16 +639,16 @@ func _age_button(c: Building) -> void:
 	var nxt: Dictionary = Defs.AGES[p.age]
 	var req := ""
 	for r in nxt["req"]:
-		req += "\n· " + r[2]
-	_add_btn("Subir de era", "Avanzar a la era %s (en el Centro)\nCosto: %s\nRequisitos:%s" % [
-		nxt["name"], Defs.cost_text(nxt["cost"]), req],
+		req += "\n· " + Lang.t(r[2])
+	_add_btn(Lang.t("Subir de era"), Lang.t("Avanzar a la era %s (en el Centro)\nCosto: %s\nRequisitos:%s") % [
+		Lang.t(nxt["name"]), Defs.cost_text(nxt["cost"]), req],
 		func() -> void:
 			var cc := game.main_center(game.local_id)
 			if cc:
 				_try(game.age_block_reason(game.local_id, cc), {"k": "age", "e": cc.id}),
 		func() -> String:
 			var cc := game.main_center(game.local_id)
-			return game.age_block_reason(game.local_id, cc) if cc else "Sin centro.",
+			return game.age_block_reason(game.local_id, cc) if cc else Lang.t("Sin centro."),
 		Art.era(p.civ, p.age + 1))
 
 
@@ -657,10 +657,10 @@ func _selection_tab() -> void:
 	var b := game.controller.own_building_selected()
 	if not us.is_empty():
 		if is_touch():
-			_add_btn("Soltar", "Quitar la selección", func() -> void: game.controller.set_selection([]), func() -> String: return "")
-		_add_btn("Detener", "Detener la tarea actual", func() -> void:
+			_add_btn(Lang.t("Soltar"), Lang.t("Quitar la selección"), func() -> void: game.controller.set_selection([]), func() -> String: return "")
+		_add_btn(Lang.t("Detener"), Lang.t("Detener la tarea actual"), func() -> void:
 			game.issue({"k": "stop", "u": game._ids(game.controller.own_units_selected())}), func() -> String: return "")
-		_add_btn("Borrar", "Eliminar las unidades seleccionadas (tecla Supr)", func() -> void:
+		_add_btn(Lang.t("Borrar"), Lang.t("Eliminar las unidades seleccionadas (tecla Supr)"), func() -> void:
 			game.issue({"k": "kill", "u": game._ids(game.controller.own_units_selected())}), func() -> String: return "")
 		return
 	if b == null:
@@ -670,9 +670,9 @@ func _selection_tab() -> void:
 			var d: Dictionary = Defs.UNITS[k]
 			var kk: String = k
 			var bb := b
-			_add_btn(d["name"], "%s\nCosto: %s\nVida %d · Ataque %d%s\n%s" % [d["name"],
+			_add_btn(Lang.t(d["name"]), Lang.t("%s\nCosto: %s\nVida %d · Ataque %d%s\n%s") % [Lang.t(d["name"]),
 				Defs.cost_text(Defs.cost_of(k, game.players[game.local_id].civ)), d["hp"], d["atk"],
-				(" · Alcance %d" % d["range"]) if d["range"] > 0 else "", d["desc"]],
+				(Lang.t(" · Alcance %d") % d["range"]) if d["range"] > 0 else "", Lang.t(d["desc"])],
 				func() -> void:
 					_try(game.train_block_reason(game.local_id, bb, kk), {"k": "train", "e": bb.id, "b": kk}),
 				func() -> String: return game.train_block_reason(game.local_id, bb, kk),
@@ -680,19 +680,19 @@ func _selection_tab() -> void:
 		if b.kind == "mercado":
 			for r in ["comida", "madera", "piedra"]:
 				var rr: String = r
-				_add_btn("Comprar %s" % Defs.RES_NAMES[r].to_lower(), "Comprar 100 de %s con oro" % Defs.RES_NAMES[r].to_lower(),
+				_add_btn(Lang.t("Comprar %s") % Lang.t(Defs.RES_NAMES[r]).to_lower(), Lang.t("Comprar 100 de %s con oro") % Lang.t(Defs.RES_NAMES[r]).to_lower(),
 					func() -> void: game.issue({"k": "buy", "r": rr}),
 					func() -> String:
-						return "" if game.players[game.local_id].res["oro"] >= game.market_price(game.local_id, rr) else "Faltan recursos.")
-				_add_btn("Vender %s" % Defs.RES_NAMES[r].to_lower(), "Vender 100 de %s por oro" % Defs.RES_NAMES[r].to_lower(),
+						return "" if game.players[game.local_id].res["oro"] >= game.market_price(game.local_id, rr) else Lang.t("Faltan recursos."))
+				_add_btn(Lang.t("Vender %s") % Lang.t(Defs.RES_NAMES[r]).to_lower(), Lang.t("Vender 100 de %s por oro") % Lang.t(Defs.RES_NAMES[r]).to_lower(),
 					func() -> void: game.issue({"k": "sell", "r": rr}),
 					func() -> String:
-						return "" if game.players[game.local_id].res[rr] >= 100 else "Faltan recursos.")
+						return "" if game.players[game.local_id].res[rr] >= 100 else Lang.t("Faltan recursos."))
 		if b.kind == "centro":
 			_seed_button()
 			_age_button(b)
 	var bb3 := b
-	_add_btn("Destruir", "Derribar este edificio", func() -> void:
+	_add_btn(Lang.t("Destruir"), Lang.t("Derribar este edificio"), func() -> void:
 		game.issue({"k": "destroy", "e": bb3.id}), func() -> String: return "")
 
 
@@ -720,18 +720,18 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 		btn.add_theme_font_size_override("font_size", 12)
 	# Lo que cuesta algo se puede ver antes de comprarlo: en celular el primer toque
 	# muestra la información con "Comprar"; en PC, al pasar el mouse.
-	var costs := tip.contains("Costo") or text.begins_with("Comprar") or text.begins_with("Vender") or text == "Siembra"
+	var costs := tip.contains(Lang.t("Costo")) or text.begins_with(Lang.t("Comprar")) or text.begins_with(Lang.t("Vender")) or text == Lang.t("Siembra")
 	if costs:
-		var verb := "Comprar"
+		var verb := Lang.t("Comprar")
 		var close := false
-		if tip.contains("Si no tienes aldeanos seleccionados"):
-			verb = "Construir"
+		if tip.contains(Lang.t("Si no tienes aldeanos seleccionados")):
+			verb = Lang.t("Construir")
 			close = true
-		elif text == "Subir de era":
-			verb = "Subir de era"
+		elif text == Lang.t("Subir de era"):
+			verb = Lang.t("Subir de era")
 			close = true
-		elif text.begins_with("Vender"):
-			verb = "Vender"
+		elif text.begins_with(Lang.t("Vender")):
+			verb = Lang.t("Vender")
 		var spec := {"name": text, "tip": tip, "press": on_press, "block": block, "icon": icon, "verb": verb, "close": close}
 		btn.pressed.connect(func() -> void:
 			if not is_touch():
@@ -765,8 +765,8 @@ func _refresh_buttons() -> void:
 		if not is_instance_valid(btn):
 			continue
 		var reason: String = s[1].call()
-		btn.disabled = reason != "" and reason != "Faltan recursos."
-		btn.modulate = Color(1, 0.75, 0.7) if reason == "Faltan recursos." else Color.WHITE
+		btn.disabled = reason != "" and reason != Lang.t("Faltan recursos.")
+		btn.modulate = Color(1, 0.75, 0.7) if reason == Lang.t("Faltan recursos.") else Color.WHITE
 		btn.tooltip_text = s[2] + ("\n\n" + reason if reason != "" else "")
 
 
@@ -824,7 +824,7 @@ func _tick_hold(dt: float) -> void:
 	_hold["fired"] = true
 	var reason: String = spec["block"].call()
 	if reason != "":
-		notify("Te faltan recursos." if reason == "Faltan recursos." else reason, Vector2.INF)
+		notify(Lang.t("Te faltan recursos.") if reason == Lang.t("Faltan recursos.") else reason, Vector2.INF)
 		_end_hold(true)
 		return
 	spec["press"].call()
@@ -864,9 +864,13 @@ func _preview_confirm() -> void:
 
 ## Costo con los iconos de cada recurso, para leerlo de un vistazo.
 static func _cost_icons(t: String) -> String:
-	var re := RegEx.new()
-	re.compile("(\\d+) (alimento|madera|oro|piedra)")
-	return re.sub(t, "[img=22]res://assets/ui/iconos/$2.png[/img] [b]$1[/b]", true)
+	# Los nombres vienen traducidos ("food", "comida"…): cambiar cada uno por su icono.
+	var icons := {"comida": "alimento", "madera": "madera", "oro": "oro", "piedra": "piedra"}
+	for r in Defs.RES:
+		var re := RegEx.new()
+		re.compile("(\\d+) " + Lang.t(Defs.RES_NAMES[r]).to_lower())
+		t = re.sub(t, "[img=22]res://assets/ui/iconos/%s.png[/img] [b]$1[/b]" % icons[r], true)
+	return t
 
 
 func _render_preview() -> void:
@@ -875,12 +879,12 @@ func _render_preview() -> void:
 	var reason: String = spec["block"].call()
 	var lines: Array[String] = []
 	for ln in String(spec["tip"]).split("\n"):
-		if ln.begins_with("Costo:"):
-			lines.append("Costo: " + _cost_icons(ln.trim_prefix("Costo:").strip_edges()))
-		elif ln.strip_edges() != "" and ln != spec["name"] and not ln.begins_with("Si no tienes aldeanos"):
+		if ln.begins_with(Lang.t("Costo:")):
+			lines.append(Lang.t("Costo:") + " " + _cost_icons(ln.trim_prefix(Lang.t("Costo:")).strip_edges()))
+		elif ln.strip_edges() != "" and ln != spec["name"] and not ln.begins_with(Lang.t("Si no tienes aldeanos")):
 			lines.append(ln)
 	if reason != "":
-		lines.append("[color=#ff8a7a]%s[/color]" % ("Te faltan recursos." if reason == "Faltan recursos." else reason))
+		lines.append("[color=#ff8a7a]%s[/color]" % (Lang.t("Te faltan recursos.") if reason == Lang.t("Faltan recursos.") else reason))
 	info_body.text = "\n".join(lines)
 	var ic: Texture2D = spec.get("icon")
 	portrait.texture = ic
@@ -912,82 +916,82 @@ func _refresh_info() -> void:
 	if sel.is_empty():
 		info_title.text = ""
 		if is_touch():
-			info_body.text = "Toca un aldeano y luego toca a dónde ir o qué recolectar.\nO deja el dedo sobre él y arrástralo hasta un árbol, mina, animal o enemigo: al soltar, va y lo hace."
+			info_body.text = Lang.t("Toca un aldeano y luego toca a dónde ir o qué recolectar.\nO deja el dedo sobre él y arrástralo hasta un árbol, mina, animal o enemigo: al soltar, va y lo hace.")
 		else:
-			info_body.text = "Selecciona aldeanos para recolectar o construir.\nClic derecho sobre árboles, minas, bayas, animales o peces."
+			info_body.text = Lang.t("Selecciona aldeanos para recolectar o construir.\nClic derecho sobre árboles, minas, bayas, animales o peces.")
 		return
 	if sel.size() == 1:
 		var e: Entity = sel[0]
-		var owner_txt := "Naturaleza" if e.owner_id < 0 else game.players[e.owner_id].name
+		var owner_txt := Lang.t("Naturaleza") if e.owner_id < 0 else game.players[e.owner_id].name
 		info_title.text = "%s — %s" % [e.display_name(), owner_txt]
 		var lines: Array[String] = []
 		if e.max_hp > 0 and not (e is Animal and e.dead):
-			lines.append("Vida: %d / %d" % [ceili(e.hp), int(e.max_hp)])
+			lines.append(Lang.t("Vida: %d / %d") % [ceili(e.hp), int(e.max_hp)])
 		if e is Unit:
 			lines.append(e.status_text())
 			if e.carry > 0.0:
-				lines.append("Carga: %d %s" % [int(e.carry), Defs.RES_NAMES[e.carry_type].to_lower()])
+				lines.append(Lang.t("Carga: %d %s") % [int(e.carry), Lang.t(Defs.RES_NAMES[e.carry_type]).to_lower()])
 			if e.idle_notice != "":
 				lines.append("[color=#ffd75a]%s[/color]" % e.idle_notice)
-			lines.append("Ataque %d · Armadura %d%s" % [e.def["atk"], e.def["armor"],
-				(" · Alcance %d" % e.attack_range()) if e.attack_range() > 0 else ""])
+			lines.append(Lang.t("Ataque %d · Armadura %d%s") % [e.def["atk"], e.def["armor"],
+				(Lang.t(" · Alcance %d") % e.attack_range()) if e.attack_range() > 0 else ""])
 		elif e is Building:
 			if not e.complete:
-				lines.append("En construcción: %d %%" % int(e.progress * 100))
+				lines.append(Lang.t("En construcción: %d %%") % int(e.progress * 100))
 			elif e.kind == "granja":
 				if e.sowing():
-					lines.append("Sembrando: %d %%" % int(e.sow * 100))
+					lines.append(Lang.t("Sembrando: %d %%") % int(e.sow * 100))
 				else:
-					lines.append("Alimento restante: %d" % int(e.food))
-				lines.append("Siembras guardadas: %d" % game.players[e.owner_id].seeds)
+					lines.append(Lang.t("Alimento restante: %d") % int(e.food))
+				lines.append(Lang.t("Siembras guardadas: %d") % game.players[e.owner_id].seeds)
 			if e.kind == "centro" and e.owner_id == game.local_id:
-				lines.append("Siembras guardadas: %d" % game.players[game.local_id].seeds)
+				lines.append(Lang.t("Siembras guardadas: %d") % game.players[game.local_id].seeds)
 				if game.main_center(game.local_id) == e:
-					lines.append("[color=#ffd75a]Centro principal[/color]")
+					lines.append(Lang.t("[color=#ffd75a]Centro principal[/color]"))
 				var reqs := game.age_requirements(game.local_id)
 				if not reqs.is_empty():
-					var txt := "Para la siguiente era: "
+					var txt := Lang.t("Para la siguiente era: ")
 					for r in reqs:
 						txt += "[color=%s]%s %d/%d[/color]  " % ["#7dff7d" if r["ok"] else "#ff8a7a", r["text"], mini(r["have"], r["need"]), r["need"]]
 					lines.append(txt)
-			lines.append(e.def["desc"])
+			lines.append(Lang.t(e.def["desc"]))
 			if e.kind == "corral" and e.complete:
-				lines.append("Animales pastando: %d / %d  (+%.1f de alimento por segundo)" % [e.grazers, Defs.CORRAL_CAP, e.grazers * Defs.GRAZE_RATE])
+				lines.append(Lang.t("Animales pastando: %d / %d  (+%.1f de alimento por segundo)") % [e.grazers, Defs.CORRAL_CAP, e.grazers * Defs.GRAZE_RATE])
 			if e.kind == "mercado" and e.owner_id == game.local_id:
-				var mp := "Precios (100 u.): "
+				var mp := Lang.t("Precios (100 u.): ")
 				for r in ["comida", "madera", "piedra"]:
 					var pr := game.market_price(game.local_id, r)
-					mp += "%s compra %d / vende %d oro   " % [Defs.RES_NAMES[r], pr, floorf(pr * 0.75)]
+					mp += Lang.t("%s compra %d / vende %d oro   ") % [Lang.t(Defs.RES_NAMES[r]), pr, floorf(pr * 0.75)]
 				lines.append(mp)
 			if e.owner_id == game.local_id and not e.queue.is_empty():
-				lines.append("Entrenando: %s %d %%" % [_qname(e.queue[0]), int(e.queue_progress() * 100)])
+				lines.append(Lang.t("Entrenando: %s %d %%") % [_qname(e.queue[0]), int(e.queue_progress() * 100)])
 				if e.waiting_pop:
-					lines.append("[color=#ff8a7a]Esperando población: construye casas.[/color]")
+					lines.append(Lang.t("[color=#ff8a7a]Esperando población: construye casas.[/color]"))
 				var bq: Building = e
 				for i in e.queue.size():
 					var qb := Button.new()
 					qb.text = _qname(e.queue[i]).left(3)
-					qb.tooltip_text = "Cancelar el último de la cola"
+					qb.tooltip_text = Lang.t("Cancelar el último de la cola")
 					qb.custom_minimum_size = Vector2(36, 26)
 					qb.pressed.connect(func() -> void: game.issue({"k": "cancel", "e": bq.id}))
 					queue_box.add_child(qb)
 		elif e.has_resource() or e is ResourceNode or e is Animal:
 			if e is Animal and not e.dead:
-				lines.append("Vida: %d · Carne: %d" % [ceili(e.hp), int(e.food)])
+				lines.append(Lang.t("Vida: %d · Carne: %d") % [ceili(e.hp), int(e.food)])
 				if e.tame and e.owner_id < 0:
-					lines.append("Salvaje. Un aldeano lo puede pastorear %d segundos seguidos y será tuyo (clic derecho con el aldeano)." % int(Defs.HERD_TIME))
+					lines.append(Lang.t("Salvaje. Un aldeano lo puede pastorear %d segundos seguidos y será tuyo (clic derecho con el aldeano).") % int(Defs.HERD_TIME))
 				elif e.tame and e.owner_id == game.local_id:
 					if e.grazing():
-						lines.append("[color=#7dff7d]Pastando en tu corral: da %.1f de alimento por segundo y engorda.[/color]" % Defs.GRAZE_RATE)
+						lines.append(Lang.t("[color=#7dff7d]Pastando en tu corral: da %.1f de alimento por segundo y engorda.[/color]") % Defs.GRAZE_RATE)
 					else:
-						lines.append("Clic derecho en un Corral tuyo para llevarlo a pastar. Con un aldeano, clic derecho en él para sacrificarlo.")
+						lines.append(Lang.t("Clic derecho en un Corral tuyo para llevarlo a pastar. Con un aldeano, clic derecho en él para sacrificarlo."))
 				elif e.tame:
-					lines.append("Un aldeano tuyo se lo puede llevar si lo pastorea %d segundos seguidos." % int(Defs.HERD_TIME))
+					lines.append(Lang.t("Un aldeano tuyo se lo puede llevar si lo pastorea %d segundos seguidos.") % int(Defs.HERD_TIME))
 			else:
-				lines.append("Queda: %d de %s" % [int(e.remaining()), Defs.RES_NAMES.get(e.res_type(), "").to_lower()])
+				lines.append(Lang.t("Queda: %d de %s") % [int(e.remaining()), Lang.t(Defs.RES_NAMES.get(e.res_type(), "")).to_lower()])
 		info_body.text = "\n".join(lines)
 	else:
-		info_title.text = "%d seleccionados" % sel.size()
+		info_title.text = Lang.t("%d seleccionados") % sel.size()
 		var counts := {}
 		for e in sel:
 			counts[e.display_name()] = counts.get(e.display_name(), 0) + 1
@@ -999,5 +1003,5 @@ func _refresh_info() -> void:
 
 func _qname(k: String) -> String:
 	if k == "era":
-		return "Era"
-	return Defs.UNITS[k]["name"]
+		return Lang.t("Era")
+	return Lang.t(Defs.UNITS[k]["name"])

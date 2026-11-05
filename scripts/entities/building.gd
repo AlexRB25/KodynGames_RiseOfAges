@@ -33,7 +33,7 @@ func is_static() -> bool:
 
 
 func display_name() -> String:
-	return def["name"]
+	return Lang.t(def["name"])
 
 
 func blocks() -> bool:
@@ -137,7 +137,7 @@ func sim(dt: float) -> void:
 		if k != "era" and not game.has_pop_room(owner_id):
 			if not waiting_pop:
 				waiting_pop = true
-				game.notify(owner_id, "Necesitas más casas para entrenar.", pos)
+				game.notify(owner_id, Lang.t("Necesitas más casas para entrenar."), pos)
 		else:
 			waiting_pop = false
 			train_t += dt * game.players[owner_id].speed_mult()
@@ -211,9 +211,9 @@ func take_resource(a: float) -> float:
 			food = def["food"]
 			sow = 0.0
 			_refresh_crops()
-			game.notify(owner_id, "Granja resembrada (quedan %d siembras)." % p.seeds, pos)
+			game.notify(owner_id, Lang.t("Granja resembrada (quedan %d siembras).") % p.seeds, pos)
 		else:
-			game.notify(owner_id, "Una granja se agotó. Compra siembra en el Centro.", pos)
+			game.notify(owner_id, Lang.t("Una granja se agotó. Compra siembra en el Centro."), pos)
 			game.destroy_building(self, false)
 	return t
 

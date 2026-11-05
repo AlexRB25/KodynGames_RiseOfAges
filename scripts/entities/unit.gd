@@ -66,7 +66,7 @@ func is_military() -> bool:
 
 
 func display_name() -> String:
-	return def["name"]
+	return Lang.t(def["name"])
 
 
 func init(g: Game, k: String, owner: int, p: Vector2) -> void:
@@ -180,7 +180,7 @@ func _do_herd(dt: float) -> void:
 	var r := _approach(a, Defs.HERD_REACH, dt)
 	if r == -1:
 		herd_t = 0.0
-		_go_idle("No puedo llegar al animal.")
+		_go_idle(Lang.t("No puedo llegar al animal."))
 		return
 	if r == 0:
 		herd_t = 0.0   # se tiene que acercar: vuelve a empezar
@@ -427,7 +427,7 @@ func _do_return(dt: float) -> void:
 		dropoff = game.nearest_dropoff(owner_id, carry_type, pos)
 		_goal_for = null
 		if dropoff == null:
-			_go_idle("No hay dónde dejar %s. Construye un edificio que lo reciba." % Defs.RES_NAMES[carry_type].to_lower())
+			_go_idle(Lang.t("No hay dónde dejar %s. Construye un edificio que lo reciba.") % Lang.t(Defs.RES_NAMES[carry_type]).to_lower())
 			return
 	var r := _approach(dropoff, 0.75, dt)
 	if r == 1:
@@ -454,9 +454,9 @@ func _after_drop() -> void:
 
 
 func _finished_text() -> String:
-	var names := {"arbol": "árboles", "piedra": "piedra", "oro": "oro", "arbusto": "bayas",
-		"caza": "animales", "pesca": "peces", "granja": "granjas libres"}
-	return "Aldeano sin trabajo: ya no hay %s cerca. Asígnale otra tarea." % names.get(work_group, "recursos")
+	var names := {"arbol": Lang.t("árboles"), "piedra": "piedra", "oro": "oro", "arbusto": "bayas",
+		"caza": "animales", "pesca": "peces", "granja": Lang.t("granjas libres")}
+	return Lang.t("Aldeano sin trabajo: ya no hay %s cerca. Asígnale otra tarea.") % names.get(work_group, "recursos")
 
 
 ## El recurso se acabó: buscar otro del mismo tipo dentro del radio.
@@ -506,7 +506,7 @@ func _do_build(dt: float) -> void:
 		_face_to(target.center())
 		target.add_progress(dt)
 	elif r == -1:
-		_go_idle("Un aldeano no puede llegar a la construcción.")
+		_go_idle(Lang.t("Un aldeano no puede llegar a la construcción."))
 
 
 ## Al terminar un campamento, el aldeano se pone a trabajar lo que le corresponde.
@@ -599,27 +599,27 @@ func is_idle() -> bool:
 func status_text() -> String:
 	match state:
 		S.IDLE:
-			return "Sin tarea"
+			return Lang.t("Sin tarea")
 		S.MOVE:
-			return "Moviéndose"
+			return Lang.t("Moviéndose")
 		S.GATHER:
 			if not Entity.valid(target):
-				return "Buscando recurso"
+				return Lang.t("Buscando recurso")
 			if target is Animal and not target.dead:
-				return "Cazando"
+				return Lang.t("Cazando")
 			if target is Building and target.sowing():
-				return "Sembrando"
+				return Lang.t("Sembrando")
 			if target is Building:
-				return "Cosechando"
-			return "Recolectando %s" % Defs.RES_NAMES.get(target.res_type(), "")
+				return Lang.t("Cosechando")
+			return Lang.t("Recolectando %s") % Lang.t(Defs.RES_NAMES.get(target.res_type(), ""))
 		S.RETURN:
-			return "Llevando %s" % Defs.RES_NAMES.get(carry_type, "")
+			return Lang.t("Llevando %s") % Lang.t(Defs.RES_NAMES.get(carry_type, ""))
 		S.BUILD:
-			return "Construyendo"
+			return Lang.t("Construyendo")
 		S.ATTACK:
-			return "Atacando"
+			return Lang.t("Atacando")
 		S.HERD:
-			return "Pastoreando: %d / %d s" % [floori(herd_t), int(Defs.HERD_TIME)]
+			return Lang.t("Pastoreando: %d / %d s") % [floori(herd_t), int(Defs.HERD_TIME)]
 	return ""
 
 

@@ -233,5 +233,5 @@ static func cost_text(cost: Dictionary) -> String:
 	var parts: Array[String] = []
 	for r in RES:
 		if cost.has(r):
-			parts.append("%d %s" % [cost[r], RES_NAMES[r].to_lower()])
+			parts.append("%d %s" % [cost[r], Lang.t(RES_NAMES[r]).to_lower()])
 	return ", ".join(parts)
