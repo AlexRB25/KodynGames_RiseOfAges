@@ -56,7 +56,29 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	check(tut.i == 2, "al tocar el círculo pasa a 'Muévelo'")
-	g.order_units([tut._villager], null, tut._spot, false)
+	# Tocar el lugar marcado. Con --touch se usa el dedo (y antes un "dedo pegado":
+	# un levantar que se pierde no debe bloquear los toques siguientes).
+	await get_tree().process_frame
+	if Hud.is_touch():
+		var lost := InputEventScreenTouch.new()
+		lost.index = 3
+		lost.pressed = true
+		lost.position = Vector2(5, 5)
+		g.controller._input(lost)   # solo la bajada, como si un botón se quedara con la subida
+	for pressed in [true, false]:
+		if Hud.is_touch():
+			var t := InputEventScreenTouch.new()
+			t.index = 0
+			t.pressed = pressed
+			t.position = tut.target_pos
+			Input.parse_input_event(t)
+		else:
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_RIGHT   # en PC las órdenes van con clic derecho
+			ev.pressed = pressed
+			ev.position = tut.target_pos
+			Input.parse_input_event(ev)
+		await get_tree().process_frame
 	await _wait(g, 8.0)
 	check(tut.i == 3, "al llegar a la marca pasa a 'Junta madera'")
 	g.order_units([tut._villager], tut._tree(), tut._tree().center(), false)

@@ -91,6 +91,19 @@ func _typing() -> bool:
 	return f is LineEdit or f is TextEdit
 
 
+## Los dedos se cuentan aquí, antes que los botones: si un botón se queda con el
+## "levantar", el dedo no debe quedar pegado.
+func _input(ev: InputEvent) -> void:
+	if ev is InputEventScreenTouch:
+		if ev.pressed and not ev.canceled:
+			if ev.index == 0:
+				_touches.clear()   # el dedo 0 solo baja cuando no hay otro: limpiar dedos pegados
+			_touches[ev.index] = ev.position
+		else:
+			_touches.erase(ev.index)
+		_pinch_d = 0.0
+
+
 func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventMouseButton:
 		if ev.button_index == MOUSE_BUTTON_WHEEL_UP and ev.pressed:
@@ -102,12 +115,6 @@ func _unhandled_input(ev: InputEvent) -> void:
 	elif ev is InputEventMouseMotion and _rotating:
 		yaw -= ev.relative.x * 0.006
 		pitch = clampf(pitch + ev.relative.y * 0.004, deg_to_rad(30), deg_to_rad(80))
-	elif ev is InputEventScreenTouch:
-		if ev.pressed:
-			_touches[ev.index] = ev.position
-		else:
-			_touches.erase(ev.index)
-		_pinch_d = 0.0
 	elif ev is InputEventScreenDrag and _touches.size() >= 2:
 		var old: Vector2 = _touches[ev.index] if _touches.has(ev.index) else ev.position
 		_touches[ev.index] = ev.position

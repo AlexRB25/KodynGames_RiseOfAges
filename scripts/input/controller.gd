@@ -1,9 +1,9 @@
 class_name Controller
 extends Node
-## Entrada del jugador local: selección, órdenes y colocación de edificios.
-## Clic izq = seleccionar (arrastrar = recuadro, Shift = añadir, doble clic = todos los del mismo tipo).
-## Clic der = orden según el objetivo. Teclas: Esc, Supr, H (centro), . (aldeano sin tarea),
-## Ctrl+1..9 guardar grupo, 1..9 recuperarlo, Espacio = ir a la selección.
+## Entrada del jugador local: selecciÃ³n, Ã³rdenes y colocaciÃ³n de edificios.
+## Clic izq = seleccionar (arrastrar = recuadro, Shift = aÃ±adir, doble clic = todos los del mismo tipo).
+## Clic der = orden segÃºn el objetivo. Teclas: Esc, Supr, H (centro), . (aldeano sin tarea),
+## Ctrl+1..9 guardar grupo, 1..9 recuperarlo, Espacio = ir a la selecciÃ³n.
 
 var game: Game
 var selection: Array[Entity] = []
@@ -38,7 +38,7 @@ func cam() -> RtsCamera:
 	return game.camera
 
 
-# ---------------- selección ----------------
+# ---------------- selecciÃ³n ----------------
 
 func set_selection(list: Array) -> void:
 	for e in selection:
@@ -148,7 +148,7 @@ func _update_cmd_drag(p: Vector2) -> void:
 	if p.distance_to(_cmd_drag["start"]) <= TAP_SLOP_TOUCH:
 		game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
 		return
-	# El icono de la acción que hará al soltar (talar, minar, atacar…).
+	# El icono de la acciÃ³n que harÃ¡ al soltar (talar, minar, atacarâ€¦).
 	var keep := selection.duplicate()
 	selection.assign(_cmd_drag["units"])
 	var act := action_for(pick(p))
@@ -157,22 +157,38 @@ func _update_cmd_drag(p: Vector2) -> void:
 var _two_finger := false
 
 
+## Contar los dedos aquÃ­ (antes que los botones) y por Ã­ndice: si un botÃ³n se quedaba
+## con el "levantar" del dedo, el contador quedaba en 1 y luego todo toque parecÃ­a
+## de dos dedos y se ignoraba.
+func _input(ev: InputEvent) -> void:
+	if not (ev is InputEventScreenTouch):
+		return
+	if ev.pressed and not ev.canceled:
+		# El dedo 0 solo baja cuando no hay otro dedo: limpiar dedos "pegados".
+		if ev.index == 0:
+			_finger_ids.clear()
+		_finger_ids[ev.index] = true
+	else:
+		_finger_ids.erase(ev.index)
+	_fingers = _finger_ids.size()
+	if _fingers == 0:
+		_two_finger = false
+	elif _fingers >= 2:
+		# Con dos dedos se mueve la cÃ¡mara: cancelar el recuadro de selecciÃ³n.
+		_two_finger = true
+		if not _cmd_drag.is_empty():
+			_cmd_drag = {}
+			game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
+		if dragging:
+			dragging = false
+			game.hud.set_drag_rect(Rect2())
+var _finger_ids: Dictionary = {}
+
+
 func _unhandled_input(ev: InputEvent) -> void:
 	if game.over:
 		return
-	# Con dos dedos se mueve la cámara: cancelar el recuadro de selección.
 	if ev is InputEventScreenTouch:
-		_fingers = maxi(0, _fingers + (1 if ev.pressed else -1))
-		if _fingers >= 2:
-			_two_finger = true
-			if not _cmd_drag.is_empty():
-				_cmd_drag = {}
-				game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
-			if dragging:
-				dragging = false
-				game.hud.set_drag_rect(Rect2())
-		if _fingers == 0:
-			_two_finger = false
 		return
 	if _two_finger and ev is InputEventMouseButton:
 		return
@@ -243,7 +259,7 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 
 func _click_select(sp: Vector2, add: bool) -> void:
 	var e := pick(sp)
-	# Táctil: con tus unidades seleccionadas, tocar otra cosa (suelo, recurso, enemigo) es una orden.
+	# TÃ¡ctil: con tus unidades seleccionadas, tocar otra cosa (suelo, recurso, enemigo) es una orden.
 	if Hud.is_touch() and (not own_units_selected().is_empty() or not own_animals_selected().is_empty()):
 		var own: bool = e != null and (e is Unit or e is Building or e is Animal) and e.owner_id == game.local_id
 		var useful_building: bool = own and e is Building and action_for(e) != ""
@@ -449,7 +465,7 @@ var _cursor := ""
 var _cursor_t := 0.0
 
 
-## Qué haría la selección con clic derecho sobre esa entidad ("" = moverse).
+## QuÃ© harÃ­a la selecciÃ³n con clic derecho sobre esa entidad ("" = moverse).
 func action_for(target: Entity) -> String:
 	var us := own_units_selected()
 	if us.is_empty() or target == null:
@@ -562,7 +578,7 @@ func _place_at(sp: Vector2, keep: bool) -> void:
 	var k := placing
 	var t := _ghost_tile(sp)
 	if not game.can_place_ui(k, t):
-		game.hud.notify("No se puede construir ahí.", Vector2.INF)
+		game.hud.notify("No se puede construir ahÃ­.", Vector2.INF)
 		return
 	var reason := game.build_block_reason(game.local_id, k)
 	if reason != "":
@@ -582,14 +598,14 @@ func _place_wall(sp: Vector2, keep: bool) -> void:
 			tiles.append(t)
 	wall_start = Vector2i(-1, -1)
 	if tiles.is_empty():
-		game.hud.notify("No se puede construir ahí.", Vector2.INF)
+		game.hud.notify("No se puede construir ahÃ­.", Vector2.INF)
 	else:
 		_issue_place(k, tiles, keep)
 	if not keep:
 		cancel_placing()
 
 
-## Manda la orden de construir; si no hay aldeanos seleccionados, el juego elige el más cercano.
+## Manda la orden de construir; si no hay aldeanos seleccionados, el juego elige el mÃ¡s cercano.
 func _issue_place(k: String, tiles: Array, queue: bool) -> void:
 	var ids: Array = []
 	for u in own_units_selected():
