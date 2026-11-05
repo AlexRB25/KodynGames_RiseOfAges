@@ -40,6 +40,7 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
+	_center = center
 	var panel := PanelContainer.new()
 	panel.theme = _theme()
 	center.add_child(panel)
@@ -186,6 +187,7 @@ func _ready() -> void:
 		if rk_status:
 			rk_status.text = msg)
 	Net.closed.connect(func() -> void:
+		_lobby_civ_sent = false
 		_status("Se cerró la conexión.")
 		if ranked_box.visible:
 			_refresh_queue()
@@ -195,6 +197,14 @@ func _ready() -> void:
 	Net.started.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/game.tscn"))
 	Setup.online = false
 	Net.close()
+	# Pantalla principal nueva (tu aldeano, formas de juego, tienda, configuración).
+	var white := Image.create(4, 4, false, Image.FORMAT_L8)
+	white.fill(Color.WHITE)
+	Mat.setup(ImageTexture.create_from_image(white), Vector2(1000, 1000))
+	_home = Home.new()
+	add_child(_home)
+	_home.setup(self)
+	apply_fav_civ()
 	# Desarrollo: --rank abre la pantalla con rango, --shot=archivo.png guarda una captura.
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--rank":
@@ -208,6 +218,33 @@ func _ready() -> void:
 			get_tree().quit()
 
 
+var _center: Control
+var _home: Home
+var _lobby_civ_sent := false
+
+
+## Desde la pantalla principal: abrir una forma de juego.
+func open_mode(k: String) -> void:
+	match k:
+		"solo":
+			main_box.visible = false
+			setup_box.visible = true
+		"rango":
+			_open_ranked()
+		"amigos":
+			main_box.visible = false
+			online_box.visible = true
+
+
+## Tu civilización favorita queda elegida en todas las formas de juego.
+func apply_fav_civ() -> void:
+	var idx := maxi(0, Defs.CIV_ORDER.find(Account.fav_civ()))
+	if not rows.is_empty():
+		rows[0]["civ"].select(idx)
+	if rk_civ:
+		rk_civ.select(idx)
+
+
 var _scroll: ScrollContainer
 var _root: VBoxContainer
 var _logo: TextureRect
@@ -216,6 +253,9 @@ var _logo: TextureRect
 ## El panel se ajusta solo a la ventana: logo grande solo en la pantalla principal y,
 ## si el contenido no cabe a lo alto, el panel se desplaza con la rueda o el dedo.
 func _process(_dt: float) -> void:
+	if _home:
+		_home.visible = main_box.visible
+		_center.visible = not main_box.visible
 	if _scroll == null:
 		return
 	if _logo:
@@ -622,6 +662,12 @@ func _refresh_lobby() -> void:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_box.add_child(hint)
 	var me := int(r.get("you", -1))
+	if not _lobby_civ_sent:
+		for p in r.get("players", []):
+			if int(p["id"]) == me:
+				_lobby_civ_sent = true
+				if String(p["civ"]) != Account.fav_civ():
+					Net.set_me(Account.fav_civ(), int(p["team"]), int(p["color"]))
 	for p in r.get("players", []):
 		var hb := HBoxContainer.new()
 		var n := Label.new()

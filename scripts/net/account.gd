@@ -50,6 +50,21 @@ func points() -> int:
 	return int(profile.get("points", 0))
 
 
+## Civilización favorita (se guarda en este equipo).
+func fav_civ() -> String:
+	var cfg := ConfigFile.new()
+	cfg.load(SESSION_PATH)
+	var c: String = cfg.get_value("jugador", "civ", "")
+	return c if Defs.CIVS.has(c) else String(Defs.CIV_ORDER[0])
+
+
+func set_fav_civ(c: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SESSION_PATH)
+	cfg.set_value("jugador", "civ", c)
+	cfg.save(SESSION_PATH)
+
+
 func set_player_name(n: String) -> void:
 	player_name = n.strip_edges().left(16)
 	var cfg := ConfigFile.new()
