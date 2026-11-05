@@ -911,7 +911,10 @@ func _refresh_info() -> void:
 	portrait.visible = pt != null
 	if sel.is_empty():
 		info_title.text = ""
-		info_body.text = "Selecciona aldeanos para recolectar o construir.\nClic derecho sobre árboles, minas, bayas, animales o peces."
+		if is_touch():
+			info_body.text = "Toca un aldeano y luego toca a dónde ir o qué recolectar.\nO deja el dedo sobre él y arrástralo hasta un árbol, mina, animal o enemigo: al soltar, va y lo hace."
+		else:
+			info_body.text = "Selecciona aldeanos para recolectar o construir.\nClic derecho sobre árboles, minas, bayas, animales o peces."
 		return
 	if sel.size() == 1:
 		var e: Entity = sel[0]
