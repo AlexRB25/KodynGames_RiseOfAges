@@ -34,7 +34,7 @@ Los dos deben imprimir el mismo `hash` en el paso 600.
 
 1. En render.com: New → Blueprint → conectar el repositorio de GitHub. Toma `render.yaml`.
 2. Plan free: el servicio se duerme tras 15 min sin visitas; la primera visita tarda ~1 min en despertar.
-3. La URL queda tipo `https://conquista.onrender.com` (si el nombre está libre). Si cambia, actualizar
+3. La URL queda tipo `https://conquista-srzq.onrender.com` (si el nombre está libre). Si cambia, actualizar
    `DEFAULT_SERVER` en `scripts/net/net.gd` (solo lo usa la versión .exe; la web usa su propia dirección).
 
 ## Partidas con rango (emparejar por nivel)

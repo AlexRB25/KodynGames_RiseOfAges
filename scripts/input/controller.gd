@@ -70,6 +70,14 @@ func own_units_selected() -> Array[Unit]:
 	return out
 
 
+func own_animals_selected() -> Array[Animal]:
+	var out: Array[Animal] = []
+	for e in selection:
+		if e is Animal and e.owner_id == game.local_id and not e.dead:
+			out.append(e)
+	return out
+
+
 func own_building_selected() -> Building:
 	for e in selection:
 		if e is Building and e.owner_id == game.local_id:
@@ -190,8 +198,8 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 func _click_select(sp: Vector2, add: bool) -> void:
 	var e := pick(sp)
 	# Táctil: con tus unidades seleccionadas, tocar otra cosa (suelo, recurso, enemigo) es una orden.
-	if Hud.is_touch() and not own_units_selected().is_empty():
-		var own: bool = e != null and (e is Unit or e is Building) and e.owner_id == game.local_id
+	if Hud.is_touch() and (not own_units_selected().is_empty() or not own_animals_selected().is_empty()):
+		var own: bool = e != null and (e is Unit or e is Building or e is Animal) and e.owner_id == game.local_id
 		var useful_building: bool = own and e is Building and action_for(e) != ""
 		if not own or useful_building:
 			_command(sp, false)
@@ -224,6 +232,10 @@ func _box_select(r: Rect2, add: bool) -> void:
 		if u.owner_id == game.local_id and not u.dead and _on_screen(u.pos, 0.6) and r.has_point(_screen_of(u.pos, 0.6)):
 			found.append(u)
 	if found.is_empty():
+		for a in game.animals:
+			if a.owner_id == game.local_id and not a.dead and _on_screen(a.pos, 0.3) and r.has_point(_screen_of(a.pos, 0.3)):
+				found.append(a)
+	if found.is_empty():
 		for b in game.buildings:
 			if b.owner_id == game.local_id and r.has_point(_screen_of(b.center(), 0.5)):
 				found.append(b)
@@ -248,6 +260,11 @@ func _command(sp: Vector2, queue: bool) -> void:
 			target = null
 		game.order_units(us, target, g, queue)
 		_marker(g, target)
+		return
+	var herd := own_animals_selected()
+	if not herd.is_empty():
+		game.issue({"k": "order", "u": game._ids(herd), "t": target.id if target else 0, "x": g.x, "y": g.y, "q": false})
+		_marker(g, null)
 		return
 	var b := own_building_selected()
 	if b:
@@ -391,6 +408,10 @@ func action_for(target: Entity) -> String:
 	var us := own_units_selected()
 	if us.is_empty() or target == null:
 		return ""
+	if target is Animal and not target.dead and target.tame and target.owner_id != game.local_id:
+		for u in us:
+			if u.is_villager():
+				return "pastorear"
 	if target.owner_id >= 0 and game.is_enemy(game.local_id, target.owner_id) and not target.dead:
 		return "atacar"
 	var vill := false

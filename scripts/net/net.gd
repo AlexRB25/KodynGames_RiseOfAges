@@ -11,7 +11,7 @@ signal queue_changed      # cambió queue_info (buscando partida con rango)
 signal rated(msg: Dictionary)   # el servidor repartió los puntos de la partida con rango
 
 const PROTOCOL := 2
-const DEFAULT_SERVER := "wss://conquista.onrender.com/ws"
+const DEFAULT_SERVER := "wss://conquista-srzq.onrender.com/ws"
 
 var ws := WebSocketPeer.new()
 var is_open := false

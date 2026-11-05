@@ -20,6 +20,12 @@ var legs: Array[Node3D] = []
 var _death_t := 0.0
 var _anim := 0.0
 var _rng := RandomNumberGenerator.new()
+var tame := false                     # se puede pastorear (cabra, guajolote)
+var path := PackedVector2Array()      # camino cuando su dueño lo manda a algún lado
+var graze_tick := -10                 # último paso en que pastó en un corral
+var held_tick := -10                  # último paso en que un aldeano lo estaba pastoreando
+var herd_claims := {}                 # jugador -> último paso en que lo pastoreó
+var _collar: Node3D
 
 
 func is_mobile() -> bool:
@@ -46,6 +52,76 @@ func display_name() -> String:
 	return def["name"] + (" (cazado)" if dead else "")
 
 
+func grazing() -> bool:
+	return not dead and game != null and game.tick - graze_tick <= 2
+
+
+## Cambia de dueño (-1 = salvaje). Lleva un listón del color de su dueño.
+func set_herd_owner(pid: int) -> void:
+	owner_id = pid
+	path.clear()
+	home = pos
+	if _collar:
+		_collar.queue_free()
+		_collar = null
+	if pid >= 0 and body:
+		var h := 0.42 if kind == "guajolote" else 0.46
+		var x := 0.18 if kind == "guajolote" else 0.24
+		_collar = Mat.box(body, Vector3(0.08, 0.07, 0.26), Vector3(x, h, 0), game.players[pid].color)
+	if pid >= 0:
+		# Si su nuevo dueño tiene un corral cerca, se va solo para allá.
+		var best: Building = null
+		var bd := 40.0
+		for b in game.buildings:
+			if b.owner_id == pid and b.kind == "corral" and b.complete and not b.dead:
+				var d := b.center().distance_to(pos)
+				if d < bd:
+					bd = d
+					best = b
+		if best:
+			cmd_move(best.center())
+		game.notify(pid, "Un%s %s ya es de tu pueblo.%s" % ["a" if kind == "cabra" else "", def["name"].to_lower(),
+			" Va hacia tu corral." if best else " Construye un Corral para que paste."], pos)
+
+
+## Orden del dueño: ir a un punto (o al corral, para quedarse pastando ahí).
+func cmd_move(p: Vector2) -> void:
+	if dead:
+		return
+	home = p
+	path = game.map.path_to_tile(pos, MapData.to_tile(p), p)
+	wait_t = _rng.randf_range(3.0, 6.0)
+	if path.is_empty():
+		moving = false
+		return
+	goal = path[0]
+	path.remove_at(0)
+	moving = true
+
+
+func cmd_stop() -> void:
+	path.clear()
+	moving = false
+	home = pos
+
+
+## Un aldeano lo está pastoreando en este paso: se queda quieto.
+## Devuelve false si otro jugador también lo pastorea (disputado: nadie avanza).
+func hold_for(pid: int) -> bool:
+	held_tick = game.tick
+	moving = false
+	path.clear()
+	herd_claims[pid] = game.tick
+	for other in herd_claims:
+		if other != pid and game.tick - int(herd_claims[other]) <= 1:
+			return false
+	return true
+
+
+func being_herded() -> bool:
+	return game.tick - held_tick <= 1
+
+
 func init(g: Game, k: String, p: Vector2, seed_v: int) -> void:
 	game = g
 	kind = k
@@ -54,6 +130,7 @@ func init(g: Game, k: String, p: Vector2, seed_v: int) -> void:
 	hp = max_hp
 	food = def["food"]
 	max_food = food
+	tame = def.get("tame", false)
 	speed = def["speed"]
 	pos = p
 	prev_pos = p
@@ -99,7 +176,7 @@ func take_damage(amount: float, from: Entity) -> void:
 		return
 	hp -= amount
 	flash_bar()
-	if from:
+	if from and owner_id < 0:   # los animales de un pueblo no huyen
 		flee_t = def["flee"]
 		flee_from = from.pos
 		_pick_flee_goal()
@@ -133,14 +210,17 @@ func sim(dt: float) -> void:
 	prev_pos = pos
 	if dead:
 		return
+	if being_herded():
+		return
 	if flee_t > 0.0:
 		flee_t -= dt
 	if not moving:
 		wait_t -= dt
 		if wait_t <= 0.0:
 			wait_t = _rng.randf_range(2.0, 6.0)
+			var roam := 4.0 if owner_id < 0 else 1.6   # los de un pueblo no se alejan
 			for k in 5:
-				var g := home + Vector2(_rng.randf_range(-4, 4), _rng.randf_range(-4, 4))
+				var g := home + Vector2(_rng.randf_range(-roam, roam), _rng.randf_range(-roam, roam))
 				if game.map.is_free(MapData.to_tile(g)):
 					goal = g
 					moving = true
@@ -151,6 +231,10 @@ func sim(dt: float) -> void:
 	var step := sp * dt
 	if d.length() <= step:
 		pos = goal
+		if not path.is_empty():
+			goal = path[0]
+			path.remove_at(0)
+			return
 		moving = false
 		if flee_t > 0.0:
 			_pick_flee_goal()

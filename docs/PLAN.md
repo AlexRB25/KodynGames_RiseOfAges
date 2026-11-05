@@ -65,3 +65,9 @@ El nombre "Conquista" es provisional.
 - Tipos (Defs.MAP_TYPES): Al azar (por defecto), Valle, Costa, Mesetas, Tierra de lagos, Selva, Desierto, Mar interior. El terreno siempre se genera al azar con la semilla de la partida; el tipo cambia el carácter. En línea el anfitrión elige el tipo; con rango siempre "Al azar".
 - Desarrollo: `-- --seed=N --tipo=costa --mapinfo --at=x,y,dist --reveal --shot=archivo.png`.
 - Pendiente: barcos (pesca, guerra, transporte) para aprovechar el mar.
+
+## Pastoreo (2026-11-04, reglas del usuario)
+- Solo un aldeano puede apropiarse de una cabra o guajolote (Defs.ANIMALS "tame"): clic derecho = pastorear (cursor de cayado), 10 s seguidos (Defs.HERD_TIME) junto al animal, que se queda quieto. Si se aleja, recibe otra orden o lo atacan, vuelve a empezar. Acercarse no basta.
+- Un aldeano enemigo te lo roba igual (10 s seguidos). Si dos pueblos lo pastorean a la vez, nadie avanza.
+- Corral (3x3, 80 de madera, pestaña Campo): hasta 6 animales pastan, dan 0.2 de alimento/s cada uno sin morir y engordan hasta 1.6x su carne. Al apropiarte de uno, si tienes corral cerca se va solo. Con un aldeano, clic derecho en tu animal = sacrificarlo.
+- Bots: construyen corral si hay animales cerca, mandan un aldeano a pastorear (uno a la vez) y llevan sus animales al corral.

@@ -129,6 +129,8 @@ func queue_progress() -> float:
 func sim(dt: float) -> void:
 	if dead or not complete:
 		return
+	if kind == "corral":
+		_graze(dt)
 	# entrenamiento / investigación
 	if not queue.is_empty():
 		var k: String = queue[0]
@@ -349,6 +351,26 @@ func _rebuild_visual() -> void:
 			Mat.cyl(v, 0.0, 0.95, 0.8, Vector3(0, 1.4, 0), roof_c, 10)
 			Mat.cyl(v, 0.82, 0.82, 0.08, Vector3(0, 0.95, 0), team, 10)
 			Mat.box(v, Vector3(0.05, 0.4, 0.3), Vector3(0.79, 0.2, 0), wood)
+		"corral":
+			# Cerca de troncos con una entrada, paja en el suelo y un bebedero.
+			Mat.box(v, Vector3(s * 0.96, 0.03, s * 0.96), Vector3(0, 0.015, 0), Color(0.72, 0.62, 0.35))
+			var hs := s * 0.48
+			for i in 7:
+				var t := -hs + i * (hs * 2.0 / 6.0)
+				for side in [Vector3(t, 0, -hs), Vector3(t, 0, hs), Vector3(-hs, 0, t), Vector3(hs, 0, t)]:
+					if side.x == hs and absf(side.z) < 0.5:
+						continue   # entrada
+					Mat.box(v, Vector3(0.09, 0.55, 0.09), side + Vector3(0, 0.27, 0), wood)
+			for z in [-hs, hs]:
+				Mat.box(v, Vector3(s * 0.96, 0.06, 0.05), Vector3(0, 0.42, z), wood.lightened(0.1))
+				Mat.box(v, Vector3(s * 0.96, 0.06, 0.05), Vector3(0, 0.22, z), wood.lightened(0.1))
+			Mat.box(v, Vector3(0.05, 0.06, s * 0.96), Vector3(-hs, 0.42, 0), wood.lightened(0.1))
+			Mat.box(v, Vector3(0.05, 0.06, s * 0.96), Vector3(-hs, 0.22, 0), wood.lightened(0.1))
+			for z in [-hs * 0.6, hs * 0.6]:
+				Mat.box(v, Vector3(0.05, 0.06, hs * 0.75), Vector3(hs, 0.42, z), wood.lightened(0.1))
+			Mat.box(v, Vector3(0.9, 0.2, 0.3), Vector3(-0.6, 0.1, -0.8), wood.darkened(0.2))
+			Mat.box(v, Vector3(0.8, 0.04, 0.2), Vector3(-0.6, 0.19, -0.8), Color(0.25, 0.5, 0.65))
+			Mat.box(v, Vector3(0.3, 0.06, 0.04), Vector3(hs + 0.05, 0.6, 0.6), team)
 		"granja":
 			Mat.box(v, Vector3(1.94, 0.04, 1.94), Vector3(0, 0.02, 0), Color(0.45, 0.32, 0.18))
 			_crops = Node3D.new()
@@ -428,3 +450,26 @@ func _refresh_crops() -> void:
 		return
 	var f := clampf(food / maxf(1.0, def.get("food", 1.0)), 0.0, 1.0)
 	_crops.scale = Vector3(1, 0.3 + 0.7 * f, 1)
+
+
+## Corral: los animales del dueño que están cerca pastan, dan alimento y engordan.
+var grazers := 0
+
+
+func _graze(dt: float) -> void:
+	grazers = 0
+	var c := center()
+	for a in game.animals:
+		if grazers >= Defs.CORRAL_CAP:
+			break
+		if a.dead or not a.tame or a.owner_id != owner_id or a.graze_tick == game.tick:
+			continue
+		if MapData.dist_to_rect(a.pos, rect) > Defs.CORRAL_RADIUS - 2.0 and a.pos.distance_to(c) > Defs.CORRAL_RADIUS:
+			continue
+		a.graze_tick = game.tick
+		a.food = minf(a.food + Defs.FATTEN_RATE * dt, a.def["food"] * Defs.FATTEN_MAX)
+		a.max_food = maxf(a.max_food, a.food)
+		grazers += 1
+	if grazers > 0:
+		var mult: float = game.players[owner_id].gather_mult("comida")
+		game.deposit(owner_id, "comida", Defs.GRAZE_RATE * grazers * dt * mult)

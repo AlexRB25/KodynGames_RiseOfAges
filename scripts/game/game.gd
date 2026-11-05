@@ -156,6 +156,24 @@ func _dev_args() -> void:
 			if v.size() > 2:
 				camera.dist = float(v[2])
 				camera.target_dist = float(v[2])
+		elif a == "--corral":
+			# Desarrollo: un corral junto a tu centro con las cabras cercanas pastando.
+			var cc := main_center(local_id).center()
+			var co: Building = null
+			for r in range(7, 16):
+				for k in 16:
+					var t := MapData.to_tile(cc + Vector2.from_angle(TAU * k / 16.0) * r)
+					if co == null and can_place(local_id, "corral", t):
+						co = spawn_building("corral", local_id, t, true)
+			if co:
+				for an in animals:
+					if an.tame and an.pos.distance_to(cc) < 14.0:
+						an.set_herd_owner(local_id)
+						an.cmd_move(co.center())
+				camera.focus(co.center())
+				camera.dist = 14.0
+				camera.target_dist = 14.0
+				controller.set_selection([co])
 		elif a.begins_with("--sel=") and controller:
 			var sc := main_center(int(a.get_slice("=", 1)))
 			if sc:
@@ -446,12 +464,16 @@ func _update_fog() -> void:
 	for b in buildings:
 		if team_of(b.owner_id) == lt:
 			src.append([b.center(), b.sight + b.def["size"] / 2])
+	for a in animals:
+		if not a.dead and a.owner_id >= 0 and team_of(a.owner_id) == lt:
+			src.append([a.pos, 3.0])
 	fog.update(src)
 	for u in units:
 		if team_of(u.owner_id) != lt:
 			u.visible = fog.is_visible(u.pos)
 	for a in animals:
-		a.visible = fog.is_visible(a.pos) or (a.dead and fog.is_explored_rect(Rect2i(MapData.to_tile(a.pos), Vector2i.ONE)))
+		a.visible = fog.is_visible(a.pos) or (a.dead and fog.is_explored_rect(Rect2i(MapData.to_tile(a.pos), Vector2i.ONE))) \
+			or (not a.dead and a.owner_id >= 0 and team_of(a.owner_id) == lt)
 	for b in buildings:
 		if team_of(b.owner_id) != lt:
 			if fog.is_visible_rect(b.rect):
@@ -613,6 +635,9 @@ func find_resource_near(group: String, p: Vector2, r: float, owner: int, exclude
 			# Primero animales ya cazados con comida; luego vivos.
 			for a in animals:
 				if a == exclude or a.removed:
+					continue
+				# No cazar solo: animales vivos de otro pueblo ni los tuyos que pastan.
+				if not a.dead and ((a.owner_id >= 0 and (a.owner_id != owner or a.grazing())) or a.being_herded()):
 					continue
 				var d := a.pos.distance_to(p)
 				if a.dead:
@@ -927,6 +952,10 @@ func command_units(list: Array, target: Entity, point: Vector2, queue: bool) -> 
 		if not (u is Unit) or u.dead:
 			continue
 		if Entity.live(target) or (Entity.valid(target) and target.has_resource()):
+			# Aldeano + cabra o guajolote vivo que no es tuyo = pastorearlo (también para robarlo).
+			if u.is_villager() and target is Animal and not target.dead and target.tame and target.owner_id != u.owner_id:
+				u.cmd_herd(target)
+				continue
 			if is_enemy(u.owner_id, target.owner_id):
 				u.cmd_attack(target)
 				continue
@@ -999,6 +1028,32 @@ func _ids(list: Array) -> Array:
 	return out
 
 
+func _own_animals(pid: int, ids: Array) -> Array[Animal]:
+	var out: Array[Animal] = []
+	for i in ids:
+		var e := entity(i)
+		if e is Animal and e.owner_id == pid and not e.dead:
+			out.append(e)
+	return out
+
+
+## Tus animales: a un corral tuyo (se quedan pastando) o a un punto, un poco separados.
+func _order_animals(pid: int, ids: Array, target: Entity, point: Vector2) -> void:
+	var list := _own_animals(pid, ids)
+	if list.is_empty():
+		return
+	var dest := point
+	if target is Building and target.owner_id == pid and target.kind == "corral":
+		dest = target.center()
+	var cols := ceili(sqrt(list.size()))
+	for i in list.size():
+		var off := Vector2((i % cols) - (cols - 1) * 0.5, (i / cols) - (cols - 1) * 0.5) * 0.7
+		var p := dest + off
+		if not map.is_free(MapData.to_tile(p)):
+			p = dest
+		list[i].cmd_move(p)
+
+
 func _own_units(pid: int, ids: Array) -> Array[Unit]:
 	var out: Array[Unit] = []
 	for i in ids:
@@ -1026,9 +1081,12 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 	match String(c.get("k", "")):
 		"order":
 			command_units(_own_units(pid, c.get("u", [])), entity(c.get("t", 0)), Vector2(c["x"], c["y"]), bool(c.get("q", false)))
+			_order_animals(pid, c.get("u", []), entity(c.get("t", 0)), Vector2(c["x"], c["y"]))
 		"stop":
 			for u in _own_units(pid, c.get("u", [])):
 				u.cmd_stop()
+			for a in _own_animals(pid, c.get("u", [])):
+				a.cmd_stop()
 		"kill":
 			for u in _own_units(pid, c.get("u", [])):
 				u.take_damage(99999.0, null)

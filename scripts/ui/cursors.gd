@@ -34,6 +34,9 @@ static func _shapes(kind: String) -> Array:
 				[Vector2(8, 22), Vector2(11, 27), 2.0, METAL], [Vector2(11, 27), Vector2(15, 24), 2.0, METAL], [Vector2(15, 24), Vector2(14, 21), 2.0, METAL]]
 		"cosechar":    # hoz
 			return [[Vector2(35, 35), Vector2(25, 25), 4.0, WOOD], [Vector2(25, 25), Vector2(17, 12), 3.0, METAL], [Vector2(17, 12), Vector2(9, 8), 3.0, METAL], [Vector2(9, 8), Vector2(3, 12), 3.0, METAL], [Vector2(3, 12), Vector2(4, 17), 2.0, METAL]]
+		"pastorear":   # cayado de pastor
+			return [[Vector2(30, 37), Vector2(16, 12), 3.0, WOOD], [Vector2(16, 12), Vector2(12, 5), 3.0, WOOD], [Vector2(12, 5), Vector2(6, 4), 3.0, WOOD],
+				[Vector2(6, 4), Vector2(3, 8), 3.0, WOOD], [Vector2(3, 8), Vector2(5, 12), 3.0, WOOD], [Vector2(26, 27), 4.0, Color(0.95, 0.94, 0.9)]]
 		"depositar":   # costal
 			return [[Vector2(20, 26), 10.0, Color(0.80, 0.68, 0.45)], [Vector2(20, 16), Vector2(20, 10), 6.0, Color(0.80, 0.68, 0.45)], [Vector2(15, 14), Vector2(25, 14), 2.5, WOOD], [Vector2(20, 26), 3.0, GOLD]]
 	return []

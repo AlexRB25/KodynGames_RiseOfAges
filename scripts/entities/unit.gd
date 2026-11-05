@@ -5,7 +5,7 @@ extends Entity
 ## cercano que lo acepte -> regresa. Si se acaba, busca otro igual cerca; si no
 ## hay, se queda quieto y avisa.
 
-enum S { IDLE, MOVE, GATHER, RETURN, BUILD, ATTACK, DEAD }
+enum S { IDLE, MOVE, GATHER, RETURN, BUILD, ATTACK, DEAD, HERD }
 
 var def: Dictionary
 var state := S.IDLE
@@ -26,6 +26,7 @@ var work_pos := Vector2.ZERO
 var finish_after_drop := false
 var build_queue: Array = []
 var idle_notice := ""         # texto del aviso "ya terminé"
+var herd_t := 0.0             # segundos seguidos pastoreando
 
 var atk_timer := 0.0
 var scan_timer := 0.0
@@ -157,6 +158,45 @@ func cmd_gather(e: Entity) -> void:
 	state = S.GATHER
 
 
+## Pastorear una cabra o guajolote: HERD_TIME segundos seguidos y se vuelve de tu pueblo.
+func cmd_herd(a: Animal) -> void:
+	if not is_villager():
+		cmd_move(a.pos)
+		return
+	_reset_task()
+	build_queue.clear()
+	target = a
+	herd_t = 0.0
+	state = S.HERD
+
+
+func _do_herd(dt: float) -> void:
+	if not Entity.live(target) or not (target is Animal) or target.owner_id == owner_id:
+		herd_t = 0.0
+		target = null
+		state = S.IDLE
+		return
+	var a: Animal = target
+	var r := _approach(a, Defs.HERD_REACH, dt)
+	if r == -1:
+		herd_t = 0.0
+		_go_idle("No puedo llegar al animal.")
+		return
+	if r == 0:
+		herd_t = 0.0   # se tiene que acercar: vuelve a empezar
+		return
+	working = true
+	_face_to(a.pos)
+	if not a.hold_for(owner_id):
+		return   # otro pueblo lo está pastoreando a la vez: nadie avanza
+	herd_t += dt
+	if herd_t >= Defs.HERD_TIME:
+		herd_t = 0.0
+		a.set_herd_owner(owner_id)
+		target = null
+		state = S.IDLE
+
+
 func cmd_build(b: Building, queue := false) -> void:
 	if not is_villager():
 		return
@@ -226,6 +266,8 @@ func sim(dt: float) -> void:
 			_do_build(dt)
 		S.ATTACK:
 			_do_attack(dt)
+		S.HERD:
+			_do_herd(dt)
 
 
 func _do_idle(dt: float) -> void:
@@ -523,6 +565,7 @@ func _do_attack(dt: float) -> void:
 
 
 func take_damage(amount: float, from: Entity) -> void:
+	herd_t = 0.0
 	if dead:
 		return
 	hp -= amount
@@ -575,6 +618,8 @@ func status_text() -> String:
 			return "Construyendo"
 		S.ATTACK:
 			return "Atacando"
+		S.HERD:
+			return "Pastoreando: %d / %d s" % [floori(herd_t), int(Defs.HERD_TIME)]
 	return ""
 
 
@@ -680,8 +725,10 @@ func render(alpha: float, dt: float) -> void:
 		for l in legs:
 			l.rotation.z = lerpf(l.rotation.z, 0.0, dt * 8.0)
 		body.position.y = 0
-	# brazo: golpe al trabajar/atacar
-	if working:
+	# brazo: golpe al trabajar/atacar (pastorear: mueve el brazo despacio, como con un cayado)
+	if working and state == S.HERD:
+		arm.rotation.z = -0.6 - sin(Time.get_ticks_msec() * 0.004 + id) * 0.5
+	elif working:
 		if is_villager() and state != S.ATTACK and not (Entity.valid(target) and target is Animal and not target.dead):
 			_swing = maxf(_swing, 0.0)
 			arm.rotation.z = -absf(sin(Time.get_ticks_msec() * 0.008 + id)) * 1.6

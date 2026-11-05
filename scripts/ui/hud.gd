@@ -454,7 +454,7 @@ var tab := "aldeanos"
 var _tab_btns := {}
 
 const TAB_NAMES := {"campo": "Campo", "edificios": "Edificios", "aldeanos": "Aldeanos", "seleccion": "Selección"}
-const CAMPO := ["granja", "molino", "maderero", "minero"]
+const CAMPO := ["granja", "molino", "corral", "maderero", "minero"]
 const EDIFICIOS := ["casa", "cuartel", "arqueria", "establo", "torre", "muralla", "mercado", "templo", "castillo", "centro"]
 
 
@@ -725,6 +725,8 @@ func _refresh_info() -> void:
 						txt += "[color=%s]%s %d/%d[/color]  " % ["#7dff7d" if r["ok"] else "#ff8a7a", r["text"], mini(r["have"], r["need"]), r["need"]]
 					lines.append(txt)
 			lines.append(e.def["desc"])
+			if e.kind == "corral" and e.complete:
+				lines.append("Animales pastando: %d / %d  (+%.1f de alimento por segundo)" % [e.grazers, Defs.CORRAL_CAP, e.grazers * Defs.GRAZE_RATE])
 			if e.kind == "mercado" and e.owner_id == game.local_id:
 				var mp := "Precios (100 u.): "
 				for r in ["comida", "madera", "piedra"]:
@@ -745,7 +747,16 @@ func _refresh_info() -> void:
 					queue_box.add_child(qb)
 		elif e.has_resource() or e is ResourceNode or e is Animal:
 			if e is Animal and not e.dead:
-				lines.append("Vida: %d · Comida: %d" % [ceili(e.hp), int(e.food)])
+				lines.append("Vida: %d · Carne: %d" % [ceili(e.hp), int(e.food)])
+				if e.tame and e.owner_id < 0:
+					lines.append("Salvaje. Un aldeano lo puede pastorear %d segundos seguidos y será tuyo (clic derecho con el aldeano)." % int(Defs.HERD_TIME))
+				elif e.tame and e.owner_id == game.local_id:
+					if e.grazing():
+						lines.append("[color=#7dff7d]Pastando en tu corral: da %.1f de alimento por segundo y engorda.[/color]" % Defs.GRAZE_RATE)
+					else:
+						lines.append("Clic derecho en un Corral tuyo para llevarlo a pastar. Con un aldeano, clic derecho en él para sacrificarlo.")
+				elif e.tame:
+					lines.append("Un aldeano tuyo se lo puede llevar si lo pastorea %d segundos seguidos." % int(Defs.HERD_TIME))
 			else:
 				lines.append("Queda: %d de %s" % [int(e.remaining()), Defs.RES_NAMES.get(e.res_type(), "").to_lower()])
 		info_body.text = "\n".join(lines)

@@ -35,10 +35,20 @@ const NODES := {
 }
 
 const ANIMALS := {
-	"cabra": {"name": "Cabra", "hp": 8.0, "food": 100.0, "speed": 0.9, "flee": 1.5, "color": Color(0.93, 0.91, 0.86)},
+	"cabra": {"name": "Cabra", "hp": 8.0, "food": 100.0, "speed": 0.9, "flee": 1.5, "color": Color(0.93, 0.91, 0.86), "tame": true},
 	"venado": {"name": "Venado", "hp": 6.0, "food": 140.0, "speed": 1.3, "flee": 2.4, "color": Color(0.62, 0.43, 0.25)},
-	"guajolote": {"name": "Guajolote", "hp": 4.0, "food": 70.0, "speed": 0.8, "flee": 1.3, "color": Color(0.30, 0.22, 0.18)},
+	"guajolote": {"name": "Guajolote", "hp": 4.0, "food": 70.0, "speed": 0.8, "flee": 1.3, "color": Color(0.30, 0.22, 0.18), "tame": true},
 }
+# Pastoreo: un aldeano pastorea una cabra o guajolote 10 segundos seguidos y se vuelve
+# de su pueblo (también si era de otro jugador: así se roban). En un Corral pastan: dan
+# alimento sin morir y engordan (más carne si después se sacrifican).
+const HERD_TIME := 10.0
+const HERD_REACH := 1.5
+const GRAZE_RATE := 0.2        # alimento por segundo por animal en el corral
+const CORRAL_CAP := 6          # animales que pastan por corral
+const CORRAL_RADIUS := 4.5     # distancia al corral para contar como "pastando"
+const FATTEN_RATE := 0.15      # comida que gana el animal por segundo pastando
+const FATTEN_MAX := 1.6        # hasta 1.6 veces su carne normal
 const MEAT_RATE := 0.70
 const FARM_RATE := 0.42
 const SEED_COST := {"madera": 60}   # 1 siembra = 1 granja
@@ -76,6 +86,9 @@ const BUILDINGS := {
 		"sight": 5, "drop": ["oro", "piedra"], "desc": "Recibe oro y piedra. Cerca de él se pica 25 % más rápido y rinde 15 % más."},
 	"molino": {"name": "Molino", "size": 2, "hp": 500.0, "cost": {"madera": 100}, "time": 30.0,
 		"sight": 5, "drop": ["comida"], "desc": "Recibe alimento. Permite granjas. Bayas y granjas cercanas rinden más."},
+	"corral": {"name": "Corral", "size": 3, "hp": 350.0, "cost": {"madera": 80}, "time": 20.0, "sight": 3,
+		"walkable": true,
+		"desc": "Lleva aquí tus cabras y guajolotes (selecciónalos y clic derecho en el corral). Pastan y te dan alimento sin morir, hasta 6 por corral, y además engordan."},
 	"granja": {"name": "Granja", "size": 2, "hp": 300.0, "cost": {}, "time": 8.0, "sight": 2,
 		"walkable": true, "food": 250.0, "seed": true,
 		"desc": "Ocupa 4 cuadros y gasta 1 siembra (se compra en el Centro). El granjero siembra, luego cosecha 250 de alimento. Si tienes siembras guardadas, se resiembra sola."},
@@ -113,7 +126,7 @@ const AGES := [
 		"req": [[["castillo"], 1, "1 castillo"], [["casa"], 12, "12 casas"], [["templo"], 2, "2 templos"]]},
 ]
 const AGE_HP := 0.2   # +20 % de vida a los edificios por cada era
-const BUILD_MENU := ["casa", "maderero", "minero", "molino", "granja", "cuartel", "arqueria", "establo", "torre", "muralla", "mercado", "centro", "templo", "castillo"]
+const BUILD_MENU := ["casa", "maderero", "minero", "molino", "granja", "corral", "cuartel", "arqueria", "establo", "torre", "muralla", "mercado", "centro", "templo", "castillo"]
 
 ## Civilizaciones: se cargan de data/civs/*.json (ver docs/CIVILIZACIONES.md).
 static var CIVS: Dictionary = _load_civs()

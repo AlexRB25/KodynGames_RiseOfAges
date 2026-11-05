@@ -117,6 +117,7 @@ func _think() -> void:
 	if g.count_buildings(pid, ["granja"]) > 0 and p.seeds < 2 and p.res["madera"] > 250:
 		g.buy_seed(pid)
 	_rebalance(vills)
+	_herding(vills, home)
 	_use_market()
 
 	# 4. Militares y defensas
@@ -357,3 +358,48 @@ func _resource_for(r: String, home: Vector2, u: Unit) -> Entity:
 							camp = b
 			return g.find_resource_near(r, camp.center() if camp else home, 45.0, pid)
 	return null
+
+
+## Pastoreo: corral cerca del centro, un aldeano pastorea cabras y guajolotes salvajes
+## cercanos (uno a la vez) y los animales del bot se van a pastar al corral.
+func _herding(vills: Array[Unit], home: Vector2) -> void:
+	var wild: Array[Animal] = []
+	var mine: Array[Animal] = []
+	for a in g.animals:
+		if a.dead or not a.tame:
+			continue
+		if a.owner_id == pid:
+			mine.append(a)
+		elif a.owner_id < 0 and a.pos.distance_to(home) < 28.0:
+			wild.append(a)
+	var corral := _nearest_own("corral", home)
+	if corral == null:
+		if _pending("corral") == 0 and vills.size() >= 7 and wild.size() + mine.size() >= 2 and p.res["madera"] >= 130:
+			_build("corral", home, vills, 5, 11)
+		return
+	var grazing := 0
+	for a in mine:
+		if a.grazing():
+			grazing += 1
+		elif not a.moving and a.pos.distance_to(corral.center()) > 3.0:
+			a.cmd_move(corral.center())
+	var herding := false
+	for u in vills:
+		if u.state == Unit.S.HERD:
+			herding = true
+	if herding or wild.is_empty() or mine.size() >= Defs.CORRAL_CAP:
+		return
+	# El animal salvaje más cercano al centro y el aldeano más cercano a él (que no construya).
+	wild.sort_custom(func(a: Animal, b: Animal) -> bool: return a.pos.distance_to(home) < b.pos.distance_to(home))
+	var target := wild[0]
+	var best: Unit = null
+	var bd := INF
+	for u in vills:
+		if u.state == Unit.S.BUILD or u.carry > 0.0:
+			continue
+		var d := u.pos.distance_to(target.pos) - (30.0 if u.is_idle() else 0.0)
+		if d < bd:
+			bd = d
+			best = u
+	if best:
+		best.cmd_herd(target)

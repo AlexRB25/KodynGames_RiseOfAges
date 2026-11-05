@@ -15,6 +15,7 @@ func _ready() -> void:
 		var sc := Defs.civ_score(c)
 		check(absf(sc) <= 1.0, "civilización %s balanceada (puntos %.2f)" % [c, sc])
 	await _economy_test()
+	await _herd_test()
 	await _bot_match_test()
 	print("RESULTADO: %s (%d fallos)" % ["BIEN" if fails == 0 else "MAL", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -139,6 +140,8 @@ func _bot_match_test() -> void:
 		{"name": "Bot", "civ": "maya", "team": 2, "color": 1, "bot": true, "difficulty": "dificil"},
 	], 99)
 	var t0 := Time.get_ticks_msec()
+	var corral_seen := false
+	var herded_max := 0
 	for m in 14:
 		g.run_seconds(60.0)
 		var line := "     min %2d:" % (m + 1)
@@ -154,6 +157,14 @@ func _bot_match_test() -> void:
 			line += "  %s ald=%d ejer=%d edif=%d era=%d com=%d mad=%d oro=%d pie=%d |" % [p.name, v, a,
 				g.count_buildings(p.id, Defs.BUILDINGS.keys()), p.age, p.res["comida"], p.res["madera"], p.res["oro"], p.res["piedra"]]
 		print(line)
+		for b in g.buildings:
+			if b.kind == "corral" and b.complete:
+				corral_seen = true
+		var owned := 0
+		for an in g.animals:
+			if not an.dead and an.owner_id >= 0:
+				owned += 1
+		herded_max = maxi(herded_max, owned)
 		if g.over:
 			break
 	print("     tiempo real: %d ms" % (Time.get_ticks_msec() - t0))
@@ -168,5 +179,81 @@ func _bot_match_test() -> void:
 		best_age = maxi(best_age, p.age)
 	check(best_v >= 15 or g.over, "un bot creció a 15+ aldeanos (%d)" % best_v)
 	check(best_age >= 2 or g.over, "un bot avanzó de era (era %d)" % best_age)
+	check(corral_seen, "los bots construyeron un corral")
+	check(herded_max >= 2, "los bots pastorearon animales (%d a la vez)" % herded_max)
+	g.queue_free()
+	await get_tree().process_frame
+
+
+## Pastoreo: solo un aldeano, 10 segundos seguidos; acercarse no basta. En el corral
+## da alimento sin morir y engorda. El rival la roba pastoreándola igual; si se
+## interrumpe, vuelve a empezar.
+func _herd_test() -> void:
+	var g := await _new_game([
+		{"name": "A", "civ": "mexica", "team": 1, "color": 0, "bot": false},
+		{"name": "B", "civ": "maya", "team": 2, "color": 1, "bot": false},
+	], 4321)
+	var c := g.main_center(0).center()
+	var goat: Animal = null
+	var bd := INF
+	for a in g.animals:
+		if a.kind == "cabra" and a.pos.distance_to(c) < bd:
+			bd = a.pos.distance_to(c)
+			goat = a
+	check(goat != null and goat.owner_id == -1, "hay una cabra salvaje cerca")
+	var mine: Unit = null
+	var enemy: Unit = null
+	for u in g.units:
+		if u.owner_id == 0 and mine == null:
+			mine = u
+		if u.owner_id == 1 and enemy == null:
+			enemy = u
+	# Solo acercarse no basta.
+	mine.pos = goat.pos + Vector2(1.0, 0)
+	mine.prev_pos = mine.pos
+	g.run_seconds(4.0)
+	check(goat.owner_id == -1, "acercarse no la vuelve tuya")
+	# Pastorearla: a los 5 s aún no, a los 10 s seguidos sí.
+	g.apply_cmd(0, {"k": "order", "u": [mine.id], "t": goat.id, "x": goat.pos.x, "y": goat.pos.y})
+	check(mine.state == Unit.S.HERD, "clic derecho con un aldeano en la cabra = pastorear")
+	g.run_seconds(5.0)
+	check(goat.owner_id == -1, "a los 5 segundos todavía no es tuya (%s)" % mine.status_text())
+	g.run_seconds(6.5)
+	check(goat.owner_id == 0, "tras 10 segundos seguidos de pastoreo es tuya")
+	check(mine.state == Unit.S.IDLE, "el aldeano termina de pastorear")
+	# Corral terminado cerca del centro.
+	var corral: Building = null
+	for r in range(6, 16):
+		for k in 16:
+			var t := MapData.to_tile(c + Vector2.from_angle(TAU * k / 16.0) * r)
+			if corral == null and g.can_place(0, "corral", t):
+				corral = g.spawn_building("corral", 0, t, true)
+	check(corral != null, "se puso un corral")
+	g.apply_cmd(0, {"k": "order", "u": [goat.id], "t": corral.id, "x": corral.center().x, "y": corral.center().y})
+	mine.cmd_move(c)
+	var food0: float = g.players[0].res["comida"]
+	var meat0 := goat.food
+	g.run_seconds(60.0)
+	var gained: float = g.players[0].res["comida"] - food0
+	check(goat.grazing(), "la cabra está pastando en el corral")
+	check(gained > 6.0, "el corral dio alimento sin matar a la cabra (+%d)" % int(gained))
+	check(goat.food > meat0 + 3.0 and not goat.dead, "la cabra engordó (%d -> %d de carne)" % [int(meat0), int(goat.food)])
+	# El rival la pastorea lejos de tu centro (que dispara a los enemigos); si lo interrumpen, vuelve a empezar.
+	var far := g.main_center(1).center().lerp(c, 0.5)
+	far = MapData.center(g.map.nearest_free(MapData.to_tile(far)))
+	goat.pos = far
+	goat.prev_pos = far
+	goat.home = far
+	enemy.pos = goat.pos + Vector2(0, 1.0)
+	enemy.prev_pos = enemy.pos
+	g.apply_cmd(1, {"k": "order", "u": [enemy.id], "t": goat.id, "x": goat.pos.x, "y": goat.pos.y})
+	g.run_seconds(6.0)
+	g.apply_cmd(1, {"k": "stop", "u": [enemy.id]})
+	g.run_seconds(0.5)
+	g.apply_cmd(1, {"k": "order", "u": [enemy.id], "t": goat.id, "x": goat.pos.x, "y": goat.pos.y})
+	g.run_seconds(6.0)
+	check(goat.owner_id == 0, "interrumpido, el rival vuelve a empezar (6 + 6 s no bastan)")
+	g.run_seconds(6.0)
+	check(goat.owner_id == 1, "el rival la robó pastoreándola 10 segundos seguidos (%s)" % enemy.status_text())
 	g.queue_free()
 	await get_tree().process_frame
