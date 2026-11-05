@@ -8,8 +8,7 @@ var font: Font
 var civ_label: Label
 var civ_desc: Label
 var chip: RichTextLabel
-var stage: Node3D
-var figure: Node3D
+var fig_view: CivFigure
 var overlay: Control
 
 const RED := Color(0.55, 0.13, 0.10)
@@ -130,17 +129,9 @@ func _build() -> void:
 	left.add_theme_constant_override("separation", 4)
 	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(left)
-	var svc := SubViewportContainer.new()
-	svc.stretch = true
-	svc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	svc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	left.add_child(svc)
-	var vp := SubViewport.new()
-	vp.own_world_3d = true
-	vp.transparent_bg = true
-	vp.msaa_3d = Viewport.MSAA_4X
-	svc.add_child(vp)
-	_build_stage(vp)
+	fig_view = CivFigure.new(Account.fav_civ(), Defs.PLAYER_COLORS[0])
+	fig_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.add_child(fig_view)
 	civ_label = _label("", 46, GOLD)
 	left.add_child(civ_label)
 	civ_desc = _label("", 18)
@@ -192,52 +183,13 @@ func _mode(title: String, sub: String, cb: Callable, color := RED) -> Button:
 	return b
 
 
-func _build_stage(vp: SubViewport) -> void:
-	stage = Node3D.new()
-	vp.add_child(stage)
-	var cam := Camera3D.new()
-	cam.fov = 28
-	cam.look_at_from_position(Vector3(4.6, 1.7, 1.2), Vector3(0, 0.72, 0), Vector3.UP)
-	stage.add_child(cam)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-40, 60, 0)
-	sun.light_energy = 1.15
-	stage.add_child(sun)
-	var env := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_CLEAR_COLOR
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.8, 0.76, 0.7)
-	e.ambient_light_energy = 0.9
-	env.environment = e
-	stage.add_child(env)
-	# Pedestal de piedra escalonado.
-	Mat.box(stage, Vector3(1.25, 0.16, 1.25), Vector3(0, -0.08, 0), Color(0.55, 0.52, 0.46))
-	Mat.box(stage, Vector3(1.0, 0.12, 1.0), Vector3(0, 0.04, 0), Color(0.66, 0.62, 0.54))
-	Mat.box(stage, Vector3(1.02, 0.025, 1.02), Vector3(0, 0.105, 0), Color(0.72, 0.55, 0.25))
-
-
-func _process(dt: float) -> void:
-	if figure:
-		figure.rotation.y += dt * 0.6
-
-
 ## Muestra el aldeano nivel 5 de tu civilización favorita.
 func _show_civ() -> void:
 	var civ := Account.fav_civ()
 	var d: Dictionary = Defs.CIVS.get(civ, {})
 	civ_label.text = String(d.get("name", civ))
 	civ_desc.text = String(d.get("desc", ""))
-	if figure:
-		figure.queue_free()
-	figure = Node3D.new()
-	figure.position = Vector3(0, 0.12, 0)
-	stage.add_child(figure)
-	var sk: Array = d.get("look", {}).get("skin", [0.62, 0.42, 0.28])
-	var body := Node3D.new()
-	body.scale = Vector3.ONE * 1.25
-	figure.add_child(body)
-	Look.person(body, "aldeano", 5, Defs.PLAYER_COLORS[0], 0.0, Color(sk[0], sk[1], sk[2]))
+	fig_view.set_civ(civ)
 
 
 func _refresh_chip() -> void:

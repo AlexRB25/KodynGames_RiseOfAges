@@ -209,6 +209,11 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--rank":
 			_open_ranked()
+		elif arg.begins_with("--solo="):
+			open_mode("solo")
+			for ch in get_children():
+				if ch is SoloScreen:
+					ch._set_preset(arg.get_slice("=", 1))
 		elif arg == "--solo":
 			main_box.visible = false
 			setup_box.visible = true
@@ -227,8 +232,9 @@ var _lobby_civ_sent := false
 func open_mode(k: String) -> void:
 	match k:
 		"solo":
-			main_box.visible = false
-			setup_box.visible = true
+			var ss := SoloScreen.new()
+			add_child(ss)
+			ss.setup(_home, self)
 		"rango":
 			_open_ranked()
 		"amigos":
