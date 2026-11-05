@@ -34,6 +34,11 @@ func _ready() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(CFG)
 	var saved: String = cfg.get_value("jugador", "idioma", "")
+	# Web: el idioma elegido en la página principal (o en el juego) se guarda en el navegador.
+	if OS.has_feature("web"):
+		var web = JavaScriptBridge.eval("(function(){try{return localStorage.getItem('roa_idioma')||''}catch(e){return ''}})()")
+		if web is String and LANGS.has(web):
+			saved = web
 	# Desarrollo: --idioma=en fuerza un idioma sin guardarlo.
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--idioma="):

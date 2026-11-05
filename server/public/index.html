@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rise of Ages — Beta</title>
+<title data-t="0">Rise of Ages — Beta</title>
 <link rel="icon" type="image/png" href="/img/favicon.png">
 <meta property="og:image" content="/img/portada.jpg">
 <meta name="description" content="Rise of Ages: juego de estrategia en tiempo real con civilizaciones mesoamericanas. Beta gratuita en el navegador: contra bots, con amigos o con rango en línea.">
@@ -81,6 +81,11 @@ nav.top .links a { color: var(--text); text-decoration: none; font-weight: 600; 
 nav.top .links a:hover { color: var(--gold); }
 nav.top .links a.btn { color: #2a1a08; font-size: 15px; padding: 8px 16px; box-shadow: 0 3px 0 #8a5f1c; }
 @media (max-width: 760px) { nav.top .links a.opt { display: none; } }
+.lang { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lang button { background: transparent; color: var(--muted); border: 0; font: 800 12px 'Nunito', Arial, sans-serif;
+  padding: 6px 8px; cursor: pointer; }
+.lang button + button { border-left: 1px solid var(--border); }
+.lang button[aria-pressed="true"] { background: var(--gold); color: #2a1a08; }
 html { scroll-behavior: smooth; scroll-padding-top: 64px; }
 .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 0 22px; }
 .pill { font-size: 13px; font-weight: 800; padding: 5px 12px; border-radius: 999px; background: rgba(42,30,19,.85);
@@ -114,42 +119,45 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
 
 <nav class="top">
   <div class="wrap">
-    <a href="#" aria-label="Inicio"><img src="/img/logo.png" alt="Rise of Ages" width="57" height="34"></a>
+    <a href="#" aria-label="Inicio"><img data-ta="126" src="/img/logo.png" alt="Rise of Ages" width="57" height="34"></a>
     <div class="links">
-      <a class="opt" href="#juego">El juego</a>
-      <a class="opt" href="#mundo">El mundo</a>
-      <a class="opt" href="#amigos">Con amigos</a>
-      <a class="btn" href="/jugar/">▶ Jugar</a>
+      <a data-t="1" class="opt" href="#juego">El juego</a>
+      <a data-t="2" class="opt" href="#mundo">El mundo</a>
+      <a data-t="3" class="opt" href="#amigos">Con amigos</a>
+      <div class="lang" role="group" aria-label="Idioma / Language">
+        <button type="button" translate="no" data-l="es" onclick="roaLang('es')">ES</button><button type="button" translate="no" data-l="en" onclick="roaLang('en')">EN</button><button type="button" translate="no" data-l="pt" onclick="roaLang('pt')">PT</button>
+      </div>
+      <a data-t="4" class="btn" href="/jugar/">▶ Jugar</a>
     </div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="wrap">
-    <span class="beta">VERSIÓN BETA · GRATIS</span>
+    <span data-t="5" class="beta">VERSIÓN BETA · GRATIS</span>
     <h1 class="sr">Rise of Ages</h1>
-    <img class="logo" src="/img/logo.png" alt="Rise of Ages" width="560" height="335">
-    <p class="tag">Levanta tu civilización mesoamericana desde una aldea hasta un imperio. Recolecta, construye, evoluciona y derrota a tus rivales.</p>
+    <img data-ta="126" class="logo" src="/img/logo.png" alt="Rise of Ages" width="560" height="335">
+    <p data-t="6" class="tag">Levanta tu civilización mesoamericana desde una aldea hasta un imperio. Recolecta, construye, evoluciona y derrota a tus rivales.</p>
     <div class="pills">
-      <span class="pill">🎮 Gratis</span><span class="pill">🌐 En el navegador</span>
-      <span class="pill">🎓 Tutorial guiado</span><span class="pill">🗣️ Español · English · Português</span>
+      <span data-t="7" class="pill">🎮 Gratis</span><span data-t="8" class="pill">🌐 En el navegador</span>
+      <span data-t="9" class="pill">🎓 Tutorial guiado</span><span data-t="10" class="pill">🗣️ Español · English · Português</span>
     </div>
     <div class="cta">
-      <a class="btn" href="/jugar/">▶ Jugar ahora</a>
-      <a class="btn alt" href="#amigos">Jugar con un amigo</a>
+      <a data-t="11" class="btn" href="/jugar/">▶ Jugar ahora</a>
+      <a data-t="12" class="btn alt" href="#amigos">Jugar con un amigo</a>
     </div>
-    <p class="note">Se juega en el navegador, en computadora o celular (en horizontal). No hay que instalar nada.</p>
+    <p data-t="13" class="note">Se juega en el navegador, en computadora o celular (en horizontal). No hay que instalar nada.</p>
   </div>
 </header>
 
 <section id="juego">
   <div class="wrap">
-    <h2>Así se ve</h2>
+    <h2 data-t="14">Así se ve</h2>
     <div class="shots">
-      <figure class="main"><img src="/img/captura1.webp" alt="Un pueblo maya con su centro, casas, corral y granjas junto al bosque y un lago" width="1600" height="900"><figcaption>Tu pueblo crece entre bosques, minas y lagos</figcaption></figure>
+      <figure class="main"><img data-ta="127" src="/img/captura1.webp" alt="Un pueblo maya con su centro, casas, corral y granjas junto al bosque y un lago" width="1600" height="900"><figcaption data-t="15">Tu pueblo crece entre bosques, minas y lagos</figcaption></figure>
       <div class="side">
-        <figure><img src="/img/captura2.webp" alt="Granjas, corral con cabras y una mina de oro" width="960" height="540" loading="lazy"><figcaption>Granjas, corral y minas</figcaption></figure>
-        <figure><img src="/img/captura3.webp" alt="Aldeanos y guerreros de las 5 eras junto al bosque" width="960" height="540" loading="lazy"><figcaption>Tu gente cambia en cada era</figcaption></figure>
+        <figure><img data-ta="128" src="/img/captura2.webp" alt="Granjas, corral con cabras y una mina de oro" width="960" height="540" loading="lazy"><figcaption data-t="16">Granjas, corral y minas</figcaption></figure>
+        <figure><img data-ta="129" src="/img/captura3.webp" alt="Aldeanos y guerreros de las 5 eras junto al bosque" width="960" height="540" loading="lazy"><figcaption data-t="17">Tu gente cambia en cada era</figcaption></figure>
       </div>
     </div>
   </div>
@@ -157,70 +165,70 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
 
 <section>
   <div class="wrap">
-    <h2>¿En qué consiste?</h2>
-    <p class="lead">Rise of Ages es un juego de <b>estrategia en tiempo real</b>. Empiezas con un Centro y 5 aldeanos en un mapa
+    <h2 data-t="18">¿En qué consiste?</h2>
+    <p data-t="19" class="lead">Rise of Ages es un juego de <b>estrategia en tiempo real</b>. Empiezas con un Centro y 5 aldeanos en un mapa
       que no conoces: solo ves lo que tus unidades alcanzan a ver. Tienes que explorar, juntar recursos, crecer tu pueblo,
       avanzar de era y armar un ejército. <b>Gana el equipo que deje a los demás sin ningún Centro.</b></p>
     <div class="grid">
-      <div class="card"><div class="ico"><img src="/img/alimento.png" alt=""><img src="/img/madera.png" alt=""><img src="/img/oro.png" alt=""><img src="/img/piedra.png" alt=""></div><h3>4 recursos</h3><p>Alimento, madera, oro y piedra. Tus aldeanos cazan, recogen bayas, pescan, siembran, talan y pican.</p></div>
-      <div class="card"><div class="ico">🏠</div><h3>Construye por cuadros</h3><p>Casas, campamentos, molino, granjas, cuartel, arquería, establo, torres, murallas, mercado, templo y castillo.</p></div>
-      <div class="card"><div class="ico">🏛️</div><h3>5 eras</h3><p>Aldea Primitiva, Era Tribal, Era de Piedra, Era de los Metales y Era Imperial. Cada era pide recursos y edificios, y tu gente y tus edificios se ven mejor.</p></div>
-      <div class="card"><div class="ico">🌫️</div><h3>Niebla de guerra</h3><p>No sabes dónde está tu enemigo hasta que lo encuentras. Explora el mapa: ríos, lagos, selva y desierto.</p></div>
-      <div class="card"><div class="ico">🤖</div><h3>Contra bots</h3><p>Hasta 8 jugadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… con 4 dificultades.</p></div>
-      <div class="card"><div class="ico">🌐</div><h3>Con amigos</h3><p>Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).</p></div>
-      <div class="card"><div class="ico">🎓</div><h3>Tutorial guiado <span class="tagnew">NUEVO</span></h3><p>La primera vez te lleva paso a paso: elegir aldeanos, juntar comida, cortar madera y construir. Ilumina justo lo que tienes que tocar.</p></div>
-      <div class="card"><div class="ico">🗣️</div><h3>En tu idioma <span class="tagnew">NUEVO</span></h3><p>Español, inglés y portugués. Toma el idioma de tu dispositivo y lo puedes cambiar en Configuración.</p></div>
-      <div class="card"><div class="ico">🏆</div><h3>Con rango</h3><p>Te emparejamos con alguien de tu nivel en 1 vs 1, 2 vs 2 o 4 vs 4. Ganar suma puntos, perder resta, y cada 100 puntos subes de nivel.</p></div>
+      <div class="card"><div class="ico"><img src="/img/alimento.png" alt=""><img src="/img/madera.png" alt=""><img src="/img/oro.png" alt=""><img src="/img/piedra.png" alt=""></div><h3 data-t="20">4 recursos</h3><p data-t="21">Alimento, madera, oro y piedra. Tus aldeanos cazan, recogen bayas, pescan, siembran, talan y pican.</p></div>
+      <div class="card"><div class="ico">🏠</div><h3 data-t="22">Construye por cuadros</h3><p data-t="23">Casas, campamentos, molino, granjas, cuartel, arquería, establo, torres, murallas, mercado, templo y castillo.</p></div>
+      <div class="card"><div class="ico">🏛️</div><h3 data-t="24">5 eras</h3><p data-t="25">Aldea Primitiva, Era Tribal, Era de Piedra, Era de los Metales y Era Imperial. Cada era pide recursos y edificios, y tu gente y tus edificios se ven mejor.</p></div>
+      <div class="card"><div class="ico">🌫️</div><h3 data-t="26">Niebla de guerra</h3><p data-t="27">No sabes dónde está tu enemigo hasta que lo encuentras. Explora el mapa: ríos, lagos, selva y desierto.</p></div>
+      <div class="card"><div class="ico">🤖</div><h3 data-t="28">Contra bots</h3><p data-t="29">Hasta 8 jugadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… con 4 dificultades.</p></div>
+      <div class="card"><div class="ico">🌐</div><h3 data-t="3">Con amigos</h3><p data-t="30">Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).</p></div>
+      <div class="card"><div class="ico">🎓</div><h3 data-t="31">Tutorial guiado <span class="tagnew">NUEVO</span></h3><p data-t="32">La primera vez te lleva paso a paso: elegir aldeanos, juntar comida, cortar madera y construir. Ilumina justo lo que tienes que tocar.</p></div>
+      <div class="card"><div class="ico">🗣️</div><h3 data-t="33">En tu idioma <span class="tagnew">NUEVO</span></h3><p data-t="34">Español, inglés y portugués. Toma el idioma de tu dispositivo y lo puedes cambiar en Configuración.</p></div>
+      <div class="card"><div class="ico">🏆</div><h3 data-t="35">Con rango</h3><p data-t="36">Te emparejamos con alguien de tu nivel en 1 vs 1, 2 vs 2 o 4 vs 4. Ganar suma puntos, perder resta, y cada 100 puntos subes de nivel.</p></div>
     </div>
   </div>
 </section>
 
 <section id="mundo">
   <div class="wrap">
-    <h2>Un mundo que se gasta <span class="tagnew">NUEVO</span></h2>
-    <p class="lead">Cada árbol, mina y arbusto se va acabando mientras tus aldeanos trabajan, y lo ves en el mapa. Al talar un árbol queda su <b>tocón</b> unos minutos. Las cabras se pastorean para que den comida sin morir, o se cazan. Planea bien: lo que está cerca de tu Centro no dura para siempre.</p>
+    <h2 data-t="37">Un mundo que se gasta <span class="tagnew">NUEVO</span></h2>
+    <p data-t="38" class="lead">Cada árbol, mina y arbusto se va acabando mientras tus aldeanos trabajan, y lo ves en el mapa. Al talar un árbol queda su <b>tocón</b> unos minutos. Las cabras se pastorean para que den comida sin morir, o se cazan. Planea bien: lo que está cerca de tu Centro no dura para siempre.</p>
     <div class="stages">
-      <div class="stage-row"><h3>Árbol · madera</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/arbol_100.webp" alt="Árbol 100%" loading="lazy"><span>100%</span></div>
-        <div class="cell"><img src="/img/etapas/arbol_75.webp" alt="Árbol 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/arbol_50.webp" alt="Árbol 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/arbol_25.webp" alt="Árbol 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><img src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span>Tocón</span></div>
+      <div class="stage-row"><h3 data-t="39">Árbol · madera</h3><div class="cells">
+        <div class="cell"><img data-ta="130" src="/img/etapas/arbol_100.webp" alt="Árbol 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img data-ta="131" src="/img/etapas/arbol_75.webp" alt="Árbol 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="132" src="/img/etapas/arbol_50.webp" alt="Árbol 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="133" src="/img/etapas/arbol_25.webp" alt="Árbol 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><img data-ta="40" src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span data-t="40">Tocón</span></div>
       </div></div>
-      <div class="stage-row"><h3>Pino · madera</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/pino_100.webp" alt="Pino 100%" loading="lazy"><span>100%</span></div>
-        <div class="cell"><img src="/img/etapas/pino_75.webp" alt="Pino 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/pino_50.webp" alt="Pino 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/pino_25.webp" alt="Pino 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><img src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span>Tocón</span></div>
+      <div class="stage-row"><h3 data-t="41">Pino · madera</h3><div class="cells">
+        <div class="cell"><img data-ta="134" src="/img/etapas/pino_100.webp" alt="Pino 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img data-ta="135" src="/img/etapas/pino_75.webp" alt="Pino 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="136" src="/img/etapas/pino_50.webp" alt="Pino 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="137" src="/img/etapas/pino_25.webp" alt="Pino 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><img data-ta="40" src="/img/etapas/arbol_0.webp" alt="Tocón" loading="lazy"><span data-t="40">Tocón</span></div>
       </div></div>
-      <div class="stage-row"><h3>Mina de oro</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/oro_100.webp" alt="Mina de oro 100%" loading="lazy"><span>100%</span></div>
-        <div class="cell"><img src="/img/etapas/oro_75.webp" alt="Mina de oro 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/oro_50.webp" alt="Mina de oro 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/oro_25.webp" alt="Mina de oro 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><span>Agotada</span></div>
+      <div class="stage-row"><h3 data-t="42">Mina de oro</h3><div class="cells">
+        <div class="cell"><img data-ta="138" src="/img/etapas/oro_100.webp" alt="Mina de oro 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img data-ta="139" src="/img/etapas/oro_75.webp" alt="Mina de oro 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="140" src="/img/etapas/oro_50.webp" alt="Mina de oro 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="141" src="/img/etapas/oro_25.webp" alt="Mina de oro 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span data-t="43">Agotada</span></div>
       </div></div>
-      <div class="stage-row"><h3>Mina de piedra</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/piedra_100.webp" alt="Mina de piedra 100%" loading="lazy"><span>100%</span></div>
-        <div class="cell"><img src="/img/etapas/piedra_75.webp" alt="Mina de piedra 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/piedra_50.webp" alt="Mina de piedra 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/piedra_25.webp" alt="Mina de piedra 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><span>Agotada</span></div>
+      <div class="stage-row"><h3 data-t="44">Mina de piedra</h3><div class="cells">
+        <div class="cell"><img data-ta="142" src="/img/etapas/piedra_100.webp" alt="Mina de piedra 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img data-ta="143" src="/img/etapas/piedra_75.webp" alt="Mina de piedra 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="144" src="/img/etapas/piedra_50.webp" alt="Mina de piedra 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="145" src="/img/etapas/piedra_25.webp" alt="Mina de piedra 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span data-t="43">Agotada</span></div>
       </div></div>
-      <div class="stage-row"><h3>Arbusto de bayas · alimento</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/arbusto_100.webp" alt="Arbusto de bayas 100%" loading="lazy"><span>100%</span></div>
-        <div class="cell"><img src="/img/etapas/arbusto_75.webp" alt="Arbusto de bayas 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/arbusto_50.webp" alt="Arbusto de bayas 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/arbusto_25.webp" alt="Arbusto de bayas 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><span>Agotado</span></div>
+      <div class="stage-row"><h3 data-t="45">Arbusto de bayas · alimento</h3><div class="cells">
+        <div class="cell"><img data-ta="146" src="/img/etapas/arbusto_100.webp" alt="Arbusto de bayas 100%" loading="lazy"><span>100%</span></div>
+        <div class="cell"><img data-ta="147" src="/img/etapas/arbusto_75.webp" alt="Arbusto de bayas 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="148" src="/img/etapas/arbusto_50.webp" alt="Arbusto de bayas 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="149" src="/img/etapas/arbusto_25.webp" alt="Arbusto de bayas 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span data-t="46">Agotado</span></div>
       </div></div>
-      <div class="stage-row"><h3>Cabra · alimento</h3><div class="cells">
-        <div class="cell"><img src="/img/etapas/cabra_100.webp" alt="Cabra Viva" loading="lazy"><span>Viva</span></div>
-        <div class="cell"><img src="/img/etapas/cabra_75.webp" alt="Cabra 75%" loading="lazy"><span>75%</span></div>
-        <div class="cell"><img src="/img/etapas/cabra_50.webp" alt="Cabra 50%" loading="lazy"><span>50%</span></div>
-        <div class="cell"><img src="/img/etapas/cabra_25.webp" alt="Cabra 25%" loading="lazy"><span>25%</span></div>
-        <div class="cell end"><span>Agotada</span></div>
+      <div class="stage-row"><h3 data-t="47">Cabra · alimento</h3><div class="cells">
+        <div class="cell"><img data-ta="150" src="/img/etapas/cabra_100.webp" alt="Cabra Viva" loading="lazy"><span data-t="48">Viva</span></div>
+        <div class="cell"><img data-ta="151" src="/img/etapas/cabra_75.webp" alt="Cabra 75%" loading="lazy"><span>75%</span></div>
+        <div class="cell"><img data-ta="152" src="/img/etapas/cabra_50.webp" alt="Cabra 50%" loading="lazy"><span>50%</span></div>
+        <div class="cell"><img data-ta="153" src="/img/etapas/cabra_25.webp" alt="Cabra 25%" loading="lazy"><span>25%</span></div>
+        <div class="cell end"><span data-t="43">Agotada</span></div>
       </div></div>
     </div>
   </div>
@@ -228,117 +236,135 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align:
 
 <section>
   <div class="wrap">
-    <h2>De aldea a imperio: 5 eras</h2>
-    <p class="lead">Arriba al centro de la pantalla siempre ves en qué era vas. Al avanzar, tu gente se viste mejor y tus edificios se hacen más grandes y firmes. Así evolucionan los mayas:</p>
+    <h2 data-t="49">De aldea a imperio: 5 eras</h2>
+    <p data-t="50" class="lead">Arriba al centro de la pantalla siempre ves en qué era vas. Al avanzar, tu gente se viste mejor y tus edificios se hacen más grandes y firmes. Así evolucionan los mayas:</p>
     <div class="eras">
-      <div class="era"><img class="badge" src="/img/era1.png" alt="I Aldea Primitiva"><img src="/img/maya_aldeano1.jpg" alt="Aldeano maya nivel 1" loading="lazy"><small>Aldeano básico</small></div>
-      <div class="era"><img class="badge" src="/img/era2.png" alt="II Era Tribal"><img src="/img/maya_aldeano2.jpg" alt="Aldeano maya nivel 2" loading="lazy"><small>Trabajador</small></div>
-      <div class="era"><img class="badge" src="/img/era3.png" alt="III Era de Piedra"><img src="/img/maya_aldeano3.jpg" alt="Aldeano maya nivel 3" loading="lazy"><small>Especializado</small></div>
-      <div class="era"><img class="badge" src="/img/era4.png" alt="IV Era de los Metales"><img src="/img/maya_aldeano4.jpg" alt="Aldeano maya nivel 4" loading="lazy"><small>Experto</small></div>
-      <div class="era"><img class="badge" src="/img/era5.png" alt="V Era Imperial"><img src="/img/maya_aldeano5.jpg" alt="Aldeano maya nivel 5" loading="lazy"><small>Maestro</small></div>
+      <div class="era"><img data-ta="154" class="badge" src="/img/era1.png" alt="I Aldea Primitiva"><img data-ta="155" src="/img/maya_aldeano1.jpg" alt="Aldeano maya nivel 1" loading="lazy"><small data-t="51">Aldeano básico</small></div>
+      <div class="era"><img data-ta="156" class="badge" src="/img/era2.png" alt="II Era Tribal"><img data-ta="157" src="/img/maya_aldeano2.jpg" alt="Aldeano maya nivel 2" loading="lazy"><small data-t="52">Trabajador</small></div>
+      <div class="era"><img data-ta="158" class="badge" src="/img/era3.png" alt="III Era de Piedra"><img data-ta="159" src="/img/maya_aldeano3.jpg" alt="Aldeano maya nivel 3" loading="lazy"><small data-t="53">Especializado</small></div>
+      <div class="era"><img data-ta="160" class="badge" src="/img/era4.png" alt="IV Era de los Metales"><img data-ta="161" src="/img/maya_aldeano4.jpg" alt="Aldeano maya nivel 4" loading="lazy"><small data-t="54">Experto</small></div>
+      <div class="era"><img data-ta="162" class="badge" src="/img/era5.png" alt="V Era Imperial"><img data-ta="163" src="/img/maya_aldeano5.jpg" alt="Aldeano maya nivel 5" loading="lazy"><small data-t="55">Maestro</small></div>
     </div>
     <div class="eras" style="margin-top:10px">
-      <div class="era"><img src="/img/maya_centro1.jpg" alt="Centro maya nivel 1" loading="lazy"><small>Centro básico</small></div>
-      <div class="era"><img src="/img/maya_centro2.jpg" alt="Centro maya nivel 2" loading="lazy"><small>Centro de aldea</small></div>
-      <div class="era"><img src="/img/maya_centro3.jpg" alt="Centro maya nivel 3" loading="lazy"><small>Centro de comunidad</small></div>
-      <div class="era"><img src="/img/maya_centro4.jpg" alt="Centro maya nivel 4" loading="lazy"><small>Centro ceremonial</small></div>
-      <div class="era"><img src="/img/maya_centro5.jpg" alt="Centro maya nivel 5" loading="lazy"><small>Gran templo</small></div>
+      <div class="era"><img data-ta="164" src="/img/maya_centro1.jpg" alt="Centro maya nivel 1" loading="lazy"><small data-t="56">Centro básico</small></div>
+      <div class="era"><img data-ta="165" src="/img/maya_centro2.jpg" alt="Centro maya nivel 2" loading="lazy"><small data-t="57">Centro de aldea</small></div>
+      <div class="era"><img data-ta="166" src="/img/maya_centro3.jpg" alt="Centro maya nivel 3" loading="lazy"><small data-t="58">Centro de comunidad</small></div>
+      <div class="era"><img data-ta="167" src="/img/maya_centro4.jpg" alt="Centro maya nivel 4" loading="lazy"><small data-t="59">Centro ceremonial</small></div>
+      <div class="era"><img data-ta="168" src="/img/maya_centro5.jpg" alt="Centro maya nivel 5" loading="lazy"><small data-t="60">Gran templo</small></div>
     </div>
-    <p class="note">Arte conceptual. En el mapa ya hay edificios, árboles, minas y animales en 3D con este estilo, y vamos agregando más en cada versión.</p>
+    <p data-t="61" class="note">Arte conceptual. En el mapa ya hay edificios, árboles, minas y animales en 3D con este estilo, y vamos agregando más en cada versión.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <h2>Civilizaciones</h2>
-    <p class="lead">Todas juegan con las mismas reglas. Cada una gana en algo y pierde en otra cosa, para que gane la mejor estrategia.</p>
+    <h2 data-t="62">Civilizaciones</h2>
+    <p data-t="63" class="lead">Todas juegan con las mismas reglas. Cada una gana en algo y pierde en otra cosa, para que gane la mejor estrategia.</p>
     <div class="civs">
-      <div class="civ"><b>Mexicas</b><span>Ejército rápido y fuerte; construyen más lento.</span></div>
-      <div class="civ"><b>Mayas</b><span>Más madera y alimento; soldados más frágiles.</span></div>
-      <div class="civ"><b>Purépechas</b><span>Mucho oro y torres fuertes; menos madera.</span></div>
-      <div class="civ"><b>Zapotecas</b><span>Piedra y edificios resistentes; pegan menos.</span></div>
-      <div class="civ"><b>Toltecas</b><span>Arqueros de más alcance y casas baratas.</span></div>
+      <div class="civ"><b data-t="64">Mexicas</b><span data-t="65">Ejército rápido y fuerte; construyen más lento.</span></div>
+      <div class="civ"><b data-t="66">Mayas</b><span data-t="67">Más madera y alimento; soldados más frágiles.</span></div>
+      <div class="civ"><b data-t="68">Purépechas</b><span data-t="69">Mucho oro y torres fuertes; menos madera.</span></div>
+      <div class="civ"><b data-t="70">Zapotecas</b><span data-t="71">Piedra y edificios resistentes; pegan menos.</span></div>
+      <div class="civ"><b data-t="72">Toltecas</b><span data-t="73">Arqueros de más alcance y casas baratas.</span></div>
     </div>
-    <p class="note">Próximamente: más civilizaciones por temporadas.</p>
+    <p data-t="74" class="note">Próximamente: más civilizaciones por temporadas.</p>
   </div>
 </section>
 
 <section id="amigos">
   <div class="wrap">
-    <h2>Jugar en línea con un amigo</h2>
+    <h2 data-t="75">Jugar en línea con un amigo</h2>
     <ol class="steps">
-      <li>Entra a <a href="/jugar/">Jugar</a> y elige <b>“Sala con amigos (código)”</b>.</li>
-      <li>Escribe tu nombre y toca <b>Crear sala</b>. Te aparece un <b>código de 4 letras</b>.</li>
-      <li>Tu amigo entra al mismo enlace, escribe su nombre y el código, y toca <b>Unirse</b>.</li>
-      <li>Cada quien elige civilización, equipo y color. Quien creó la sala elige el mapa, puede agregar bots y toca <b>¡Comenzar!</b></li>
+      <li data-t="76">Entra a <a href="/jugar/">Jugar</a> y elige <b>“Sala con amigos (código)”</b>.</li>
+      <li data-t="77">Escribe tu nombre y toca <b>Crear sala</b>. Te aparece un <b>código de 4 letras</b>.</li>
+      <li data-t="78">Tu amigo entra al mismo enlace, escribe su nombre y el código, y toca <b>Unirse</b>.</li>
+      <li data-t="79">Cada quien elige civilización, equipo y color. Quien creó la sala elige el mapa, puede agregar bots y toca <b>¡Comenzar!</b></li>
     </ol>
-    <p class="note">Tip: si quieren jugar juntos contra la computadora, pónganse en el mismo equipo y agreguen bots en el otro.</p>
-    <h3 style="margin-top:28px">Partidas con rango</h3>
-    <p>Elige <b>“Jugar con rango (en línea)”</b>, tu civilización y el modo: <b>1 vs 1, 2 vs 2 o 4 vs 4</b>. Te emparejamos con el jugador conectado más cercano a tu nivel.
+    <p data-t="80" class="note">Tip: si quieren jugar juntos contra la computadora, pónganse en el mismo equipo y agreguen bots en el otro.</p>
+    <h3 data-t="81" style="margin-top:28px">Partidas con rango</h3>
+    <p data-t="82">Elige <b>“Jugar con rango (en línea)”</b>, tu civilización y el modo: <b>1 vs 1, 2 vs 2 o 4 vs 4</b>. Te emparejamos con el jugador conectado más cercano a tu nivel.
       Si no hay nadie de tu nivel, juegas con quien esté. Ganar suma puntos (más si le ganas a alguien de nivel más alto) y perder resta.
       Salirse a media partida cuenta como derrota.</p>
-    <p class="note">Tu cuenta es la misma de Kodyn Games (la de Zombie War), pero los puntos de Rise of Ages son aparte.</p>
+    <p data-t="83" class="note">Tu cuenta es la misma de Kodyn Games (la de Zombie War), pero los puntos de Rise of Ages son aparte.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <h2>Cómo se juega</h2>
+    <h2 data-t="84">Cómo se juega</h2>
     <div class="two">
       <div class="card">
-        <h3>🖱️ Computadora</h3>
+        <h3 data-t="85">🖱️ Computadora</h3>
         <table>
-          <tr><td>Clic izquierdo</td><td>Seleccionar (arrastra para un recuadro)</td></tr>
-          <tr><td>Clic derecho</td><td>Ordenar: mover, recolectar, construir, atacar</td></tr>
-          <tr><td>WASD / bordes</td><td>Mover la cámara</td></tr>
-          <tr><td>Q / E</td><td>Girar la cámara</td></tr>
-          <tr><td>Rueda</td><td>Acercar / alejar</td></tr>
-          <tr><td>H · .</td><td>Ir al centro · aldeano sin tarea</td></tr>
-          <tr><td>Shift</td><td>Poner varios edificios seguidos</td></tr>
+          <tr><td data-t="86">Clic izquierdo</td><td data-t="87">Seleccionar (arrastra para un recuadro)</td></tr>
+          <tr><td data-t="88">Clic derecho</td><td data-t="89">Ordenar: mover, recolectar, construir, atacar</td></tr>
+          <tr><td data-t="90">WASD / bordes</td><td data-t="91">Mover la cámara</td></tr>
+          <tr><td>Q / E</td><td data-t="92">Girar la cámara</td></tr>
+          <tr><td data-t="93">Rueda</td><td data-t="94">Acercar / alejar</td></tr>
+          <tr><td>H · .</td><td data-t="95">Ir al centro · aldeano sin tarea</td></tr>
+          <tr><td data-t="96">Shift</td><td data-t="97">Poner varios edificios seguidos</td></tr>
         </table>
       </div>
       <div class="card">
-        <h3>📱 Celular y tablet</h3>
+        <h3 data-t="98">📱 Celular y tablet</h3>
         <table>
-          <tr><td>Gira el celular</td><td>Se juega en horizontal y en pantalla completa</td></tr>
-          <tr><td>Toca</td><td>Selecciona tus unidades o edificios</td></tr>
-          <tr><td>Toca algo más</td><td>Con unidades elegidas: es la orden (ir, cortar, atacar…)</td></tr>
-          <tr><td>Arrastra 1 dedo</td><td>Recuadro de selección</td></tr>
-          <tr><td>2 dedos</td><td>Mover la cámara · pellizco para acercar</td></tr>
-          <tr><td>Botón “Mapa”</td><td>Ver el mapa completo</td></tr>
+          <tr><td data-t="99">Gira el celular</td><td data-t="100">Se juega en horizontal y en pantalla completa</td></tr>
+          <tr><td data-t="101">Toca</td><td data-t="102">Selecciona tus unidades o edificios</td></tr>
+          <tr><td data-t="103">Toca algo más</td><td data-t="104">Con unidades elegidas: es la orden (ir, cortar, atacar…)</td></tr>
+          <tr><td data-t="105">Arrastra 1 dedo</td><td data-t="106">Recuadro de selección</td></tr>
+          <tr><td data-t="107">2 dedos</td><td data-t="108">Mover la cámara · pellizco para acercar</td></tr>
+          <tr><td data-t="109">Botón “Mapa”</td><td data-t="110">Ver el mapa completo</td></tr>
         </table>
       </div>
     </div>
-    <h3 style="margin-top:26px">Lo básico</h3>
+    <h3 data-t="111" style="margin-top:26px">Lo básico</h3>
     <ul>
-      <li>Los aldeanos cargan 10 de recurso, lo llevan al Centro (o a su campamento) y regresan solos. Si se acaba, buscan el siguiente cerca; si no hay, se quedan con un <b>“!”</b> y te avisan.</li>
-      <li>Cada <b>casa</b> te deja tener 5 personas más. Los aldeanos se compran en el Centro.</li>
-      <li>Las <b>granjas</b> necesitan siembra (se compra en el Centro y se puede guardar): primero se siembra y después se cosecha.</li>
-      <li>Para subir de <b>era</b> necesitas recursos y ciertos edificios (el Centro te dice cuáles te faltan).</li>
+      <li data-t="112">Los aldeanos cargan 10 de recurso, lo llevan al Centro (o a su campamento) y regresan solos. Si se acaba, buscan el siguiente cerca; si no hay, se quedan con un <b>“!”</b> y te avisan.</li>
+      <li data-t="113">Cada <b>casa</b> te deja tener 5 personas más. Los aldeanos se compran en el Centro.</li>
+      <li data-t="114">Las <b>granjas</b> necesitan siembra (se compra en el Centro y se puede guardar): primero se siembra y después se cosecha.</li>
+      <li data-t="115">Para subir de <b>era</b> necesitas recursos y ciertos edificios (el Centro te dice cuáles te faltan).</li>
     </ul>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <h2>Es una beta</h2>
+    <h2 data-t="116">Es una beta</h2>
     <div class="warn">
-      <p style="margin:0">Estamos probando el juego: los gráficos van cambiando en cada versión, puede haber errores y el balance va a cambiar.
+      <p data-t="117" style="margin:0">Estamos probando el juego: los gráficos van cambiando en cada versión, puede haber errores y el balance va a cambiar.
       Durante la beta los puntos de rango pueden reiniciarse. ¡Tu opinión nos ayuda mucho!</p>
     </div>
-    <h3 style="margin-top:24px">Lo que viene</h3>
+    <h3 data-t="118" style="margin-top:24px">Lo que viene</h3>
     <ul class="road">
-      <li><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango.</li>
-      <li><span class="ok">✔</span> Tutorial guiado, español/inglés/portugués y recursos en 3D que se van gastando.</li>
-      <li>Barcos de pesca, de transporte y de guerra; mares y muelles.</li>
-      <li>Puertas en murallas, unidades únicas por civilización y castillos más completos.</li>
-      <li>Nuevas civilizaciones por temporadas, gráficos mejorados, sonido y música.</li>
-      <li>Versión para Steam (PC) y tiendas de celular.</li>
+      <li data-t="119"><span class="ok">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango.</li>
+      <li data-t="120"><span class="ok">✔</span> Tutorial guiado, español/inglés/portugués y recursos en 3D que se van gastando.</li>
+      <li data-t="121">Barcos de pesca, de transporte y de guerra; mares y muelles.</li>
+      <li data-t="122">Puertas en murallas, unidades únicas por civilización y castillos más completos.</li>
+      <li data-t="123">Nuevas civilizaciones por temporadas, gráficos mejorados, sonido y música.</li>
+      <li data-t="124">Versión para Steam (PC) y tiendas de celular.</li>
     </ul>
-    <div class="cta" style="margin-top:26px"><a class="btn" href="/jugar/">▶ Jugar ahora</a></div>
+    <div class="cta" style="margin-top:26px"><a data-t="11" class="btn" href="/jugar/">▶ Jugar ahora</a></div>
   </div>
 </section>
 
-<footer>Rise of Ages · Beta · Kodyn Games · Hecho con Godot Engine</footer>
+<footer data-t="125">Rise of Ages · Beta · Kodyn Games · Hecho con Godot Engine</footer>
+<!-- idiomas:inicio -->
+<script>
+(function(){
+  var D={"en": ["Rise of Ages — Beta", "The game", "The world", "With friends", "▶ Play", "BETA VERSION · FREE", "Raise your Mesoamerican civilization from a village to an empire. Gather, build, advance and defeat your rivals.", "🎮 Free", "🌐 In your browser", "🎓 Guided tutorial", "🗣️ Español · English · Português", "▶ Play now", "Play with a friend", "Play in your browser, on a computer or phone (in landscape). Nothing to install.", "See it in action", "Your town grows among forests, mines and lakes", "Farms, pen and mines", "Your people change in every age", "What is it about?", "Rise of Ages is a <b>real-time strategy</b> game. You start with a Town Center and 5 villagers on a map you don't know: you only see what your units can see. Explore, gather resources, grow your town, advance through the ages and build an army. <b>The team that leaves the others without any Town Center wins.</b>", "4 resources", "Food, wood, gold and stone. Your villagers hunt, pick berries, fish, farm, chop and mine.", "Grid building", "Houses, camps, mill, farms, barracks, archery range, stable, towers, walls, market, temple and castle.", "5 ages", "Primitive Village, Tribal Age, Stone Age, Metal Age and Imperial Age. Each age needs resources and buildings, and your people and buildings look better.", "Fog of war", "You don't know where your enemy is until you find them. Explore the map: rivers, lakes, jungle and desert.", "Against bots", "Up to 8 players: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… with 4 difficulty levels.", "Create a room, share the code with your friends and play together (you can add bots too).", "Guided tutorial <span class=\"tagnew\">NEW</span>", "The first time, it walks you step by step: picking villagers, gathering food, chopping wood and building. It highlights exactly what to tap.", "In your language <span class=\"tagnew\">NEW</span>", "Spanish, English and Portuguese. It uses your device's language and you can change it in Settings.", "Ranked", "We match you with someone at your level in 1 vs 1, 2 vs 2 or 4 vs 4. Winning adds points, losing takes them away, and every 100 points you level up.", "A world that runs out <span class=\"tagnew\">NEW</span>", "Every tree, mine and bush slowly runs out while your villagers work, and you see it on the map. A felled tree leaves its <b>stump</b> for a few minutes. Goats can be herded so they give food without dying, or hunted. Plan ahead: what's near your Town Center won't last forever.", "Tree · wood", "Stump", "Pine · wood", "Gold mine", "Depleted", "Stone mine", "Berry bush · food", "Depleted", "Goat · food", "Alive", "From village to empire: 5 ages", "At the top center of the screen you always see your current age. As you advance, your people dress better and your buildings grow bigger and sturdier. This is how the Maya evolve:", "Basic villager", "Worker", "Specialist", "Expert", "Master", "Basic center", "Village center", "Community center", "Ceremonial center", "Great temple", "Concept art. The map already has 3D buildings, trees, mines and animals in this style, and we add more with every version.", "Civilizations", "They all play by the same rules. Each one is better at something and worse at something else, so the best strategy wins.", "Mexica", "Fast, strong army; they build more slowly.", "Maya", "More wood and food; frailer soldiers.", "Purépecha", "Lots of gold and strong towers; less wood.", "Zapotec", "Stone and sturdy buildings; they hit softer.", "Toltec", "Longer-range archers and cheap houses.", "Coming soon: more civilizations every season.", "Play online with a friend", "Go to <a href=\"/jugar/\">Play</a> and choose <b>“Room with friends (code)”</b>.", "Type your name and tap <b>Create room</b>. You'll get a <b>4-letter code</b>.", "Your friend opens the same link, types their name and the code, and taps <b>Join</b>.", "Everyone picks a civilization, team and color. Whoever created the room picks the map, can add bots and taps <b>Start!</b>", "Tip: to play together against the computer, join the same team and add bots to the other one.", "Ranked matches", "Choose <b>“Play ranked (online)”</b>, your civilization and the mode: <b>1 vs 1, 2 vs 2 or 4 vs 4</b>. We match you with the online player closest to your level. If nobody is at your level, you play whoever is there. Winning adds points (more if you beat someone higher) and losing takes them away. Leaving mid-match counts as a loss.", "Your account is the same Kodyn Games account (the Zombie War one), but Rise of Ages points are separate.", "How to play", "🖱️ Computer", "Left click", "Select (drag for a box)", "Right click", "Command: move, gather, build, attack", "WASD / edges", "Move the camera", "Rotate the camera", "Wheel", "Zoom in / out", "Go to center · idle villager", "Shift", "Place several buildings in a row", "📱 Phone and tablet", "Turn your phone", "Played in landscape and fullscreen", "Tap", "Select your units or buildings", "Tap something else", "With units selected: that's the command (go, chop, attack…)", "Drag 1 finger", "Selection box", "2 fingers", "Move the camera · pinch to zoom", "“Map” button", "See the whole map", "The basics", "Villagers carry 10 of a resource, take it to the Town Center (or their camp) and come back on their own. When it runs out, they look for the next one nearby; if there's none, they stop with a <b>“!”</b> and let you know.", "Each <b>house</b> lets you have 5 more people. Villagers are bought at the Town Center.", "<b>Farms</b> need seeds (bought at the Town Center and can be stored): first you sow, then you harvest.", "To advance an <b>age</b> you need resources and certain buildings (the Town Center tells you what's missing).", "It's a beta", "We're testing the game: the graphics change with every version, there may be bugs and the balance will change. During the beta, ranked points may be reset. Your feedback helps a lot!", "What's coming", "<span class=\"ok\">✔</span> Economy, building, 5 ages, combat, bots, rooms with friends and ranked matches.", "<span class=\"ok\">✔</span> Guided tutorial, Spanish/English/Portuguese and 3D resources that run out.", "Fishing, transport and war ships; seas and docks.", "Gates in walls, unique units for each civilization and more complete castles.", "New civilizations every season, better graphics, sound and music.", "Steam (PC) and mobile store versions.", "Rise of Ages · Beta · Kodyn Games · Made with Godot Engine", "Rise of Ages", "A Maya town with its center, houses, pen and farms next to the forest and a lake", "Farms, a pen with goats and a gold mine", "Villagers and warriors from the 5 ages next to the forest", "Tree 100%", "Tree 75%", "Tree 50%", "Tree 25%", "Pine 100%", "Pine 75%", "Pine 50%", "Pine 25%", "Gold mine 100%", "Gold mine 75%", "Gold mine 50%", "Gold mine 25%", "Stone mine 100%", "Stone mine 75%", "Stone mine 50%", "Stone mine 25%", "Berry bush 100%", "Berry bush 75%", "Berry bush 50%", "Berry bush 25%", "Goat, alive", "Goat 75%", "Goat 50%", "Goat 25%", "I Primitive Village", "Maya villager, level 1", "II Tribal Age", "Maya villager, level 2", "III Stone Age", "Maya villager, level 3", "IV Metal Age", "Maya villager, level 4", "V Imperial Age", "Maya villager, level 5", "Maya center, level 1", "Maya center, level 2", "Maya center, level 3", "Maya center, level 4", "Maya center, level 5", "Rise of Ages: a real-time strategy game with Mesoamerican civilizations. Free beta in your browser: against bots, with friends or ranked online."], "pt": ["Rise of Ages — Beta", "O jogo", "O mundo", "Com amigos", "▶ Jogar", "VERSÃO BETA · GRÁTIS", "Erga sua civilização mesoamericana de uma aldeia até um império. Colete, construa, evolua e derrote seus rivais.", "🎮 Grátis", "🌐 No navegador", "🎓 Tutorial guiado", "🗣️ Español · English · Português", "▶ Jogar agora", "Jogar com um amigo", "Jogue no navegador, no computador ou celular (na horizontal). Não precisa instalar nada.", "Veja como é", "Sua vila cresce entre florestas, minas e lagos", "Fazendas, curral e minas", "Seu povo muda a cada era", "Do que se trata?", "Rise of Ages é um jogo de <b>estratégia em tempo real</b>. Você começa com um Centro e 5 aldeões num mapa que não conhece: só vê o que suas unidades conseguem ver. Explore, junte recursos, faça sua vila crescer, avance de era e monte um exército. <b>Vence a equipe que deixar as outras sem nenhum Centro.</b>", "4 recursos", "Alimento, madeira, ouro e pedra. Seus aldeões caçam, colhem frutas, pescam, plantam, cortam e mineram.", "Construa em quadros", "Casas, acampamentos, moinho, fazendas, quartel, arquearia, estábulo, torres, muralhas, mercado, templo e castelo.", "5 eras", "Aldeia Primitiva, Era Tribal, Era da Pedra, Era dos Metais e Era Imperial. Cada era pede recursos e construções, e seu povo e suas construções ficam melhores.", "Névoa de guerra", "Você não sabe onde está o inimigo até encontrá-lo. Explore o mapa: rios, lagos, selva e deserto.", "Contra bots", "Até 8 jogadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… com 4 dificuldades.", "Crie uma sala, passe o código para seus amigos e joguem juntos (também dá para adicionar bots).", "Tutorial guiado <span class=\"tagnew\">NOVO</span>", "Na primeira vez ele te leva passo a passo: escolher aldeões, juntar comida, cortar madeira e construir. Ele ilumina exatamente o que você deve tocar.", "No seu idioma <span class=\"tagnew\">NOVO</span>", "Espanhol, inglês e português. Usa o idioma do seu dispositivo e você pode mudar em Configurações.", "Ranqueada", "Juntamos você com alguém do seu nível em 1 vs 1, 2 vs 2 ou 4 vs 4. Vencer soma pontos, perder tira, e a cada 100 pontos você sobe de nível.", "Um mundo que se esgota <span class=\"tagnew\">NOVO</span>", "Cada árvore, mina e arbusto vai se esgotando enquanto seus aldeões trabalham, e você vê isso no mapa. Ao cortar uma árvore, fica o <b>toco</b> por alguns minutos. As cabras podem ser pastoreadas para dar comida sem morrer, ou caçadas. Planeje bem: o que está perto do seu Centro não dura para sempre.", "Árvore · madeira", "Toco", "Pinheiro · madeira", "Mina de ouro", "Esgotada", "Mina de pedra", "Arbusto de frutas · alimento", "Esgotado", "Cabra · alimento", "Viva", "De aldeia a império: 5 eras", "No alto, no centro da tela, você sempre vê em que era está. Ao avançar, seu povo se veste melhor e suas construções ficam maiores e mais firmes. Assim evoluem os maias:", "Aldeão básico", "Trabalhador", "Especializado", "Experiente", "Mestre", "Centro básico", "Centro da aldeia", "Centro comunitário", "Centro cerimonial", "Grande templo", "Arte conceitual. O mapa já tem construções, árvores, minas e animais em 3D neste estilo, e adicionamos mais a cada versão.", "Civilizações", "Todas jogam com as mesmas regras. Cada uma é melhor em algo e pior em outra coisa, para que vença a melhor estratégia.", "Mexicas", "Exército rápido e forte; constroem mais devagar.", "Maias", "Mais madeira e alimento; soldados mais frágeis.", "Purépechas", "Muito ouro e torres fortes; menos madeira.", "Zapotecas", "Pedra e construções resistentes; batem menos.", "Toltecas", "Arqueiros de maior alcance e casas baratas.", "Em breve: mais civilizações a cada temporada.", "Jogar online com um amigo", "Entre em <a href=\"/jugar/\">Jogar</a> e escolha <b>“Sala com amigos (código)”</b>.", "Escreva seu nome e toque em <b>Criar sala</b>. Aparece um <b>código de 4 letras</b>.", "Seu amigo abre o mesmo link, escreve o nome dele e o código, e toca em <b>Entrar</b>.", "Cada um escolhe civilização, equipe e cor. Quem criou a sala escolhe o mapa, pode adicionar bots e toca em <b>Começar!</b>", "Dica: para jogarem juntos contra o computador, fiquem na mesma equipe e coloquem bots na outra.", "Partidas ranqueadas", "Escolha <b>“Jogar ranqueada (online)”</b>, sua civilização e o modo: <b>1 vs 1, 2 vs 2 ou 4 vs 4</b>. Juntamos você com o jogador online mais próximo do seu nível. Se não houver ninguém do seu nível, você joga com quem estiver. Vencer soma pontos (mais se vencer alguém de nível mais alto) e perder tira. Sair no meio da partida conta como derrota.", "Sua conta é a mesma da Kodyn Games (a do Zombie War), mas os pontos do Rise of Ages são separados.", "Como jogar", "🖱️ Computador", "Clique esquerdo", "Selecionar (arraste para um retângulo)", "Clique direito", "Ordenar: mover, coletar, construir, atacar", "WASD / bordas", "Mover a câmera", "Girar a câmera", "Roda", "Aproximar / afastar", "Ir ao centro · aldeão sem tarefa", "Shift", "Colocar várias construções seguidas", "📱 Celular e tablet", "Gire o celular", "Joga-se na horizontal e em tela cheia", "Toque", "Seleciona suas unidades ou construções", "Toque em outra coisa", "Com unidades escolhidas: é a ordem (ir, cortar, atacar…)", "Arraste 1 dedo", "Retângulo de seleção", "2 dedos", "Mover a câmera · pinça para aproximar", "Botão “Mapa”", "Ver o mapa inteiro", "O básico", "Os aldeões carregam 10 de recurso, levam ao Centro (ou ao acampamento) e voltam sozinhos. Se acabar, procuram o próximo por perto; se não houver, ficam com um <b>“!”</b> e te avisam.", "Cada <b>casa</b> permite ter mais 5 pessoas. Os aldeões são comprados no Centro.", "As <b>fazendas</b> precisam de sementes (compradas no Centro e podem ser guardadas): primeiro se planta e depois se colhe.", "Para subir de <b>era</b> você precisa de recursos e de certas construções (o Centro diz quais faltam).", "É uma beta", "Estamos testando o jogo: os gráficos mudam a cada versão, pode haver erros e o balanceamento vai mudar. Durante a beta os pontos ranqueados podem ser zerados. Sua opinião ajuda muito!", "O que vem por aí", "<span class=\"ok\">✔</span> Economia, construção, 5 eras, combate, bots, salas com amigos e partidas ranqueadas.", "<span class=\"ok\">✔</span> Tutorial guiado, espanhol/inglês/português e recursos em 3D que se esgotam.", "Barcos de pesca, de transporte e de guerra; mares e cais.", "Portões nas muralhas, unidades únicas por civilização e castelos mais completos.", "Novas civilizações a cada temporada, gráficos melhores, som e música.", "Versão para Steam (PC) e lojas de celular.", "Rise of Ages · Beta · Kodyn Games · Feito com Godot Engine", "Rise of Ages", "Uma vila maia com seu centro, casas, curral e fazendas ao lado da floresta e de um lago", "Fazendas, curral com cabras e uma mina de ouro", "Aldeões e guerreiros das 5 eras ao lado da floresta", "Árvore 100%", "Árvore 75%", "Árvore 50%", "Árvore 25%", "Pinheiro 100%", "Pinheiro 75%", "Pinheiro 50%", "Pinheiro 25%", "Mina de ouro 100%", "Mina de ouro 75%", "Mina de ouro 50%", "Mina de ouro 25%", "Mina de pedra 100%", "Mina de pedra 75%", "Mina de pedra 50%", "Mina de pedra 25%", "Arbusto de frutas 100%", "Arbusto de frutas 75%", "Arbusto de frutas 50%", "Arbusto de frutas 25%", "Cabra viva", "Cabra 75%", "Cabra 50%", "Cabra 25%", "I Aldeia Primitiva", "Aldeão maia, nível 1", "II Era Tribal", "Aldeão maia, nível 2", "III Era da Pedra", "Aldeão maia, nível 3", "IV Era dos Metais", "Aldeão maia, nível 4", "V Era Imperial", "Aldeão maia, nível 5", "Centro maia, nível 1", "Centro maia, nível 2", "Centro maia, nível 3", "Centro maia, nível 4", "Centro maia, nível 5", "Rise of Ages: jogo de estratégia em tempo real com civilizações mesoamericanas. Beta grátis no navegador: contra bots, com amigos ou ranqueado online."]}, ES=["Rise of Ages — Beta", "El juego", "El mundo", "Con amigos", "▶ Jugar", "VERSIÓN BETA · GRATIS", "Levanta tu civilización mesoamericana desde una aldea hasta un imperio. Recolecta, construye, evoluciona y derrota a tus rivales.", "🎮 Gratis", "🌐 En el navegador", "🎓 Tutorial guiado", "🗣️ Español · English · Português", "▶ Jugar ahora", "Jugar con un amigo", "Se juega en el navegador, en computadora o celular (en horizontal). No hay que instalar nada.", "Así se ve", "Tu pueblo crece entre bosques, minas y lagos", "Granjas, corral y minas", "Tu gente cambia en cada era", "¿En qué consiste?", "Rise of Ages es un juego de <b>estrategia en tiempo real</b>. Empiezas con un Centro y 5 aldeanos en un mapa que no conoces: solo ves lo que tus unidades alcanzan a ver. Tienes que explorar, juntar recursos, crecer tu pueblo, avanzar de era y armar un ejército. <b>Gana el equipo que deje a los demás sin ningún Centro.</b>", "4 recursos", "Alimento, madera, oro y piedra. Tus aldeanos cazan, recogen bayas, pescan, siembran, talan y pican.", "Construye por cuadros", "Casas, campamentos, molino, granjas, cuartel, arquería, establo, torres, murallas, mercado, templo y castillo.", "5 eras", "Aldea Primitiva, Era Tribal, Era de Piedra, Era de los Metales y Era Imperial. Cada era pide recursos y edificios, y tu gente y tus edificios se ven mejor.", "Niebla de guerra", "No sabes dónde está tu enemigo hasta que lo encuentras. Explora el mapa: ríos, lagos, selva y desierto.", "Contra bots", "Hasta 8 jugadores: 1 vs 1, 2 vs 2, 4 vs 4, 1 vs 3… con 4 dificultades.", "Crea una sala, pásale el código a tus amigos y jueguen juntos (también pueden agregar bots).", "Tutorial guiado <span class=\"tagnew\">NUEVO</span>", "La primera vez te lleva paso a paso: elegir aldeanos, juntar comida, cortar madera y construir. Ilumina justo lo que tienes que tocar.", "En tu idioma <span class=\"tagnew\">NUEVO</span>", "Español, inglés y portugués. Toma el idioma de tu dispositivo y lo puedes cambiar en Configuración.", "Con rango", "Te emparejamos con alguien de tu nivel en 1 vs 1, 2 vs 2 o 4 vs 4. Ganar suma puntos, perder resta, y cada 100 puntos subes de nivel.", "Un mundo que se gasta <span class=\"tagnew\">NUEVO</span>", "Cada árbol, mina y arbusto se va acabando mientras tus aldeanos trabajan, y lo ves en el mapa. Al talar un árbol queda su <b>tocón</b> unos minutos. Las cabras se pastorean para que den comida sin morir, o se cazan. Planea bien: lo que está cerca de tu Centro no dura para siempre.", "Árbol · madera", "Tocón", "Pino · madera", "Mina de oro", "Agotada", "Mina de piedra", "Arbusto de bayas · alimento", "Agotado", "Cabra · alimento", "Viva", "De aldea a imperio: 5 eras", "Arriba al centro de la pantalla siempre ves en qué era vas. Al avanzar, tu gente se viste mejor y tus edificios se hacen más grandes y firmes. Así evolucionan los mayas:", "Aldeano básico", "Trabajador", "Especializado", "Experto", "Maestro", "Centro básico", "Centro de aldea", "Centro de comunidad", "Centro ceremonial", "Gran templo", "Arte conceptual. En el mapa ya hay edificios, árboles, minas y animales en 3D con este estilo, y vamos agregando más en cada versión.", "Civilizaciones", "Todas juegan con las mismas reglas. Cada una gana en algo y pierde en otra cosa, para que gane la mejor estrategia.", "Mexicas", "Ejército rápido y fuerte; construyen más lento.", "Mayas", "Más madera y alimento; soldados más frágiles.", "Purépechas", "Mucho oro y torres fuertes; menos madera.", "Zapotecas", "Piedra y edificios resistentes; pegan menos.", "Toltecas", "Arqueros de más alcance y casas baratas.", "Próximamente: más civilizaciones por temporadas.", "Jugar en línea con un amigo", "Entra a <a href=\"/jugar/\">Jugar</a> y elige <b>“Sala con amigos (código)”</b>.", "Escribe tu nombre y toca <b>Crear sala</b>. Te aparece un <b>código de 4 letras</b>.", "Tu amigo entra al mismo enlace, escribe su nombre y el código, y toca <b>Unirse</b>.", "Cada quien elige civilización, equipo y color. Quien creó la sala elige el mapa, puede agregar bots y toca <b>¡Comenzar!</b>", "Tip: si quieren jugar juntos contra la computadora, pónganse en el mismo equipo y agreguen bots en el otro.", "Partidas con rango", "Elige <b>“Jugar con rango (en línea)”</b>, tu civilización y el modo: <b>1 vs 1, 2 vs 2 o 4 vs 4</b>. Te emparejamos con el jugador conectado más cercano a tu nivel. Si no hay nadie de tu nivel, juegas con quien esté. Ganar suma puntos (más si le ganas a alguien de nivel más alto) y perder resta. Salirse a media partida cuenta como derrota.", "Tu cuenta es la misma de Kodyn Games (la de Zombie War), pero los puntos de Rise of Ages son aparte.", "Cómo se juega", "🖱️ Computadora", "Clic izquierdo", "Seleccionar (arrastra para un recuadro)", "Clic derecho", "Ordenar: mover, recolectar, construir, atacar", "WASD / bordes", "Mover la cámara", "Girar la cámara", "Rueda", "Acercar / alejar", "Ir al centro · aldeano sin tarea", "Shift", "Poner varios edificios seguidos", "📱 Celular y tablet", "Gira el celular", "Se juega en horizontal y en pantalla completa", "Toca", "Selecciona tus unidades o edificios", "Toca algo más", "Con unidades elegidas: es la orden (ir, cortar, atacar…)", "Arrastra 1 dedo", "Recuadro de selección", "2 dedos", "Mover la cámara · pellizco para acercar", "Botón “Mapa”", "Ver el mapa completo", "Lo básico", "Los aldeanos cargan 10 de recurso, lo llevan al Centro (o a su campamento) y regresan solos. Si se acaba, buscan el siguiente cerca; si no hay, se quedan con un <b>“!”</b> y te avisan.", "Cada <b>casa</b> te deja tener 5 personas más. Los aldeanos se compran en el Centro.", "Las <b>granjas</b> necesitan siembra (se compra en el Centro y se puede guardar): primero se siembra y después se cosecha.", "Para subir de <b>era</b> necesitas recursos y ciertos edificios (el Centro te dice cuáles te faltan).", "Es una beta", "Estamos probando el juego: los gráficos van cambiando en cada versión, puede haber errores y el balance va a cambiar. Durante la beta los puntos de rango pueden reiniciarse. ¡Tu opinión nos ayuda mucho!", "Lo que viene", "<span class=\"ok\">✔</span> Economía, construcción, 5 eras, combate, bots, salas con amigos y partidas con rango.", "<span class=\"ok\">✔</span> Tutorial guiado, español/inglés/portugués y recursos en 3D que se van gastando.", "Barcos de pesca, de transporte y de guerra; mares y muelles.", "Puertas en murallas, unidades únicas por civilización y castillos más completos.", "Nuevas civilizaciones por temporadas, gráficos mejorados, sonido y música.", "Versión para Steam (PC) y tiendas de celular.", "Rise of Ages · Beta · Kodyn Games · Hecho con Godot Engine", "Rise of Ages", "Un pueblo maya con su centro, casas, corral y granjas junto al bosque y un lago", "Granjas, corral con cabras y una mina de oro", "Aldeanos y guerreros de las 5 eras junto al bosque", "Árbol 100%", "Árbol 75%", "Árbol 50%", "Árbol 25%", "Pino 100%", "Pino 75%", "Pino 50%", "Pino 25%", "Mina de oro 100%", "Mina de oro 75%", "Mina de oro 50%", "Mina de oro 25%", "Mina de piedra 100%", "Mina de piedra 75%", "Mina de piedra 50%", "Mina de piedra 25%", "Arbusto de bayas 100%", "Arbusto de bayas 75%", "Arbusto de bayas 50%", "Arbusto de bayas 25%", "Cabra Viva", "Cabra 75%", "Cabra 50%", "Cabra 25%", "I Aldea Primitiva", "Aldeano maya nivel 1", "II Era Tribal", "Aldeano maya nivel 2", "III Era de Piedra", "Aldeano maya nivel 3", "IV Era de los Metales", "Aldeano maya nivel 4", "V Era Imperial", "Aldeano maya nivel 5", "Centro maya nivel 1", "Centro maya nivel 2", "Centro maya nivel 3", "Centro maya nivel 4", "Centro maya nivel 5", "Rise of Ages: juego de estrategia en tiempo real con civilizaciones mesoamericanas. Beta gratuita en el navegador: contra bots, con amigos o con rango en línea."], META=169;
+  function pick(){var l='';try{l=localStorage.getItem('roa_idioma')||'';}catch(e){}
+    if(!l)l=(navigator.language||'en').slice(0,2).toLowerCase();return(l==='es'||l==='pt')?l:'en';}
+  function apply(l){
+    var T=D[l];document.documentElement.lang=l;
+    document.querySelectorAll('[data-t]').forEach(function(e){var i=+e.getAttribute('data-t');e.innerHTML=(T&&T[i])||ES[i];});
+    document.querySelectorAll('[data-ta]').forEach(function(e){var i=+e.getAttribute('data-ta');e.alt=(T&&T[i])||ES[i];});
+    if(META>=0){var m=document.querySelector('meta[name=description]');if(m)m.content=(T&&T[META])||ES[META];}
+    document.querySelectorAll('.lang button').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-l')===l?'true':'false');});
+  }
+  window.roaLang=function(l){try{localStorage.setItem('roa_idioma',l);}catch(e){}apply(l);};
+  apply(pick());
+})();
+</script>
+<!-- idiomas:fin -->
 </body>
 </html>
