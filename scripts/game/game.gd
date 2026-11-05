@@ -206,6 +206,38 @@ func _dev_args() -> void:
 			camera.target_dist = 7.0
 		elif a.begins_with("--tab=") and hud:
 			hud.set_tab(a.get_slice("=", 1))
+		elif a.begins_with("--arrastre") and controller:
+			# Desarrollo: simula dejar el dedo en un aldeano y arrastrarlo hasta un árbol.
+			await get_tree().process_frame
+			var vill: Unit = null
+			for u in units:
+				if u.owner_id == local_id and u.is_villager():
+					vill = u
+					break
+			var tree := find_resource_near("arbol", vill.pos, 30.0, local_id)
+			camera.focus(vill.pos.lerp(tree.center(), 0.5))
+			camera.dist = 22.0
+			camera.target_dist = 22.0
+			for k in 20:
+				await get_tree().process_frame
+			var p0 := controller._screen_of(vill.pos, 0.6)
+			var p1 := controller._screen_of(tree.center(), 0.3)
+			var down := InputEventMouseButton.new()
+			down.button_index = MOUSE_BUTTON_LEFT
+			down.pressed = true
+			down.position = p0
+			controller._unhandled_input(down)
+			var mv := InputEventMouseMotion.new()
+			mv.position = p1
+			controller._unhandled_input(mv)
+			if a == "--arrastre=soltar":
+				var up := InputEventMouseButton.new()
+				up.button_index = MOUSE_BUTTON_LEFT
+				up.pressed = false
+				up.position = p1
+				controller._unhandled_input(up)
+				await get_tree().create_timer(1.0).timeout
+				print("arrastre: aldeano ", vill.status_text(), " objetivo=", (vill.target.kind if vill.target else "nada"))
 		elif a.begins_with("--mantener=") and hud:
 			# Desarrollo: simula dejar el dedo sobre un botón.
 			var want2 := a.get_slice("=", 1)

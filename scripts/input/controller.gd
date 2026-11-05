@@ -96,7 +96,7 @@ func _on_screen(p: Vector2, h: float) -> bool:
 ## Entidad bajo el cursor.
 func pick(sp: Vector2) -> Entity:
 	var best: Entity = null
-	var bd := 20.0
+	var bd := 34.0 if Hud.is_touch() else 20.0
 	for u in game.units:
 		if u.dead or not u.visible:
 			continue
@@ -134,6 +134,26 @@ func pick(sp: Vector2) -> Entity:
 # ---------------- entrada ----------------
 
 var _fingers := 0
+const TAP_SLOP_TOUCH := 28.0      # con el dedo, moverse menos que esto sigue siendo un toque
+var _cmd_drag: Dictionary = {}    # orden arrastrada desde una unidad (celular)
+
+
+func _update_cmd_drag(p: Vector2) -> void:
+	var from: Entity = _cmd_drag["from"]
+	if not Entity.live(from):
+		_cmd_drag = {}
+		game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
+		return
+	var a := _screen_of(from.pos, 0.4)
+	if p.distance_to(_cmd_drag["start"]) <= TAP_SLOP_TOUCH:
+		game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
+		return
+	# El icono de la acción que hará al soltar (talar, minar, atacar…).
+	var keep := selection.duplicate()
+	selection.assign(_cmd_drag["units"])
+	var act := action_for(pick(p))
+	selection.assign(keep)
+	game.hud.set_drag_line(a, p, act if act != "" else "mover")
 var _two_finger := false
 
 
@@ -145,6 +165,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 		_fingers = maxi(0, _fingers + (1 if ev.pressed else -1))
 		if _fingers >= 2:
 			_two_finger = true
+			if not _cmd_drag.is_empty():
+				_cmd_drag = {}
+				game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
 			if dragging:
 				dragging = false
 				game.hud.set_drag_rect(Rect2())
@@ -156,6 +179,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventMouseButton:
 		_mouse_button(ev)
 	elif ev is InputEventMouseMotion:
+		if not _cmd_drag.is_empty():
+			_update_cmd_drag(ev.position)
+			return
 		if dragging:
 			var cur: Vector2 = ev.position
 			drag_rect = Rect2(drag_start, cur - drag_start).abs()
@@ -173,6 +199,12 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 				else:
 					_place_at(ev.position, ev.shift_pressed)
 				return
+			if Hud.is_touch():
+				var e := pick(ev.position)
+				if e and e.owner_id == game.local_id and ((e is Unit and not e.dead) or (e is Animal and not e.dead)):
+					var group: Array = selection.duplicate() if selection.has(e) else [e]
+					_cmd_drag = {"units": group, "from": e, "start": ev.position}
+					return
 			dragging = true
 			drag_start = ev.position
 			drag_rect = Rect2()
@@ -180,11 +212,25 @@ func _mouse_button(ev: InputEventMouseButton) -> void:
 			if placing != "" and wall_start.x >= 0:
 				_place_wall(ev.position, ev.shift_pressed)
 				return
+			if not _cmd_drag.is_empty():
+				var cd := _cmd_drag
+				_cmd_drag = {}
+				game.hud.set_drag_line(Vector2.ZERO, Vector2.ZERO, "")
+				if ev.position.distance_to(cd["start"]) > TAP_SLOP_TOUCH:
+					var alive: Array = []
+					for u in cd["units"]:
+						if Entity.live(u):
+							alive.append(u)
+					set_selection(alive)
+					_command(ev.position, false)
+				else:
+					_click_select(ev.position, false)
+				return
 			if not dragging:
 				return
 			dragging = false
 			game.hud.set_drag_rect(Rect2())
-			if drag_rect.size.length() > 6.0:
+			if drag_rect.size.length() > (TAP_SLOP_TOUCH if Hud.is_touch() else 6.0):
 				_box_select(drag_rect, ev.shift_pressed)
 			else:
 				_click_select(ev.position, ev.shift_pressed)

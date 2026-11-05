@@ -402,6 +402,38 @@ func show_rating(m: Dictionary) -> void:
 	rating_label.text = txt + "[/center]"
 
 
+var _drag_line: Line2D
+var _drag_icon: TextureRect
+
+
+## Línea de la orden arrastrada con el dedo, con el icono de la acción en la punta.
+func set_drag_line(a: Vector2, b: Vector2, action: String) -> void:
+	if _drag_line == null:
+		_drag_line = Line2D.new()
+		_drag_line.width = 5.0
+		_drag_line.default_color = Color(1.0, 0.85, 0.3, 0.9)
+		_drag_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		_drag_line.end_cap_mode = Line2D.LINE_CAP_ROUND
+		get_child(0).add_child(_drag_line)
+		_drag_icon = TextureRect.new()
+		_drag_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_drag_icon.size = Vector2(48, 48)
+		_drag_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		get_child(0).add_child(_drag_icon)
+	var on := a != b
+	_drag_line.visible = on
+	_drag_icon.visible = on
+	if not on:
+		return
+	_drag_line.points = PackedVector2Array([a, b])
+	var hostile := action == "atacar"
+	_drag_line.default_color = Color(1.0, 0.35, 0.3, 0.9) if hostile else Color(1.0, 0.85, 0.3, 0.9)
+	var t: Texture2D = Cursors.texture(action) if action != "mover" else null
+	_drag_icon.texture = t
+	_drag_icon.visible = t != null
+	_drag_icon.position = b + Vector2(-12, -64)
+
+
 func set_drag_rect(r: Rect2) -> void:
 	drag_panel.visible = r.size != Vector2.ZERO
 	drag_panel.position = r.position
