@@ -46,7 +46,23 @@ Una civilización nueva (españoles, incas, orcos…) lleva su propia carpeta en
 - **Retrato de unidad o edificio**: en el panel de abajo, al seleccionarlo, según su civilización y su era.
 - **Logo y fondo**: en el menú principal.
 
-Los personajes y edificios del **mapa 3D** todavía son figuras simples hechas por código. Para que se vean como tu arte voxel hacen falta modelos 3D (.glb, por ejemplo de MagicaVoxel o Meshy). Irían en `modelos/<civilizacion>/<unidad o edificio>/nivelN.glb` cuando los tengamos.
+## Modelos 3D (Meshy)
+
+Los edificios del mapa pueden usar un modelo 3D en vez de la figura hecha por código:
+
+```
+assets/modelos/<civilizacion>/<edificio>/nivelN.glb     ej. assets/modelos/maya/templo/nivel3.glb
+```
+
+- El juego lo ajusta solo al tamaño en casillas del edificio y le pone una franja del color del jugador en la base.
+- Si falta un nivel, usa el más cercano; si no hay modelo, usa la figura de siempre.
+- **Para generarlos con la API de Meshy:**
+  `python tools/meshy_generar.py imagen.png assets/modelos/maya/casa/nivel1.glb`
+  Usa Smart Topology, unos 4,000 triángulos con textura, 15 créditos y menos de un minuto. La clave sale de la variable MESHY_API_KEY.
+- **Después de agregar modelos:** primero `godot --headless --path . --import`, luego `python tools/ajustar_texturas_modelos.py` y otra vez el import. Así las texturas quedan en 512 px: cada edificio pesa unos 260 KB en la web en vez de 6 MB.
+- **La imagen para Meshy:** un solo edificio, vista 3/4 desde arriba, completo y sin cortar, con fondo liso o transparente, sin pasto alrededor ni texto.
+
+Los personajes (aldeanos, guerreros) todavía son figuras hechas por código. Con Meshy se pueden hacer con esqueleto y animaciones, pero primero hay que probar el rendimiento con muchos en pantalla.
 
 ## Si no quieres acomodarlo tú
 

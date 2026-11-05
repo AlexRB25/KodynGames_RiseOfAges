@@ -44,3 +44,60 @@ static func portrait(civ: String, id: String, age: int) -> Texture2D:
 		if t:
 			return t
 	return null
+
+
+## Modelo 3D (.glb) de una unidad o edificio: assets/modelos/<civ>/<id>/nivelN.glb.
+## Usa el nivel pedido; si no hay, el más cercano hacia abajo y luego hacia arriba.
+static func model(civ: String, id: String, age: int) -> PackedScene:
+	var order: Array[int] = []
+	for l in range(clampi(age, 1, 5), 0, -1):
+		order.append(l)
+	for l in range(clampi(age, 1, 5) + 1, 6):
+		order.append(l)
+	for l in order:
+		var rel := "modelos/%s/%s/nivel%d.glb" % [civ, id, l]
+		if _cache.has(rel):
+			if _cache[rel]:
+				return _cache[rel]
+			continue
+		var path := ROOT + rel
+		var ps: PackedScene = load(path) if ResourceLoader.exists(path) else null
+		_cache[rel] = ps
+		if ps:
+			return ps
+	return null
+
+
+## Instancia un modelo y lo ajusta: base en el suelo, centrado, y lo ancho del
+## modelo ocupa "width" unidades (las casillas del edificio).
+static func fitted(ps: PackedScene, width: float) -> Node3D:
+	var inst := ps.instantiate() as Node3D
+	var box := _bounds(inst, Transform3D.IDENTITY)
+	var holder := Node3D.new()
+	holder.add_child(inst)
+	if box.size == Vector3.ZERO:
+		return holder
+	var s := width / maxf(box.size.x, box.size.z)
+	inst.scale = Vector3.ONE * s
+	var c := box.get_center()
+	inst.position = Vector3(-c.x * s, -box.position.y * s, -c.z * s)
+	return holder
+
+
+static func _bounds(n: Node, xf: Transform3D) -> AABB:
+	var out := AABB()
+	var first := true
+	var here := xf
+	if n is Node3D:
+		here = xf * (n as Node3D).transform
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		var b: AABB = here * (n as MeshInstance3D).mesh.get_aabb()
+		out = b
+		first = false
+	for ch in n.get_children():
+		var cb := _bounds(ch, here)
+		if cb.size == Vector3.ZERO:
+			continue
+		out = cb if first else out.merge(cb)
+		first = false
+	return out

@@ -276,6 +276,17 @@ func _rebuild_visual() -> void:
 	var stone: Color = pal["stone"]
 	var wood := Color(0.50, 0.35, 0.20)
 	var v := visual
+	# Modelo 3D del arte (assets/modelos/<civ>/<edificio>/nivelN.glb), si existe.
+	var ms := Art.model(game.players[owner_id].civ, kind, age)
+	if ms:
+		v.add_child(Art.fitted(ms, s * 0.96))
+		# Franja del color del jugador en la base, para saber de quién es.
+		var hb := s * 0.49
+		for z in [-hb, hb]:
+			Mat.box(v, Vector3(s * 0.98, 0.06, 0.1), Vector3(0, 0.03, z), team)
+		for x in [-hb, hb]:
+			Mat.box(v, Vector3(0.1, 0.06, s * 0.98), Vector3(x, 0.03, 0), team)
+		return
 	match kind:
 		"centro":
 			# Pirámide escalonada con templo arriba.

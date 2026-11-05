@@ -156,6 +156,22 @@ func _dev_args() -> void:
 			if v.size() > 2:
 				camera.dist = float(v[2])
 				camera.target_dist = float(v[2])
+		elif a.begins_with("--edificio="):
+			# Desarrollo: --edificio=templo:1  pone ese edificio terminado junto al centro del jugador 1.
+			var parts := a.get_slice("=", 1).split(":")
+			var who := int(parts[1]) if parts.size() > 1 else local_id
+			var ec := main_center(who).center()
+			var eb: Building = null
+			for r in range(7, 18):
+				for k in 16:
+					var t := MapData.to_tile(ec + Vector2.from_angle(TAU * k / 16.0) * r)
+					if eb == null and can_place(who, parts[0], t):
+						eb = spawn_building(parts[0], who, t, true)
+			if eb:
+				camera.focus(eb.center())
+				camera.dist = 16.0
+				camera.target_dist = 16.0
+				controller.set_selection([eb])
 		elif a == "--corral":
 			# Desarrollo: un corral junto a tu centro con las cabras cercanas pastando.
 			var cc := main_center(local_id).center()
