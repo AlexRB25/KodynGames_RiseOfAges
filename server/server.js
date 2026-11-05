@@ -53,7 +53,8 @@ function serveStatic(req, res) {
       'ETag': etag,
       'Last-Modified': st.mtime.toUTCString(),
     };
-    if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
+    // Cloudflare (delante de Render) la vuelve débil: W/"..."
+    if ((req.headers['if-none-match'] || '').replace(/^W\//, '') === etag) { res.writeHead(304, headers); return res.end(); }
     const gzipOk = /\bgzip\b/.test(req.headers['accept-encoding'] || '') &&
       ['.wasm', '.pck', '.js', '.html', '.css', '.json', '.svg'].includes(ext);
     if (!gzipOk) {
