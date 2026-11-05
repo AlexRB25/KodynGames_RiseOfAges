@@ -25,9 +25,9 @@ func setup(m: Node) -> void:
 	Account.changed.connect(_refresh_chip)
 	_refresh_chip()
 	_show_civ()
-	# La primera vez: ofrecer el tutorial (se puede omitir).
-	if not Account.tutorial_done():
-		_welcome()
+	# La primera vez: directo al tutorial (dentro está "Omitir tutorial").
+	if not Account.tutorial_done() and not OS.has_feature("headless") and DisplayServer.get_name() != "headless":
+		menu.start_tutorial.call_deferred()
 	# Si ya jugaste en línea en este equipo, carga tu nivel.
 	if Account.accounts_ready() and Account.refresh_token != "" and not Account.signed_in():
 		Account.sign_in()

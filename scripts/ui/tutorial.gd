@@ -17,6 +17,7 @@ var steps: Array = []
 var i := -1
 var target_pos := Vector2.ZERO
 var target_r := 0.0
+var target_box := Vector2.ZERO   # media medida si lo iluminado es un rectángulo
 var _t := 0.0
 var _villager: Unit
 var _villager2: Unit   # el segundo aldeano (para la comida)
@@ -28,12 +29,19 @@ const SHADER := """
 shader_type canvas_item;
 uniform vec2 center = vec2(-1000.0);
 uniform float radius = 0.0;
+uniform vec2 half_box = vec2(0.0);   // si no es cero: rectángulo (media medida) en vez de círculo
 uniform vec2 rect_size = vec2(1600.0, 900.0);
 uniform float alpha = 0.62;
 void fragment() {
 	vec2 p = UV * rect_size;
-	float d = distance(p, center);
-	float a = radius > 0.0 ? smoothstep(radius, radius + 22.0, d) : 1.0;
+	float d;
+	if (half_box.x > 0.0) {
+		vec2 q = abs(p - center) - half_box + 14.0;
+		d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 14.0;
+	} else {
+		d = distance(p, center) - radius;
+	}
+	float a = (radius > 0.0 || half_box.x > 0.0) ? smoothstep(0.0, 22.0, d) : 1.0;
 	COLOR = vec4(0.0, 0.0, 0.0, a * alpha);
 }
 """
@@ -169,19 +177,27 @@ func _steps() -> Array:
 			"target": func() -> Array: return _ent(_food(), 0.4, 0.5),
 			"done": func() -> bool: return _anyone("comida")},
 		{"title": Lang.t("Compra un aldeano"),
-			"text": (Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b] y luego [b]Comprar[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]") if _touch()
-				else Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], haz clic en [b]Aldeano[/b]. Cuesta 50 de comida.")),
+			"text": (Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]") if _touch()
+				else Lang.t("Abajo, en la pestaña [b]Aldeanos[/b], pasa el mouse sobre [b]Aldeano[/b] para ver cuánto cuesta y haz clic para comprarlo.")),
 			"start": func() -> void: game.hud.set_tab("aldeanos"),
-			"target": func() -> Array: return _button(Lang.t("Aldeano")),
+			"target": func() -> Array:
+				if _previewing(Lang.t("Aldeano")):
+					return _buy_area()
+				return _button(Lang.t("Aldeano")),
+			"text_buy": Lang.t("Aquí abajo ves [b]cuántos recursos necesita[/b] (el costo con sus iconos) y si te falta algo. Toca [b]Comprar[/b].\n[i]Así funciona todo lo que se compra, también en Edificios.[/i]"),
 			"done": func() -> bool: return _centro().queue.has("aldeano") or _vills() > _start_vills},
 		{"title": Lang.t("Construye una casa"),
 			"text": Lang.t("Cada casa te deja tener 5 personas más. Abre [b]Edificios[/b], elige [b]Casa[/b] y %s un lugar libre del mapa.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),
 			"target": func() -> Array:
+				if game.controller.placing != "":
+					return []
+				if _previewing(Lang.t("Casa")):
+					return _buy_area()
 				if game.hud.tab != "edificios":
 					return _tab("edificios")
-				if game.controller.placing == "":
-					return _button(Lang.t("Casa"))
-				return [],
+				return _button(Lang.t("Casa")),
+			"text_buy": Lang.t("Aquí ves [b]cuántos recursos necesita[/b] la casa y si te falta algo. Toca [b]Construir[/b] y luego un lugar libre del mapa."),
+			"text_place": Lang.t("Ahora %s un [b]lugar libre[/b] del mapa para poner la casa. Tus aldeanos la construyen.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),
 			"done": func() -> bool: return game.count_buildings(game.local_id, ["casa"], false) > 0},
 		{"title": Lang.t("Tus recursos"),
 			"text": Lang.t("Arriba ves tu [b]alimento, madera, oro, piedra[/b] y tu [b]población[/b]. Los aldeanos sin tarea muestran un [b]![/b] y te avisan."),
@@ -264,22 +280,40 @@ func _process(dt: float) -> void:
 		return
 	var tg: Array = st["target"].call()
 	var vs := get_viewport().get_visible_rect().size
+	# El texto cambia cuando ya abrió la información (costo) o ya está poniendo el edificio.
+	var want := String(st["text"])
+	if st.has("text_place") and game.controller.placing != "":
+		want = st["text_place"]
+	elif st.has("text_buy") and _touch() and not game.hud._preview.is_empty() and not game.hud._preview.get("hover", false):
+		want = st["text_buy"]
+	if text.text != want:
+		text.text = want
+	target_box = Vector2.ZERO
 	if tg.is_empty():
 		target_pos = Vector2(-1000, -1000)
 		target_r = 0.0
+	elif tg[0] is Rect2:
+		var r: Rect2 = tg[0]
+		target_pos = r.get_center()
+		target_box = r.size * 0.5 + Vector2.ONE * (8.0 + 3.0 * sin(_t * 5.0))
+		target_r = maxf(target_box.x, target_box.y)
 	else:
 		target_pos = tg[0]
 		target_r = tg[1] * (1.0 + 0.06 * sin(_t * 5.0))
 	var m: ShaderMaterial = dim.material
 	m.set_shader_parameter("center", target_pos)
-	m.set_shader_parameter("radius", target_r)
+	m.set_shader_parameter("radius", target_r if target_box == Vector2.ZERO else 0.0)
+	m.set_shader_parameter("half_box", target_box)
 	m.set_shader_parameter("rect_size", vs)
 	m.set_shader_parameter("alpha", 0.62 if target_r > 0.0 else 0.45)
 	# Globo arriba si lo iluminado está abajo, y al revés.
 	var bsz := bubble.get_combined_minimum_size()
 	var bx := clampf((target_pos.x if target_r > 0.0 else vs.x * 0.5) - bsz.x * 0.5, 16, vs.x - bsz.x - 16)
 	var by := 90.0
-	if target_r > 0.0 and target_pos.y < vs.y * 0.45:
+	if target_box != Vector2.ZERO:
+		by = maxf(16.0, target_pos.y - target_box.y - bsz.y - 50.0)
+		bx = clampf(target_pos.x - bsz.x * 0.5, 16, vs.x - bsz.x - 16)
+	elif target_r > 0.0 and target_pos.y < vs.y * 0.45:
 		by = minf(target_pos.y + target_r + 40.0, vs.y - bsz.y - 240.0)
 	elif target_r <= 0.0:
 		by = (vs.y - bsz.y) * 0.4
@@ -292,14 +326,25 @@ func _draw_deco() -> void:
 	if target_r <= 0.0:
 		return
 	var gold := Color(1.0, 0.82, 0.3)
-	deco.draw_arc(target_pos, target_r + 4.0, 0, TAU, 48, gold, 4.0, true)
+	if target_box != Vector2.ZERO:
+		var sb := StyleBoxFlat.new()
+		sb.draw_center = false
+		sb.border_color = gold
+		sb.set_border_width_all(4)
+		sb.set_corner_radius_all(14)
+		deco.draw_style_box(sb, Rect2(target_pos - target_box, target_box * 2.0))
+	else:
+		deco.draw_arc(target_pos, target_r + 4.0, 0, TAU, 48, gold, 4.0, true)
 	# Flecha desde el globo hacia el círculo.
 	var bc := bubble.position + bubble.size * 0.5
 	var dir := (target_pos - bc)
 	if dir.length() < target_r + 60.0:
 		return
 	dir = dir.normalized()
-	var tip := target_pos - dir * (target_r + 10.0)
+	var reach := target_r
+	if target_box != Vector2.ZERO:   # hasta la orilla del rectángulo
+		reach = minf(target_box.x / maxf(absf(dir.x), 0.001), target_box.y / maxf(absf(dir.y), 0.001))
+	var tip := target_pos - dir * (reach + 10.0)
 	var base := tip - dir * 46.0
 	var side := Vector2(-dir.y, dir.x)
 	var bob := sin(_t * 6.0) * 6.0
@@ -399,6 +444,23 @@ func _button(label: String) -> Array:
 		if is_instance_valid(b) and b.text == label:
 			return _rect(b)
 	return []
+
+
+## ¿Está abierta la información (costo y Comprar/Construir) de ese botón?
+func _previewing(label: String) -> bool:
+	var p: Dictionary = game.hud._preview
+	return _touch() and not p.is_empty() and String(p.get("name", "")) == label and not p.get("hover", false)
+
+
+## La parte de abajo donde se ve el costo y el botón Comprar/Construir.
+func _buy_area() -> Array:
+	var info: Control = game.hud.info_title.get_parent()
+	var r := info.get_global_rect()
+	if game.hud.portrait.visible:
+		r = r.merge(game.hud.portrait.get_global_rect())
+	r.size.x = minf(r.size.x, 640.0)   # solo la parte con el texto y los botones
+	r = r.grow(6)
+	return [r, 0.0]
 
 
 func _tab(t: String) -> Array:

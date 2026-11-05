@@ -431,5 +431,10 @@
  "Arqueros +1 de alcance y casas más baratas. Pero oro 10 % más lento y militares con 5 % menos vida.": "Arqueiros +1 de alcance e casas mais baratas. Mas ouro 10 % mais lento e militares com 5 % menos vida.",
  "Zapotecas": "Zapotecas",
  "Piedra 20 % más rápida y edificios con +15 % de vida. Pero sus militares pegan -1 y el alimento es 5 % más lento.": "Pedra 20 % mais rápida e prédios com +15 % de vida. Mas seus militares batem -1 e a comida é 5 % mais lenta.",
- "Todos contra todos": "Todos contra todos"
+ "Todos contra todos": "Todos contra todos",
+ "Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]": "Abaixo, na aba [b]Aldeões[/b], toque em [b]Aldeão[/b].\n[i](Se deixar o dedo em cima, compra sozinho.)[/i]",
+ "Abajo, en la pestaña [b]Aldeanos[/b], pasa el mouse sobre [b]Aldeano[/b] para ver cuánto cuesta y haz clic para comprarlo.": "Abaixo, na aba [b]Aldeões[/b], passe o mouse sobre [b]Aldeão[/b] para ver quanto custa e clique para comprá-lo.",
+ "Aquí abajo ves [b]cuántos recursos necesita[/b] (el costo con sus iconos) y si te falta algo. Toca [b]Comprar[/b].\n[i]Así funciona todo lo que se compra, también en Edificios.[/i]": "Aqui embaixo você vê [b]quantos recursos precisa[/b] (o custo com os ícones) e se falta algo. Toque em [b]Comprar[/b].\n[i]Tudo o que se compra funciona assim, também em Edifícios.[/i]",
+ "Aquí ves [b]cuántos recursos necesita[/b] la casa y si te falta algo. Toca [b]Construir[/b] y luego un lugar libre del mapa.": "Aqui você vê [b]quantos recursos[/b] a casa precisa e se falta algo. Toque em [b]Construir[/b] e depois num lugar livre do mapa.",
+ "Ahora %s un [b]lugar libre[/b] del mapa para poner la casa. Tus aldeanos la construyen.": "Agora %s um [b]lugar livre[/b] do mapa para pôr a casa. Seus aldeões a constroem."
 }

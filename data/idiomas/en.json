@@ -431,5 +431,10 @@
  "Arqueros +1 de alcance y casas más baratas. Pero oro 10 % más lento y militares con 5 % menos vida.": "Archers +1 range and cheaper houses. But gold 10 % slower and military units with 5 % less HP.",
  "Zapotecas": "Zapotecs",
  "Piedra 20 % más rápida y edificios con +15 % de vida. Pero sus militares pegan -1 y el alimento es 5 % más lento.": "Stone 20 % faster and buildings with +15 % HP. But their military units hit -1 and food is 5 % slower.",
- "Todos contra todos": "Free for all"
+ "Todos contra todos": "Free for all",
+ "Abajo, en la pestaña [b]Aldeanos[/b], toca [b]Aldeano[/b].\n[i](Si dejas el dedo encima, se compra solo.)[/i]": "Below, in the [b]Villagers[/b] tab, tap [b]Villager[/b].\n[i](If you hold your finger on it, it buys by itself.)[/i]",
+ "Abajo, en la pestaña [b]Aldeanos[/b], pasa el mouse sobre [b]Aldeano[/b] para ver cuánto cuesta y haz clic para comprarlo.": "Below, in the [b]Villagers[/b] tab, hover over [b]Villager[/b] to see what it costs and click to buy it.",
+ "Aquí abajo ves [b]cuántos recursos necesita[/b] (el costo con sus iconos) y si te falta algo. Toca [b]Comprar[/b].\n[i]Así funciona todo lo que se compra, también en Edificios.[/i]": "Down here you see [b]how many resources it needs[/b] (the cost with its icons) and whether you're missing anything. Tap [b]Buy[/b].\n[i]Everything you buy works like this, in Buildings too.[/i]",
+ "Aquí ves [b]cuántos recursos necesita[/b] la casa y si te falta algo. Toca [b]Construir[/b] y luego un lugar libre del mapa.": "Here you see [b]how many resources[/b] the house needs and whether you're missing anything. Tap [b]Build[/b] and then a free spot on the map.",
+ "Ahora %s un [b]lugar libre[/b] del mapa para poner la casa. Tus aldeanos la construyen.": "Now %s a [b]free spot[/b] on the map to place the house. Your villagers build it."
 }
