@@ -288,6 +288,24 @@ func _dev_args() -> void:
 			var sc := main_center(int(a.get_slice("=", 1)))
 			if sc:
 				controller.set_selection([sc])
+		elif a == "--mapa" and hud:
+			# Desarrollo: abrir el mapa grande y tocarlo (debe seguir abierto).
+			hud.full_map.visible = true
+			await get_tree().process_frame
+			var vp := get_viewport().get_visible_rect().size
+			for pressed in [true, false]:
+				var ev := InputEventMouseButton.new()
+				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.pressed = pressed
+				ev.position = vp * Vector2(0.6, 0.6)
+				ev.global_position = ev.position
+				Input.parse_input_event(ev)
+		elif a == "--pedir-rendirse" and hud:
+			# Desarrollo: tocar "Rendirse" en el menú (debe preguntar).
+			hud.toggle_menu()
+			for b in hud.menu_panel.find_children("*", "Button", true, false):
+				if b.text == Lang.t("Rendirse"):
+					b.pressed.emit()
 		elif a == "--rendirse":
 			# Ver la pantalla final (y el premio de la partida).
 			_defeat(local_id, true)

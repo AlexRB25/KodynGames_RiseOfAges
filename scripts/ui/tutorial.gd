@@ -184,17 +184,17 @@ func _steps() -> Array:
 				if _previewing(Lang.t("Aldeano")):
 					return _buy_area()
 				return _button(Lang.t("Aldeano")),
-			"text_buy": Lang.t("Aquí abajo ves [b]cuántos recursos necesita[/b] (el costo con sus iconos) y si te falta algo. Toca [b]Comprar[/b].\n[i]Así funciona todo lo que se compra, también en Edificios.[/i]"),
+			"text_buy": Lang.t("Aquí abajo ves [b]cuántos recursos necesita[/b] (el costo con sus iconos) y si te falta algo. Toca [b]Comprar[/b].\n[i]Así funciona todo lo que se compra, también los edificios.[/i]"),
 			"done": func() -> bool: return _centro().queue.has("aldeano") or _vills() > _start_vills},
 		{"title": Lang.t("Construye una casa"),
-			"text": Lang.t("Cada casa te deja tener 5 personas más. Abre [b]Edificios[/b], elige [b]Casa[/b] y %s un lugar libre del mapa.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),
+			"text": Lang.t("Cada casa te deja tener 5 personas más. Abre [b]Pueblo[/b], elige [b]Casa[/b] y %s un lugar libre del mapa.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),
 			"target": func() -> Array:
 				if game.controller.placing != "":
 					return []
 				if _previewing(Lang.t("Casa")):
 					return _buy_area()
-				if game.hud.tab != "edificios":
-					return _tab("edificios")
+				if game.hud.tab != "pueblo":
+					return _tab("pueblo")
 				return _button(Lang.t("Casa")),
 			"text_buy": Lang.t("Aquí ves [b]cuántos recursos necesita[/b] la casa y si te falta algo. Toca [b]Construir[/b] y luego un lugar libre del mapa."),
 			"text_place": Lang.t("Ahora %s un [b]lugar libre[/b] del mapa para poner la casa. Tus aldeanos la construyen.") % (Lang.t("toca") if _touch() else Lang.t("haz clic en")),

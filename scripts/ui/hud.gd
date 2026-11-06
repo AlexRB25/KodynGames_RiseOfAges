@@ -262,7 +262,7 @@ func _build_full_map(root: Control) -> void:
 	var top := HBoxContainer.new()
 	vb.add_child(top)
 	var t := Label.new()
-	t.text = Lang.t("Mapa — toca para ir a ese lugar")
+	t.text = Lang.t("Mapa — toca o arrastra para mover la vista. Se cierra con Cerrar.")
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
 	var close := Button.new()
@@ -275,7 +275,6 @@ func _build_full_map(root: Control) -> void:
 	big.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_child(big)
 	big.setup(game)
-	big.jumped.connect(func() -> void: full_map.visible = false)
 
 
 func _build_menu(root: Control) -> void:
@@ -315,17 +314,75 @@ func _build_menu(root: Control) -> void:
 	resign.text = Lang.t("Rendirse")
 	resign.tooltip_text = Lang.t("Pierdes la partida") + (Lang.t(" (cuenta para tus puntos).") if Net.ranked else ".")
 	resign.pressed.connect(func() -> void:
-		menu_panel.visible = false
-		if not game.online:
-			game.paused = false
-		game.issue({"k": "resign"}))
+		var why := Lang.t("Si te rindes, [b]pierdes la partida ahora mismo[/b]: el rival gana y tu pueblo queda derrotado.")
+		if Net.ranked:
+			why += "\n" + Lang.t("Es una partida con rango: [b]pierdes puntos[/b] como en cualquier derrota.")
+		elif not game.online and not Setup.tutorial:
+			why += "\n" + Lang.t("Contra bots cuenta como derrota: solo ganas la experiencia de perder (si jugaste 5 minutos o más).")
+		_confirm(Lang.t("¿Rendirte?"), why, Lang.t("Sí, rendirme"), func() -> void:
+			menu_panel.visible = false
+			if not game.online:
+				game.paused = false
+			game.issue({"k": "resign"})))
 	vb.add_child(resign)
 	var quit := Button.new()
 	quit.text = Lang.t("Salir al menú principal") + (Lang.t(" (cuenta como derrota)") if Net.ranked else "")
 	quit.pressed.connect(func() -> void:
-		Net.close()
-		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+		var why := Lang.t("Sales de la partida y vuelves al menú principal. Lo que llevas en esta partida se pierde.")
+		if Net.ranked:
+			why += "\n" + Lang.t("Es una partida con rango: salir [b]cuenta como derrota[/b] y pierdes puntos.")
+		_confirm(Lang.t("¿Salir de la partida?"), why, Lang.t("Sí, salir"), func() -> void:
+			Net.close()
+			get_tree().change_scene_to_file("res://scenes/menu.tscn")))
 	vb.add_child(quit)
+
+
+## Pregunta en medio de la pantalla antes de algo que no se puede deshacer.
+func _confirm(title: String, body: String, yes_text: String, on_yes: Callable) -> void:
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.6)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	get_child(0).add_child(shade)
+	var cc := CenterContainer.new()
+	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.add_child(cc)
+	var panel := PanelContainer.new()
+	cc.add_child(panel)
+	var vb := VBoxContainer.new()
+	vb.custom_minimum_size = Vector2(520, 0)
+	vb.add_theme_constant_override("separation", 14)
+	panel.add_child(vb)
+	var t := Label.new()
+	t.text = title
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.add_theme_font_size_override("font_size", 30)
+	t.add_theme_color_override("font_color", Color(0.95, 0.45, 0.35))
+	vb.add_child(t)
+	var b := RichTextLabel.new()
+	b.bbcode_enabled = true
+	b.fit_content = true
+	b.add_theme_font_size_override("normal_font_size", 19)
+	b.add_theme_font_size_override("bold_font_size", 19)
+	b.text = body
+	vb.add_child(b)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	vb.add_child(row)
+	var no := Button.new()
+	no.text = Lang.t("No, seguir jugando")
+	no.custom_minimum_size = Vector2(220, 52)
+	no.pressed.connect(shade.queue_free)
+	row.add_child(no)
+	var yes := Button.new()
+	yes.text = yes_text
+	yes.custom_minimum_size = Vector2(220, 52)
+	yes.add_theme_color_override("font_color", Color(1, 0.6, 0.5))
+	yes.pressed.connect(func() -> void:
+		shade.queue_free()
+		on_yes.call())
+	row.add_child(yes)
 
 
 func toggle_menu() -> void:
@@ -545,13 +602,17 @@ var tabs_row: HBoxContainer
 var tab := "aldeanos"
 var _tab_btns := {}
 
-const TAB_NAMES := {"campo": "Campo", "edificios": "Edificios", "aldeanos": "Aldeanos", "seleccion": "Selección"}
-const CAMPO := ["granja", "molino", "corral", "maderero", "minero"]
-const EDIFICIOS := ["casa", "cuartel", "arqueria", "establo", "torre", "muralla", "mercado", "templo", "castillo", "centro"]
+const TAB_NAMES := {"recursos": "Recursos", "pueblo": "Pueblo", "guerra": "Guerra", "aldeanos": "Aldeanos", "seleccion": "Selección"}
+## Recursos: siembra, cosecha, comida, madera y minas.
+const RECURSOS := ["granja", "molino", "corral", "maderero", "minero"]
+## Pueblo: casas, centros y edificios de la aldea.
+const PUEBLO := ["casa", "centro", "mercado", "templo"]
+## Guerra: donde se entrena el ejército y las defensas.
+const GUERRA := ["cuartel", "arqueria", "establo", "castillo", "torre", "muralla"]
 
 
 func set_tab(t: String) -> void:
-	tab = t
+	tab = {"campo": "recursos", "edificios": "pueblo"}.get(t, t)
 	_rebuild_actions()
 
 
@@ -579,14 +640,14 @@ func _rebuild_actions() -> void:
 	for c in tabs_row.get_children():
 		c.queue_free()
 	_tab_btns.clear()
-	var tabs := ["campo", "edificios", "aldeanos"]
+	var tabs := ["recursos", "pueblo", "guerra", "aldeanos"]
 	if _has_selection_actions():
 		tabs.append("seleccion")
 	elif tab == "seleccion":
 		tab = "aldeanos"
 	for t in tabs:
 		var tb := Button.new()
-		tb.text = TAB_NAMES[t]
+		tb.text = Lang.t(TAB_NAMES[t])
 		tb.toggle_mode = true
 		tb.button_pressed = t == tab
 		tb.custom_minimum_size = Vector2(110, 32)
@@ -602,12 +663,15 @@ func _rebuild_actions() -> void:
 	_btn_specs.clear()
 	_preview = {}
 	match tab:
-		"campo":
-			for k in CAMPO:
-				_build_button(k)
+		"recursos":
 			_seed_button()
-		"edificios":
-			for k in EDIFICIOS:
+			for k in RECURSOS:
+				_build_button(k)
+		"pueblo":
+			for k in PUEBLO:
+				_build_button(k)
+		"guerra":
+			for k in GUERRA:
 				_build_button(k)
 		"aldeanos":
 			_villager_tab()
