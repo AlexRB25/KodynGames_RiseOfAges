@@ -191,17 +191,22 @@ func refresh() -> String:
 	_take(res["data"])
 	if _pending_payment:
 		_pending_payment = false
-		_wait_gems(gems())
+		message.emit(Lang.t("¡Gracias por tu compra! Llega a tu cuenta en unos segundos."))
+		_wait_purchase(10, 4.0)
 	return ""
 
 
-## Después de pagar: revisar unas veces hasta que lleguen las gemas.
-func _wait_gems(before: int) -> void:
-	message.emit(Lang.t("¡Gracias por tu compra! Tus gemas llegan en unos segundos."))
-	for i in 8:
-		await get_tree().create_timer(4.0).timeout
+## Después de pagar: revisar unas veces hasta que lleguen las gemas o el Premium.
+func _wait_purchase(times: int, every: float) -> void:
+	var gems0 := gems()
+	var prem0 := premium()
+	for i in times:
+		await get_tree().create_timer(every).timeout
 		await refresh()
-		if gems() > before:
+		if premium() and not prem0:
+			message.emit(Lang.t("¡Listo! Ya tienes el Game Pass Premium."))
+			return
+		if gems() > gems0:
 			message.emit(Lang.t("¡Listo! Llegaron tus gemas."))
 			return
 
@@ -243,16 +248,18 @@ func claim_all() -> String:
 	return await _act("roa_claim_all", {})
 
 
+## Game Pass Premium: se paga con dinero (Stripe; en el celular, su tienda), nunca con gemas.
+## "" = se abrió el pago.
 func buy_premium() -> String:
 	if demo:
-		var cost := int(season().get("premium_gems", 500))
-		if gems() < cost:
-			return Lang.t("No te alcanzan las gemas")
-		status["gems"] = gems() - cost
-		status["premium"] = true
-		changed.emit()
-		return ""
-	return await _act("roa_buy_premium", {})
+		return Lang.t("En la demostración no se cobra.")
+	return await _checkout({"product": "premium", "currency": Money.pick(premium_prices())})
+
+
+## Precio del Premium por moneda (roa_premium_prices).
+func premium_prices() -> Dictionary:
+	var p = status.get("premium_prices", {})
+	return p if p is Dictionary else {}
 
 
 func buy_item(id: String) -> String:
@@ -301,20 +308,23 @@ func bot_result(won: bool, seconds: int) -> Dictionary:
 func buy_gems(pack_id: String) -> String:
 	if demo:
 		return Lang.t("En la demostración no se cobra.")
+	return await _checkout({"pack": pack_id, "currency": Money.pick(_pack_prices(pack_id))})
+
+
+## Pide el pago al servidor del juego (server/pagos.js) y lo abre.
+func _checkout(body: Dictionary) -> String:
 	if not Account.signed_in():
 		var e: String = await Account.sign_in()
 		if e != "":
 			return e
 	var token: String = await Account.server_token()
 	var base := Net.server_url().replace("wss://", "https://").replace("ws://", "http://").trim_suffix("/ws")
-	var back := ""
 	if OS.has_feature("web"):
 		var loc = JavaScriptBridge.eval("location.origin + location.pathname")
-		back = loc if loc is String else ""
+		body["back"] = loc if loc is String else ""
 	var req := HTTPRequest.new()
 	req.timeout = 20.0
 	add_child(req)
-	var body := {"pack": pack_id, "currency": Money.pick(_pack_prices(pack_id)), "back": back}
 	var err := req.request(base + "/api/checkout",
 		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + token]),
 		HTTPClient.METHOD_POST, JSON.stringify(body))
@@ -330,22 +340,10 @@ func buy_gems(pack_id: String) -> String:
 		# En la misma pestaña: al pagar, Stripe regresa al juego (?pago=ok).
 		JavaScriptBridge.eval("location.href = %s" % JSON.stringify(d["url"]))
 	else:
-		_pending_payment = true
+		# En PC el pago se abre en el navegador; aquí se revisa solo hasta que llegue.
 		OS.shell_open(d["url"])
-		_watch_after_shell()
+		_wait_purchase(45, 8.0)
 	return ""
-
-
-## En PC: el pago se abre en el navegador; al volver al juego se revisan las gemas.
-func _watch_after_shell() -> void:
-	var before := gems()
-	for i in 45:
-		await get_tree().create_timer(8.0).timeout
-		await refresh()
-		if gems() > before:
-			_pending_payment = false
-			message.emit(Lang.t("¡Listo! Llegaron tus gemas."))
-			return
 
 
 func _pack_prices(pack_id: String) -> Dictionary:
@@ -423,7 +421,7 @@ func _demo_status() -> Dictionary:
 	return {
 		"coins": 1250, "gems": 620, "title": "tit_recolector", "image": "img_maya_2", "banner": "est_selva",
 		"season": {"id": "t1", "name": "Temporada 1: El despertar del sol", "tiers": 50, "tier_xp": 500,
-			"premium_gems": 500, "premium_bonus": 0.2, "ends_at": end, "now": now},
+			"premium_bonus": 0.2, "ends_at": end, "now": now},
 		"xp": 6230, "premium": false, "rewards": rewards, "claimed": ["free:2", "free:4", "free:6"],
 		"items": items, "owned": ["tit_recolector", "img_maya_2", "est_selva"],
 		"shop": [{"item": "est_rojo", "coins": 800, "gems": null}, {"item": "est_azul", "coins": 800, "gems": null},
@@ -435,6 +433,7 @@ func _demo_status() -> Dictionary:
 			{"id": "gemas_500", "gems": 500, "bonus": 50, "prices": {"USD": 4.99, "MXN": 99, "EUR": 4.99, "BRL": 24.9}},
 			{"id": "gemas_1000", "gems": 1000, "bonus": 200, "prices": {"USD": 9.99, "MXN": 199, "EUR": 9.99, "BRL": 49.9}},
 			{"id": "gemas_2000", "gems": 2000, "bonus": 600, "prices": {"USD": 19.99, "MXN": 399, "EUR": 19.99, "BRL": 99.9}}],
+		"premium_prices": {"USD": 4.99, "MXN": 99, "EUR": 4.99, "BRL": 24.9, "COP": 19900},
 		"bot_games_today": 2, "bot_daily": 8,
 		"prizes": {"ranked_win": {"xp": 200, "coins": 60}, "ranked_loss": {"xp": 80, "coins": 20},
 			"bots_win": {"xp": 100, "coins": 25}, "bots_loss": {"xp": 40, "coins": 10}},

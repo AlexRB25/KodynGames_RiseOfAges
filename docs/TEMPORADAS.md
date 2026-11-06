@@ -4,7 +4,7 @@
 
 - **Monedas**: se ganan jugando y en el Game Pass. Sirven en la Tienda.
 - **Gemas (diamantes)**: se compran con dinero (paquetes) y unas cuantas salen en el pase.
-  Sirven para el **Game Pass Premium** y para artículos especiales de la Tienda.
+  Sirven para artículos especiales de la Tienda (**no** para el Premium).
 - **Experiencia de temporada (xp)**: se gana en cada partida y **va aparte de los puntos de
   rango**. Cada 500 xp subes un nivel del pase (50 niveles por temporada de 8 semanas).
   - Con rango: +200 al ganar, +80 al perder (la da el servidor; quien abandona no gana nada).
@@ -17,8 +17,12 @@
     imágenes de aldeano maya y estandartes.
   - **Premium**: todos los niveles: más monedas, 400 gemas en total, imágenes de humano y
     orco, estandartes épicos, títulos y el aldeano maya legendario en el 50.
-- **Game Pass Premium**: cuesta **500 gemas** (≈ el paquete de 4.99 USD) y da la fila
-  premium + **20 % más de xp** el resto de la temporada. Lo ya alcanzado se reclama enseguida.
+- **Game Pass Premium**: se paga **siempre con dinero**, directo con Stripe (en el celular,
+  con la tienda de Google Play / App Store cuando salga), **nunca con gemas**. Cuesta 4.99 USD /
+  99 MXN / 4.99 EUR / 24.90 BRL / 19,900 COP (tabla `roa_premium_prices`). Da la fila premium +
+  **20 % más de xp** el resto de la temporada. Lo ya alcanzado se reclama enseguida. Si alguien
+  paga dos veces la misma temporada, el segundo pago queda en `kodyn_purchases` con la nota
+  "revisar y reembolsar".
 - **Jugar en línea es gratis** para todos; no hace falta el pase. (Anuncios: por decidir.)
 - **Tienda**: estandartes, títulos e imágenes con monedas o con gemas, y los paquetes de gemas.
 - **Perfil** (tocar tu tarjeta en el menú): imagen de perfil, estandarte (fondo de la
@@ -29,7 +33,7 @@
 Todo lo decide Supabase: el juego solo muestra (`roa_status`) y pide acciones. Nadie puede
 darse monedas, gemas, xp ni el pase desde el juego.
 
-## Paquetes de gemas (dinero real)
+## Compras con dinero: Premium y paquetes de gemas
 
 | Paquete | Gemas | USD | MXN | EUR | BRL | COP |
 |---|---|---|---|---|---|---|
@@ -41,10 +45,11 @@ darse monedas, gemas, xp ni el pase desde el juego.
 La moneda sale del país del idioma del jugador; si no está en `roa_gem_prices`, se cobra en
 USD. Los precios se cambian en esa tabla (Table Editor de Supabase).
 
-Cobro: el juego llama al servidor de Render (`POST /api/checkout`), que crea el pago en
-**Stripe Checkout** con el precio de la tabla. Al pagar, Stripe avisa a `POST /api/stripe`;
-el servidor revisa la firma y entrega las gemas (`roa_grant_gems`, una sola vez por pago,
-queda en `kodyn_purchases` con `game = 'rise_of_ages'`). En la web el pago abre en la misma
+Cobro: el juego llama al servidor de Render (`POST /api/checkout` con `{pack}` o
+`{product: "premium"}`), que crea el pago en **Stripe Checkout** con el precio de la tabla.
+Al pagar, Stripe avisa a `POST /api/stripe`; el servidor revisa la firma y entrega
+(`roa_grant_gems` o `roa_grant_premium`, una sola vez por pago, queda en `kodyn_purchases`
+con `game = 'rise_of_ages'`). En la web el pago abre en la misma
 pestaña y regresa al juego (`?pago=ok`); en PC se abre el navegador y las gemas aparecen solas.
 
 ## Para activarlo (una vez)

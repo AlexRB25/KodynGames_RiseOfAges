@@ -1,8 +1,10 @@
-// Compra de gemas con Stripe (lo usa server.js).
-//   POST /api/checkout   (Authorization: Bearer <sesión del jugador>, {pack, currency})
-//        -> {url} de Stripe Checkout. El precio lo pone el servidor (roa_gem_prices).
+// Compras con dinero por Stripe (lo usa server.js): paquetes de gemas y Game Pass Premium.
+//   POST /api/checkout   (Authorization: Bearer <sesión del jugador>,
+//                         {pack, currency} o {product: "premium", currency})
+//        -> {url} de Stripe Checkout. El precio lo pone el servidor (roa_gem_prices,
+//           roa_premium_prices); el juego solo dice la moneda.
 //   POST /api/stripe     aviso de Stripe (checkout.session.completed / async_payment_succeeded)
-//        -> comprueba la firma y entrega las gemas con roa_grant_gems (una sola vez por pago).
+//        -> comprueba la firma y entrega (roa_grant_gems o roa_grant_premium, una vez por pago).
 // Variables en Render: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET y, opcional, ROA_PUBLIC_URL.
 'use strict';
 const crypto = require('crypto');
@@ -66,9 +68,18 @@ function create(deps) {
     let user;
     try { user = await deps.supa('/auth/v1/user', {}, auth.slice(7)); } catch { user = null; }
     if (!user || !user.id) return reply(res, 401, { error: 'Vuelve a entrar a tu cuenta.' });
-    const price = await deps.rpc('roa_pack_price', { p_pack: String(body.pack || ''), p_currency: String(body.currency || '') })
-      .catch(() => null);
-    if (!price || !price.amount) return reply(res, 400, { error: 'Ese paquete no existe.' });
+    const premium = body.product === 'premium';
+    let price;
+    if (premium) {
+      price = await deps.rpc('roa_premium_price', { p_user: user.id, p_currency: String(body.currency || '') })
+        .catch(() => null);
+      if (!price) return reply(res, 500, { error: 'No se pudo iniciar el pago.' });
+      if (price.error) return reply(res, 400, { error: price.error });
+    } else {
+      price = await deps.rpc('roa_pack_price', { p_pack: String(body.pack || ''), p_currency: String(body.currency || '') })
+        .catch(() => null);
+      if (!price || !price.amount) return reply(res, 400, { error: 'Ese paquete no existe.' });
+    }
     const amount = Number(price.amount);
     const currency = String(price.currency);
     // A dónde vuelve: el juego web (o la página que diga el juego, si es de este sitio).
@@ -81,13 +92,16 @@ function create(deps) {
       'line_items[0][quantity]': '1',
       'line_items[0][price_data][currency]': currency.toLowerCase(),
       'line_items[0][price_data][unit_amount]': String(toMinor(amount, currency)),
-      'line_items[0][price_data][product_data][name]': `${price.gems} gemas · Rise of Ages`,
+      'line_items[0][price_data][product_data][name]': premium
+        ? `Game Pass Premium · ${price.name} · Rise of Ages` : `${price.gems} gemas · Rise of Ages`,
       'metadata[game]': GAME,
       'metadata[user]': user.id,
-      'metadata[pack]': price.pack,
+      'metadata[product]': premium ? 'premium' : 'gems',
       'payment_intent_data[metadata][game]': GAME,
       'payment_intent_data[metadata][user]': user.id,
     });
+    if (premium) form.set('metadata[season]', price.season);
+    else form.set('metadata[pack]', price.pack);
     const r = await fetchFn('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
@@ -102,7 +116,7 @@ function create(deps) {
       console.log('Stripe no creó el pago', r.status, session && session.error ? session.error.message : session);
       return reply(res, 502, { error: 'No se pudo iniciar el pago.' });
     }
-    reply(res, 200, { url: session.url, amount, currency, gems: price.gems });
+    reply(res, 200, { url: session.url, amount, currency });
   }
 
   async function webhook(req, res) {
@@ -121,16 +135,20 @@ function create(deps) {
     // La misma cuenta de Stripe cobra otros juegos: solo los de Rise of Ages.
     if (meta.game !== GAME) { res.writeHead(200); return res.end('otro juego'); }
     if (s.payment_status !== 'paid') { res.writeHead(200); return res.end('estado ' + s.payment_status); }
-    if (!meta.user || !meta.pack) { console.log('Pago sin datos del juego', s.id); res.writeHead(200); return res.end('sin datos'); }
+    const isPremium = meta.product === 'premium';
+    if (!meta.user || (isPremium ? !meta.season : !meta.pack)) {
+      console.log('Pago sin datos del juego', s.id); res.writeHead(200); return res.end('sin datos');
+    }
     const currency = String(s.currency || 'usd').toUpperCase();
+    const paid = { p_user: meta.user, p_provider: 'stripe', p_ref: String(s.id),
+      p_amount: fromMinor(Number(s.amount_total || 0), currency), p_currency: currency };
     try {
-      const out = await deps.rpc('roa_grant_gems', {
-        p_user: meta.user, p_pack: meta.pack, p_provider: 'stripe', p_ref: String(s.id),
-        p_amount: fromMinor(Number(s.amount_total || 0), currency), p_currency: currency,
-      });
-      console.log('Gemas entregadas', s.id, JSON.stringify(out));
+      const out = isPremium
+        ? await deps.rpc('roa_grant_premium', Object.assign({ p_season: meta.season }, paid))
+        : await deps.rpc('roa_grant_gems', Object.assign({ p_pack: meta.pack }, paid));
+      console.log(isPremium ? 'Premium entregado' : 'Gemas entregadas', s.id, JSON.stringify(out));
     } catch (e) {
-      console.log('No se entregaron las gemas', s.id, e.message);
+      console.log('No se entregó la compra', s.id, e.message);
       res.writeHead(500); return res.end('error'); // Stripe reintenta
     }
     res.writeHead(200);

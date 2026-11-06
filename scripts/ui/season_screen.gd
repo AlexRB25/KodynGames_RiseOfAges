@@ -122,14 +122,12 @@ func _build_top(s: Dictionary) -> void:
 		var why := Kit.text(Lang.t("Abre la fila premium (más monedas, gemas, imágenes, estandartes y títulos) y gana +%d %% de experiencia el resto de la temporada.") % roundi(float(s.get("premium_bonus", 0.2)) * 100), 16)
 		why.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pv.add_child(why)
-		var cost := int(s.get("premium_gems", 500))
-		var b := Kit.price_button("gems", cost, Vector2(300, 54), Kit.PURPLE.lightened(0.1))
+		var prices := Economy.premium_prices()
+		var cur := Money.pick(prices)
+		var price_text := Money.format(float(prices.get(cur, 0)), cur) if prices.has(cur) else ""
+		var b := Kit.button(Lang.t("Obtener") + ("  " + price_text if price_text != "" else ""), Vector2(320, 54), 24, Kit.GREEN)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		var hb: HBoxContainer = b.get_child(0)
-		var l0 := Kit.label(Lang.t("Obtener"), 24)
-		hb.add_child(l0)
-		hb.move_child(l0, 0)
-		b.pressed.connect(_buy_premium.bind(cost))
+		b.pressed.connect(_buy_premium.bind(b, price_text))
 		pv.add_child(b)
 
 
@@ -323,17 +321,20 @@ func _build_bottom() -> void:
 	row.add_child(all)
 
 
-func _buy_premium(cost: int) -> void:
-	if Economy.gems() < cost:
-		Kit.ask(self, Lang.t("Te faltan gemas"), Lang.t("El Game Pass Premium cuesta %d gemas y tienes %d. Consigue gemas en la Tienda.") % [cost, Economy.gems()],
-			Lang.t("Ir a la Tienda"), func() -> void:
-				close()
-				home.open_store("gemas"))
-		return
-	Kit.ask(self, Lang.t("Game Pass Premium"), Lang.t("¿Usar %d gemas para obtener el Premium de esta temporada? Lo que ya alcanzaste de la fila premium se puede reclamar enseguida.") % cost,
-		Lang.t("Obtener"), func() -> void:
+func _buy_premium(b: Button, price_text: String) -> void:
+	Kit.ask(self, Lang.t("Game Pass Premium"), Lang.t("¿Obtener el Premium de esta temporada por %s? El pago se hace con tarjeta (Stripe). Lo que ya alcanzaste de la fila premium se puede reclamar enseguida.") % price_text,
+		Lang.t("Pagar"), func() -> void:
+			b.disabled = true
+			b.text = Lang.t("Abriendo el pago…")
 			var e: String = await Economy.buy_premium()
-			Kit.ask(self, Lang.t("Game Pass Premium"), e if e != "" else Lang.t("¡Listo! Ya tienes el Premium.")))
+			if not is_instance_valid(b):
+				return
+			b.disabled = false
+			b.text = Lang.t("Obtener") + "  " + price_text
+			if e != "":
+				Kit.ask(self, Lang.t("Game Pass Premium"), e)
+			elif not OS.has_feature("web"):
+				Kit.ask(self, Lang.t("Pago abierto"), Lang.t("Termina el pago en tu navegador. El Premium se activa aquí solo en cuanto se confirme.")))
 
 
 func close() -> void:

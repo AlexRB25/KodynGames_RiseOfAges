@@ -5,15 +5,16 @@
 -- Cómo funciona (más detalle en docs/TEMPORADAS.md):
 --   * Monedas: se ganan jugando y en el pase. Sirven en la tienda.
 --   * Gemas: se compran con dinero (paquetes) y algunas salen en el pase.
---            Sirven para el Game Pass Premium y para cosas especiales de la tienda.
+--            Sirven para cosas especiales de la tienda.
 --   * Experiencia de temporada (xp): se gana en cada partida, aparte de los puntos de rango.
 --     Cada nivel del pase pide tier_xp. Hay dos filas de premios: gratis y premium.
---   * Game Pass Premium: se compra con gemas, abre la fila premium y da +20 % de xp.
+--   * Game Pass Premium: se paga con dinero (Stripe; luego Google Play), NUNCA con gemas.
+--     Abre la fila premium y da +20 % de xp. Precio por moneda en roa_premium_prices.
 --   * Jugar en línea es gratis para todos (no hace falta el pase).
 --
 -- Seguridad: el jugador solo LEE y pide acciones por funciones que revisan todo
 -- (reclamar, comprar, equipar). La xp de las partidas con rango la da el servidor del
--- juego; la de las partidas contra bots tiene tope diario. Las gemas compradas las
+-- juego; la de las partidas contra bots tiene tope diario. Las gemas y el Premium los
 -- entrega solo el servidor después de que Stripe confirma el pago.
 
 -- =====================================================================================
@@ -88,9 +89,11 @@ create table if not exists public.roa_seasons (
   ends_at timestamptz not null,
   tiers integer not null default 50,
   tier_xp integer not null default 500,          -- xp por nivel del pase
-  premium_gems integer not null default 500,     -- precio del Game Pass Premium en gemas
   premium_bonus numeric not null default 0.20    -- +20 % de xp con Premium
 );
+
+-- El Premium ya no se compra con gemas (precio en dinero en roa_premium_prices).
+alter table public.roa_seasons drop column if exists premium_gems;
 
 create table if not exists public.roa_season_rewards (
   season_id text not null references public.roa_seasons (id) on delete cascade,
@@ -161,6 +164,13 @@ create table if not exists public.roa_gem_prices (
   primary key (pack_id, currency)
 );
 
+-- Precio del Game Pass Premium en cada moneda (dinero real, cobrado con Stripe).
+-- Si la moneda del jugador no está, se cobra en USD. Mínimos de Stripe: 0.50 USD, 10 MXN.
+create table if not exists public.roa_premium_prices (
+  currency text primary key check (currency = upper(currency) and length(currency) = 3),
+  amount numeric(12, 2) not null check (amount > 0)
+);
+
 -- =====================================================================================
 -- Permisos: todos leen el catálogo; cada quien solo lo suyo; nadie escribe directo.
 -- =====================================================================================
@@ -174,6 +184,7 @@ alter table public.roa_daily enable row level security;
 alter table public.roa_shop enable row level security;
 alter table public.roa_gem_packs enable row level security;
 alter table public.roa_gem_prices enable row level security;
+alter table public.roa_premium_prices enable row level security;
 
 drop policy if exists "roa items visibles" on public.roa_items;
 create policy "roa items visibles" on public.roa_items for select to anon, authenticated using (true);
@@ -187,6 +198,8 @@ drop policy if exists "roa paquetes visibles" on public.roa_gem_packs;
 create policy "roa paquetes visibles" on public.roa_gem_packs for select to anon, authenticated using (active);
 drop policy if exists "roa precios visibles" on public.roa_gem_prices;
 create policy "roa precios visibles" on public.roa_gem_prices for select to anon, authenticated using (true);
+drop policy if exists "roa precio premium visible" on public.roa_premium_prices;
+create policy "roa precio premium visible" on public.roa_premium_prices for select to anon, authenticated using (true);
 drop policy if exists "roa lo mio" on public.roa_owned;
 create policy "roa lo mio" on public.roa_owned for select to authenticated using (user_id = auth.uid());
 drop policy if exists "roa mi progreso" on public.roa_season_progress;
@@ -196,7 +209,7 @@ create policy "roa mis reclamos" on public.roa_season_claims for select to authe
 
 revoke insert, update, delete on public.roa_items, public.roa_owned, public.roa_seasons, public.roa_season_rewards,
   public.roa_season_progress, public.roa_season_claims, public.roa_daily, public.roa_shop, public.roa_gem_packs,
-  public.roa_gem_prices from anon, authenticated;
+  public.roa_gem_prices, public.roa_premium_prices from anon, authenticated;
 
 -- =====================================================================================
 -- Funciones
@@ -338,6 +351,7 @@ begin
                                                from public.roa_gem_prices x where x.pack_id = p.id), '{}'::jsonb))
                                           order by p.sort, p.gems)
                          from public.roa_gem_packs p where p.active), '[]'::jsonb),
+    'premium_prices', coalesce((select jsonb_object_agg(x.currency, x.amount) from public.roa_premium_prices x), '{}'::jsonb),
     'bot_games_today', coalesce(v_daily.bot_games, 0),
     'bot_daily', public.roa_bot_daily(),
     'prizes', jsonb_build_object(
@@ -452,37 +466,75 @@ begin
 end;
 $fn$;
 
--- Comprar el Game Pass Premium de la temporada en curso con gemas.
-create or replace function public.roa_buy_premium()
+-- El Game Pass Premium se paga con dinero: ya no existe la compra con gemas.
+drop function if exists public.roa_buy_premium();
+
+-- Solo el servidor, antes de cobrar: temporada en curso y precio del Premium en esa
+-- moneda (si no hay, USD). 'owned' = ya lo tiene (no se le cobra otra vez).
+create or replace function public.roa_premium_price(p_user uuid, p_currency text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $fn$
+declare
+  v_season public.roa_seasons;
+  v_price public.roa_premium_prices;
+begin
+  v_season := public.roa_current_season();
+  if v_season.id is null then
+    return jsonb_build_object('error', 'No hay temporada en curso');
+  end if;
+  if exists (select 1 from public.roa_season_progress
+              where user_id = p_user and season_id = v_season.id and premium) then
+    return jsonb_build_object('error', 'Ya tienes el Game Pass Premium');
+  end if;
+  select * into v_price from public.roa_premium_prices where currency = upper(coalesce(p_currency, ''));
+  if v_price.currency is null then
+    select * into v_price from public.roa_premium_prices where currency = 'USD';
+  end if;
+  if v_price.currency is null then
+    return jsonb_build_object('error', 'No hay precio para el Premium');
+  end if;
+  return jsonb_build_object('season', v_season.id, 'name', v_season.name,
+                            'currency', v_price.currency, 'amount', v_price.amount);
+end;
+$fn$;
+
+-- Solo el servidor, después de que Stripe (o la tienda del celular) confirma el pago:
+-- activa el Premium de esa temporada. El mismo pago no se entrega dos veces.
+create or replace function public.roa_grant_premium(
+  p_user uuid, p_season text, p_provider text, p_ref text, p_amount numeric, p_currency text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public
 as $fn$
 declare
-  v_uid uuid := auth.uid();
-  v_season public.roa_seasons;
+  v_had boolean;
 begin
-  if v_uid is null then
-    raise exception 'Sin sesión';
+  if not exists (select 1 from public.roa_seasons where id = p_season) then
+    return jsonb_build_object('ok', false, 'error', 'temporada desconocida');
   end if;
-  v_season := public.roa_current_season();
-  if v_season.id is null then
-    raise exception 'No hay temporada en curso';
-  end if;
-  insert into public.roa_season_progress (user_id, season_id) values (v_uid, v_season.id)
-  on conflict (user_id, season_id) do nothing;
-  if (select premium from public.roa_season_progress where user_id = v_uid and season_id = v_season.id) then
-    raise exception 'Ya tienes el Game Pass Premium';
-  end if;
-  update public.roa_profiles set gems = gems - v_season.premium_gems, updated_at = now()
-   where id = v_uid and gems >= v_season.premium_gems;
+  insert into public.kodyn_purchases (game, user_id, product, provider, provider_ref, amount, currency, detail)
+  values ('rise_of_ages', p_user, 'premium', p_provider, p_ref, p_amount, upper(p_currency),
+          jsonb_build_object('season', p_season))
+  on conflict (provider, provider_ref) do nothing;
   if not found then
-    raise exception 'No te alcanzan las gemas';
+    return jsonb_build_object('ok', true, 'duplicate', true);
+  end if;
+  insert into public.roa_profiles (id) values (p_user) on conflict (id) do nothing;
+  insert into public.roa_season_progress (user_id, season_id) values (p_user, p_season)
+  on conflict (user_id, season_id) do nothing;
+  select premium into v_had from public.roa_season_progress where user_id = p_user and season_id = p_season;
+  if v_had then
+    -- Pagó dos veces (por ejemplo, dos pestañas): queda registrado para revisarlo y reembolsar.
+    return jsonb_build_object('ok', true, 'note', 'ya lo tenía: revisar y reembolsar');
   end if;
   update public.roa_season_progress set premium = true, updated_at = now()
-   where user_id = v_uid and season_id = v_season.id;
-  return public.roa_status();
+   where user_id = p_user and season_id = p_season;
+  return jsonb_build_object('ok', true, 'premium', true);
 end;
 $fn$;
 
@@ -692,7 +744,8 @@ revoke all on function public.roa_pack_price(text, text) from public, anon, auth
 revoke all on function public.roa_status() from public, anon;
 revoke all on function public.roa_claim(integer, text) from public, anon;
 revoke all on function public.roa_claim_all() from public, anon;
-revoke all on function public.roa_buy_premium() from public, anon;
+revoke all on function public.roa_premium_price(uuid, text) from public, anon, authenticated;
+revoke all on function public.roa_grant_premium(uuid, text, text, text, numeric, text) from public, anon, authenticated;
 revoke all on function public.roa_buy_item(text) from public, anon;
 revoke all on function public.roa_equip(text, text) from public, anon;
 revoke all on function public.roa_bot_result(boolean, integer) from public, anon;
@@ -704,7 +757,8 @@ grant execute on function public.roa_pack_price(text, text) to service_role;
 grant execute on function public.roa_status() to authenticated;
 grant execute on function public.roa_claim(integer, text) to authenticated;
 grant execute on function public.roa_claim_all() to authenticated;
-grant execute on function public.roa_buy_premium() to authenticated;
+grant execute on function public.roa_premium_price(uuid, text) to service_role;
+grant execute on function public.roa_grant_premium(uuid, text, text, text, numeric, text) to service_role;
 grant execute on function public.roa_buy_item(text) to authenticated;
 grant execute on function public.roa_equip(text, text) to authenticated;
 grant execute on function public.roa_bot_result(boolean, integer) to authenticated;
@@ -778,6 +832,11 @@ insert into public.roa_gem_prices (pack_id, currency, amount) values
   ('gemas_100', 'BRL', 4.90), ('gemas_500', 'BRL', 24.90), ('gemas_1000', 'BRL', 49.90), ('gemas_2000', 'BRL', 99.90),
   ('gemas_100', 'COP', 3900), ('gemas_500', 'COP', 19900), ('gemas_1000', 'COP', 39900), ('gemas_2000', 'COP', 79900)
 on conflict (pack_id, currency) do nothing;
+
+-- Precio del Game Pass Premium (dinero real).
+insert into public.roa_premium_prices (currency, amount) values
+  ('USD', 4.99), ('MXN', 99), ('EUR', 4.99), ('BRL', 24.90), ('COP', 19900)
+on conflict (currency) do nothing;
 
 -- Temporada 1: empieza el día que corres este archivo y dura 8 semanas, 50 niveles de 500 xp.
 insert into public.roa_seasons (id, name, starts_at, ends_at)

@@ -581,5 +581,12 @@
  "Aldeano orco 3": "Orc villager 3",
  "Aldeano orco 4": "Orc villager 4",
  "Aldeano orco 5": "Orc villager 5",
- "La tienda y el Game Pass se están preparando. ¡Vuelve pronto!": "The store and Game Pass are getting ready. Come back soon!"
+ "La tienda y el Game Pass se están preparando. ¡Vuelve pronto!": "The store and Game Pass are getting ready. Come back soon!",
+ "¡Gracias por tu compra! Llega a tu cuenta en unos segundos.": "Thanks for your purchase! It'll reach your account in a few seconds.",
+ "¡Listo! Ya tienes el Game Pass Premium.": "Done! You now have the Game Pass Premium.",
+ "¿Obtener el Premium de esta temporada por %s? El pago se hace con tarjeta (Stripe). Lo que ya alcanzaste de la fila premium se puede reclamar enseguida.": "Get this season's Premium for %s? Payment is by card (Stripe). Whatever you've already reached on the premium track can be claimed right away.",
+ "Pagar": "Pay",
+ "Termina el pago en tu navegador. El Premium se activa aquí solo en cuanto se confirme.": "Finish the payment in your browser. Premium will activate here as soon as it's confirmed.",
+ "El pago se hace con Stripe (tarjeta). Las gemas llegan a tu cuenta en cuanto se confirma el pago. Sirven para los artículos especiales de la Tienda.": "Payment is made with Stripe (card). Gems arrive in your account as soon as the payment is confirmed. Use them for special items in the Store.",
+ "No hay precio para el Premium": "There's no price for Premium"
 }

@@ -73,7 +73,7 @@ func _build() -> void:
 		grid.columns = 4
 		for p in Economy.status.get("packs", []):
 			grid.add_child(_pack_card(p))
-		var note := Kit.text(Lang.t("El pago se hace con Stripe (tarjeta). Las gemas llegan a tu cuenta en cuanto se confirma el pago. Sirven para el Game Pass Premium y para artículos especiales."), 16, Color(0.85, 0.8, 0.68))
+		var note := Kit.text(Lang.t("El pago se hace con Stripe (tarjeta). Las gemas llegan a tu cuenta en cuanto se confirma el pago. Sirven para los artículos especiales de la Tienda."), 16, Color(0.85, 0.8, 0.68))
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		body.add_child(note)
 	else:
