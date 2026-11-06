@@ -139,8 +139,25 @@ func _draw() -> void:
 
 signal jumped
 
+## Modo "navegar" (minimapa chico del celular): tocar no manda lejos; arrastrar mueve
+## la vista poco a poco, como empujar el mapa con el dedo.
+var drag_nav := false
+const NAV_SENS := 0.45
+var _nav_last := Vector2.INF
+
 
 func _gui_input(ev: InputEvent) -> void:
+	if drag_nav:
+		if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
+			_nav_last = ev.position if ev.pressed else Vector2.INF
+			accept_event()
+		elif ev is InputEventMouseMotion and _nav_last != Vector2.INF:
+			var d: Vector2 = ev.position - _nav_last
+			_nav_last = ev.position
+			var md := _xform().affine_inverse().basis_xform(d) * NAV_SENS
+			game.camera.focus(game.camera.ground_pos() + md)
+			accept_event()
+		return
 	var press: bool = ev is InputEventMouseButton and ev.pressed
 	var drag: bool = ev is InputEventMouseMotion and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
 	if not (press or drag):

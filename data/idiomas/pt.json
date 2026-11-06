@@ -718,5 +718,18 @@
  "2 monasterios": "2 mosteiros",
  "El [b]monasterio[/b] cura poco a poco a tus unidades cercanas y entrena santos.": "O [b]mosteiro[/b] cura aos poucos suas unidades próximas e treina santos.",
  "Construye una [b]maravilla[/b] y lleva 3 reliquias con tus santos: si aguanta la cuenta atrás, ganas.": "Construa uma [b]maravilha[/b] e leve 3 relíquias com seus santos: se aguentar a contagem, você vence.",
- "Los [b]arqueros[/b] pueden meterse en una torre de guardia y disparar desde arriba.": "Os [b]arqueiros[/b] podem entrar numa torre de guarda e atirar de cima."
+ "Los [b]arqueros[/b] pueden meterse en una torre de guardia y disparar desde arriba.": "Os [b]arqueiros[/b] podem entrar numa torre de guarda e atirar de cima.",
+ "Arrastra el dedo sobre el mapa para mover la vista": "Arraste o dedo no mapa para mover a vista",
+ "Mapa grande": "Mapa grande",
+ "Te faltan: %s.": "Faltam: %s.",
+ "Se desbloquea en el nivel %d (%s).": "Desbloqueia no nível %d (%s).",
+ "Además te faltan: %s.": "Também faltam: %s.",
+ "Creando: %s": "Criando: %s",
+ "Subiendo de era: %s": "Avançando de era: %s",
+ "Investigando: %s": "Pesquisando: %s",
+ "(+%d en cola)": "(+%d na fila)",
+ "· Faltan casas": "· Faltam casas",
+ "· Falta un santo junto al monasterio": "· Falta um santo ao lado do mosteiro",
+ "Palanca: empuja para mover la vista del mapa": "Alavanca: empurre para mover a vista do mapa",
+ "Requisitos:": "Requisitos:"
 }

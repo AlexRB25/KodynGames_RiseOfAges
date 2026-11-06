@@ -169,12 +169,6 @@ func _build_top(root: Control) -> void:
 	idle_btn.tooltip_text = Lang.t("Aldeanos sin tarea (tecla .)")
 	idle_btn.pressed.connect(func() -> void: game.controller.select_next_idle())
 	hr.add_child(idle_btn)
-	if is_touch():
-		var mapb := Button.new()
-		mapb.text = Lang.t("Mapa")
-		mapb.custom_minimum_size = Vector2(90, 40)
-		mapb.pressed.connect(func() -> void: full_map.visible = not full_map.visible)
-		hr.add_child(mapb)
 	var mb := Button.new()
 	mb.text = Lang.t("Menú")
 	mb.custom_minimum_size = Vector2(70, 0)
@@ -183,10 +177,18 @@ func _build_top(root: Control) -> void:
 
 
 func _build_bottom(root: Control) -> void:
+	# Panel de información angosto y centrado; a los lados, la navegación del mapa.
 	var bar := PanelContainer.new()
-	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bar.anchor_left = 0.5
+	bar.anchor_right = 0.5
+	bar.anchor_top = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_left = -BAR_W * 0.5
+	bar.offset_right = BAR_W * 0.5
 	bar.offset_top = -220
+	bar.offset_bottom = -4
 	root.add_child(bar)
+	bottom_bar = bar
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	bar.add_child(hb)
@@ -204,7 +206,7 @@ func _build_bottom(root: Control) -> void:
 	actions.add_theme_constant_override("v_separation", 4)
 	act.add_child(actions)
 	portrait = TextureRect.new()
-	portrait.custom_minimum_size = Vector2(150, 150)
+	portrait.custom_minimum_size = Vector2(120, 120)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -241,13 +243,61 @@ func _build_bottom(root: Control) -> void:
 	back.add_theme_font_size_override("font_size", 17)
 	back.pressed.connect(func() -> void: _set_preview({}))
 	preview_row.add_child(back)
-	# Minimapa en rombo abajo a la derecha (PC/Web). En celular/tablet: botón "Mapa".
-	minimap = Minimap.new()
-	minimap.custom_minimum_size = Vector2(400, 200)
-	hb.add_child(minimap)
-	minimap.setup(game)
-	minimap.visible = not is_touch()
+	_build_nav(root)
 	_build_full_map(root)
+
+
+const BAR_W := 1000.0
+var bottom_bar: PanelContainer
+var joystick: Joystick
+
+
+## Navegación del mapa fuera del panel de información.
+## PC: minimapa abajo a la derecha (clic = ir ahí, clic derecho = mandar unidades).
+## Celular: abajo a la izquierda, palanca + minimapa que se arrastra suave (tocarlo no
+## manda lejos) + botón "Mapa" para verlo grande.
+func _build_nav(root: Control) -> void:
+	var box := PanelContainer.new()
+	box.anchor_top = 1.0
+	box.anchor_bottom = 1.0
+	box.offset_top = -220
+	box.offset_bottom = -4
+	root.add_child(box)
+	minimap = Minimap.new()
+	if not is_touch():
+		box.anchor_left = 1.0
+		box.anchor_right = 1.0
+		box.offset_left = -290
+		box.offset_right = -4
+		minimap.custom_minimum_size = Vector2(270, 200)
+		box.add_child(minimap)
+		minimap.setup(game)
+		return
+	box.offset_left = 4
+	box.offset_right = 290
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 4)
+	box.add_child(hb)
+	joystick = Joystick.new()
+	joystick.setup(game)
+	joystick.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(joystick)
+	var vb := VBoxContainer.new()
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vb.add_theme_constant_override("separation", 4)
+	hb.add_child(vb)
+	minimap.drag_nav = true
+	minimap.custom_minimum_size = Vector2(150, 140)
+	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	minimap.tooltip_text = Lang.t("Arrastra el dedo sobre el mapa para mover la vista")
+	vb.add_child(minimap)
+	minimap.setup(game)
+	var mapb := Button.new()
+	mapb.text = Lang.t("Mapa grande")
+	mapb.custom_minimum_size = Vector2(0, 46)
+	mapb.add_theme_font_size_override("font_size", 16)
+	mapb.pressed.connect(func() -> void: full_map.visible = not full_map.visible)
+	vb.add_child(mapb)
 
 
 static func is_touch() -> bool:
@@ -702,6 +752,7 @@ func _build_button(k: String) -> void:
 	var ctext := Defs.cost_text(cost) if not d.get("seed", false) else Lang.t("1 siembra (tienes %d)") % game.players[game.local_id].seeds
 	var nm := game.building_name(game.local_id, k)
 	var fisher := String(d.get("builder", "aldeano")) == "barco_pesca"
+	_meta = {"age": int(d.get("age", 1)), "cost": cost}
 	_add_btn(nm, Lang.t("%s\nCosto: %s\n%s\n\nSi no tienes aldeanos seleccionados, va el más cercano sin tarea.") % [nm, ctext, Lang.t(d["desc"])],
 		func() -> void: game.controller.start_placing(k),
 		func() -> String:
@@ -712,6 +763,7 @@ func _build_button(k: String) -> void:
 
 
 func _seed_button() -> void:
+	_meta = {"cost": Defs.SEED_COST}
 	_add_btn(Lang.t("Siembra"), Lang.t("Comprar 1 siembra (%s) en el Centro.\nCada siembra = 1 granja de 4 cuadros.\nPuedes guardar varias: cuando una granja se acaba, se resiembra sola.") % Defs.cost_text(Defs.SEED_COST),
 		func() -> void:
 			if game.players[game.local_id].can_afford(Defs.SEED_COST):
@@ -726,6 +778,7 @@ func _villager_tab() -> void:
 	var c := game.main_center(game.local_id)
 	if c:
 		var d: Dictionary = Defs.UNITS["aldeano"]
+		_meta = {"cost": Defs.cost_of("aldeano", game.players[game.local_id].civ)}
 		_add_btn(Lang.t("Aldeano"), Lang.t("Entrenar un aldeano en el Centro principal.\nCosto: %s\nNecesitas espacio de población (casas).") % Defs.cost_text(Defs.cost_of("aldeano", game.players[game.local_id].civ)),
 			func() -> void:
 				var cc := game.main_center(game.local_id)
@@ -764,6 +817,7 @@ func _age_button(c: Building) -> void:
 	var req := ""
 	for r in nxt["req"]:
 		req += "\n· " + Lang.t(r[2])
+	_meta = {"cost": nxt["cost"]}
 	_add_btn(Lang.t("Subir de era"), Lang.t("Avanzar a la era %s (en el Centro)\nCosto: %s\nRequisitos:%s") % [
 		Lang.t(nxt["name"]), Defs.cost_text(nxt["cost"]), req],
 		func() -> void:
@@ -794,6 +848,7 @@ func _selection_tab() -> void:
 			var d: Dictionary = Defs.UNITS[k]
 			var kk: String = k
 			var bb := b
+			_meta = {"age": int(d.get("age", 1)), "cost": Defs.cost_of(k, game.players[game.local_id].civ)}
 			_add_btn(Lang.t(d["name"]), Lang.t("%s\nCosto: %s\nVida %d · Ataque %d%s\n%s") % [Lang.t(d["name"]),
 				Defs.cost_text(Defs.cost_of(k, game.players[game.local_id].civ)), d["hp"], d["atk"],
 				(Lang.t(" · Alcance %d") % d["range"]) if d["range"] > 0 else "", Lang.t(d["desc"])],
@@ -819,6 +874,7 @@ func _selection_tab() -> void:
 			_build_button("trampa")
 		if b.kind == "monasterio":
 			var bm := b
+			_meta = {"cost": Defs.RELIC_COST}
 			_add_btn(Lang.t("Crear reliquia"), Lang.t("Crear una reliquia\nCosto: %s\nNecesitas un santo junto al monasterio. Tarda %d s y aparece en un lugar al azar del mapa: un santo la recoge y la lleva a tu maravilla.") % [
 				Defs.cost_text(Defs.RELIC_COST), int(Defs.RELIC_TIME)],
 				func() -> void: _try(game.relic_block_reason(game.local_id, bm), {"k": "relic", "e": bm.id}),
@@ -839,6 +895,7 @@ func _selection_tab() -> void:
 func _tech_button(b: Building, t: String) -> void:
 	var d: Dictionary = Defs.TECHS[t]
 	var bb := b
+	_meta = {"age": int(d["age"]), "cost": d["cost"]}
 	_add_btn(Lang.t(d["name"]), Lang.t("%s (mejora)\nCosto: %s\n%s") % [Lang.t(d["name"]), Defs.cost_text(d["cost"]), Lang.t(d["desc"])],
 		func() -> void: _try(game.tech_block_reason(game.local_id, bb, t), {"k": "research", "e": bb.id, "t": t}),
 		func() -> String: return game.tech_block_reason(game.local_id, bb, t))
@@ -852,7 +909,34 @@ func _try(reason: String, cmd: Dictionary) -> void:
 		notify(reason, Vector2.INF)
 
 
+## Datos del siguiente botón: nivel que pide y costo (para el candado de nivel y
+## para decir qué recursos faltan). Se usa una vez y se borra.
+var _meta := {}
+
+
+## Lo que falta para pagar un costo: "50 madera, 20 oro" ("" si alcanza).
+func _missing_text(cost: Dictionary) -> String:
+	var p := game.players[game.local_id]
+	var miss := {}
+	for r in cost:
+		var need := ceili(float(cost[r]) - p.res.get(r, 0.0))
+		if need > 0:
+			miss[r] = need
+	return Defs.cost_text(miss) if not miss.is_empty() else ""
+
+
+## Motivo de bloqueo explicado: qué recursos faltan exactamente.
+func _explain(reason: String, meta: Dictionary) -> String:
+	if reason == Lang.t("Faltan recursos.") and meta.has("cost"):
+		var m := _missing_text(meta["cost"])
+		if m != "":
+			return Lang.t("Te faltan: %s.") % m
+	return reason
+
+
 func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, icon: Texture2D = null) -> void:
+	var meta := _meta
+	_meta = {}
 	var btn := Button.new()
 	btn.text = text
 	btn.tooltip_text = tip
@@ -883,10 +967,17 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 			close = true
 		elif text.begins_with(Lang.t("Vender")):
 			verb = Lang.t("Vender")
-		var spec := {"name": text, "tip": tip, "press": on_press, "block": block, "icon": icon, "verb": verb, "close": close}
+		var spec := {"name": text, "tip": tip, "press": on_press, "block": block, "icon": icon, "verb": verb, "close": close, "meta": meta}
 		btn.pressed.connect(func() -> void:
 			if not is_touch():
-				on_press.call())
+				var why: String = block.call()
+				if why != "":
+					# Bloqueado: mostrar qué falta (recursos o nivel) en vez de no hacer nada.
+					spec["hover"] = false
+					_set_preview(spec)
+					notify(_explain(why, meta), Vector2.INF)
+				else:
+					on_press.call())
 		# Celular: toque corto = ver información; dejar el dedo = comprar (barra que se llena).
 		btn.button_down.connect(func() -> void:
 			if is_touch():
@@ -905,9 +996,39 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 			if not is_touch() and _preview.get("name", "") == text:
 				_set_preview({}))
 	else:
-		btn.pressed.connect(on_press)
+		btn.pressed.connect(func() -> void:
+			var why: String = block.call()
+			if why != "":
+				notify(_explain(why, meta), Vector2.INF)
+			else:
+				on_press.call())
+	# Candado de nivel: la insignia de la era en que se desbloquea.
+	var need_age := int(meta.get("age", 1))
+	if need_age > 1:
+		var badge := TextureRect.new()
+		badge.name = "Nivel"
+		badge.texture = Art.era(game.players[game.local_id].civ, need_age)
+		badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		badge.offset_top = 2
+		badge.offset_bottom = 30
+		btn.add_child(badge)
+		var lk := Label.new()
+		lk.name = "NivelTexto"
+		lk.text = Lang.t("Nivel %d") % need_age
+		lk.add_theme_font_size_override("font_size", 12)
+		lk.add_theme_color_override("font_outline_color", Color.BLACK)
+		lk.add_theme_constant_override("outline_size", 4)
+		lk.add_theme_color_override("font_color", Color(1, 0.85, 0.4))
+		lk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lk.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lk.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		lk.offset_top = 28
+		btn.add_child(lk)
 	actions.add_child(btn)
-	_btn_specs.append([btn, block, tip])
+	_btn_specs.append([btn, block, tip, need_age, meta])
 
 
 func _refresh_buttons() -> void:
@@ -916,9 +1037,22 @@ func _refresh_buttons() -> void:
 		if not is_instance_valid(btn):
 			continue
 		var reason: String = s[1].call()
-		btn.disabled = reason != "" and reason != Lang.t("Faltan recursos.")
-		btn.modulate = Color(1, 0.75, 0.7) if reason == Lang.t("Faltan recursos.") else Color.WHITE
-		btn.tooltip_text = s[2] + ("\n\n" + reason if reason != "" else "")
+		var locked: bool = s.size() > 3 and int(s[3]) > game.players[game.local_id].age
+		# Nunca se desactiva: tocarlo dice qué falta (recursos o nivel).
+		btn.disabled = false
+		var badge := btn.get_node_or_null("Nivel")
+		if badge:
+			badge.visible = locked
+			btn.get_node("NivelTexto").visible = locked
+		if locked:
+			btn.self_modulate = Color(0.62, 0.62, 0.62)
+		elif reason == Lang.t("Faltan recursos."):
+			btn.self_modulate = Color(1, 0.72, 0.68)
+		elif reason != "":
+			btn.self_modulate = Color(0.7, 0.7, 0.7)
+		else:
+			btn.self_modulate = Color.WHITE
+		btn.tooltip_text = s[2] + ("\n\n" + _explain(reason, s[4] if s.size() > 4 else {}) if reason != "" else "")
 
 
 var preview_row: HBoxContainer
@@ -975,7 +1109,7 @@ func _tick_hold(dt: float) -> void:
 	_hold["fired"] = true
 	var reason: String = spec["block"].call()
 	if reason != "":
-		notify(Lang.t("Te faltan recursos.") if reason == Lang.t("Faltan recursos.") else reason, Vector2.INF)
+		notify(_explain(reason, spec.get("meta", {})), Vector2.INF)
 		_end_hold(true)
 		return
 	spec["press"].call()
@@ -1028,14 +1162,33 @@ func _render_preview() -> void:
 	var spec := _preview
 	info_title.text = String(spec["name"])
 	var reason: String = spec["block"].call()
-	var lines: Array[String] = []
+	# Primero el costo y lo que falta (para que siempre se vea), luego la descripción.
+	var cost_line := ""
+	var rest: Array[String] = []
 	for ln in String(spec["tip"]).split("\n"):
 		if ln.begins_with(Lang.t("Costo:")):
-			lines.append(Lang.t("Costo:") + " " + _cost_icons(ln.trim_prefix(Lang.t("Costo:")).strip_edges()))
+			cost_line = Lang.t("Costo:") + " " + _cost_icons(ln.trim_prefix(Lang.t("Costo:")).strip_edges())
+		elif reason != "" and (ln.begins_with("· ") or ln == Lang.t("Requisitos:")):
+			continue   # los requisitos que faltan ya salen en el motivo
 		elif ln.strip_edges() != "" and ln != spec["name"] and not ln.begins_with(Lang.t("Si no tienes aldeanos")):
-			lines.append(ln)
+			rest.append(ln)
+	var lines: Array[String] = []
+	if cost_line != "":
+		lines.append(cost_line)
 	if reason != "":
-		lines.append("[color=#ff8a7a]%s[/color]" % (Lang.t("Te faltan recursos.") if reason == Lang.t("Faltan recursos.") else reason))
+		var meta: Dictionary = spec.get("meta", {})
+		var need_age := int(meta.get("age", 1))
+		if need_age > game.players[game.local_id].age:
+			# Se desbloquea en otro nivel: la insignia de esa era.
+			var et := Art.era(game.players[game.local_id].civ, need_age)
+			var badge := ("[img=110]%s[/img] " % et.resource_path) if et and et.resource_path != "" else ""
+			lines.append(badge + "[color=#ffd75a]%s[/color]" % (Lang.t("Se desbloquea en el nivel %d (%s).") % [need_age, Lang.t(Defs.AGES[need_age - 1]["name"])]))
+			var miss := _missing_text(meta.get("cost", {}))
+			if miss != "":
+				lines.append("[color=#ff8a7a]%s[/color]" % _cost_icons(Lang.t("Además te faltan: %s.") % miss))
+		else:
+			lines.append("[color=#ff8a7a]%s[/color]" % _cost_icons(_explain(reason, meta)))
+	lines.append_array(rest)
 	info_body.text = "\n".join(lines)
 	var ic: Texture2D = spec.get("icon")
 	portrait.texture = ic
@@ -1049,6 +1202,7 @@ func _render_preview() -> void:
 func _refresh_info() -> void:
 	for c in queue_box.get_children():
 		c.queue_free()
+	_queue_card()
 	if not _preview.is_empty():
 		_render_preview()
 		return
@@ -1125,18 +1279,8 @@ func _refresh_info() -> void:
 					var pr := game.market_price(game.local_id, r)
 					mp += Lang.t("%s compra %d / vende %d oro   ") % [Lang.t(Defs.RES_NAMES[r]), pr, floorf(pr * 0.75)]
 				lines.append(mp)
-			if e.owner_id == game.local_id and not e.queue.is_empty():
-				lines.append(Lang.t("Entrenando: %s %d %%") % [_qname(e.queue[0]), int(e.queue_progress() * 100)])
-				if e.waiting_pop:
-					lines.append(Lang.t("[color=#ff8a7a]Esperando población: construye casas.[/color]"))
-				var bq: Building = e
-				for i in e.queue.size():
-					var qb := Button.new()
-					qb.text = _qname(e.queue[i]).left(3)
-					qb.tooltip_text = Lang.t("Cancelar el último de la cola")
-					qb.custom_minimum_size = Vector2(36, 26)
-					qb.pressed.connect(func() -> void: game.issue({"k": "cancel", "e": bq.id}))
-					queue_box.add_child(qb)
+			if e.owner_id == game.local_id and not e.queue.is_empty() and e.waiting_pop:
+				lines.append(Lang.t("[color=#ff8a7a]Esperando población: construye casas.[/color]"))
 		elif e is Relic:
 			lines.append(Lang.t("Llévala con un santo a tu maravilla. Con 3 reliquias dentro empieza la cuenta atrás para ganar."))
 		elif e.has_resource() or e is ResourceNode or e is Animal:
@@ -1163,6 +1307,89 @@ func _refresh_info() -> void:
 		for k in counts:
 			parts.append("%s ×%d" % [k, counts[k]])
 		info_body.text = ", ".join(parts)
+
+
+## Cuadrito de lo que se está creando (abajo de la descripción): icono, nombre,
+## barrita de avance, cuántos más esperan y botón para cancelar el último.
+## Muestra el edificio seleccionado; si no hay uno, el Centro principal.
+func _queue_card() -> void:
+	var b := game.controller.own_building_selected()
+	if b == null or b.queue.is_empty():
+		var only_units := true
+		for e in game.controller.selection:
+			if e is Building:
+				only_units = false
+		b = game.main_center(game.local_id) if only_units else null
+	if b == null or b.queue.is_empty():
+		return
+	var k: String = b.queue[0]
+	var card := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.08, 0.06, 0.04, 0.85)
+	st.border_color = Color(0.72, 0.56, 0.28)
+	st.set_border_width_all(1)
+	st.set_corner_radius_all(4)
+	st.set_content_margin_all(4)
+	card.add_theme_stylebox_override("panel", st)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	queue_box.add_child(card)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	card.add_child(hb)
+	var ic: Texture2D = null
+	if k == "era":
+		ic = Art.era(game.players[game.local_id].civ, game.players[game.local_id].age + 1)
+	elif Defs.UNITS.has(k):
+		ic = Thumbs.get_icon(game, k)
+	if ic:
+		var tr := TextureRect.new()
+		tr.texture = ic
+		tr.custom_minimum_size = Vector2(44, 44)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		hb.add_child(tr)
+	var vb := VBoxContainer.new()
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vb.add_theme_constant_override("separation", 2)
+	hb.add_child(vb)
+	var verb := Lang.t("Creando: %s")
+	if k == "era":
+		verb = Lang.t("Subiendo de era: %s")
+	elif k.begins_with("tech:"):
+		verb = Lang.t("Investigando: %s")
+	var t := Label.new()
+	var more := b.queue.size() - 1
+	t.text = (verb % _qname(k)) + (("   " + Lang.t("(+%d en cola)") % more) if more > 0 else "")
+	if b.waiting_pop:
+		t.text += "   " + Lang.t("· Faltan casas")
+	elif b.waiting_santo:
+		t.text += "   " + Lang.t("· Falta un santo junto al monasterio")
+	t.add_theme_font_size_override("font_size", 14)
+	t.clip_text = true
+	t.custom_minimum_size = Vector2(10, 0)
+	vb.add_child(t)
+	var bar := ProgressBar.new()
+	bar.min_value = 0.0
+	bar.max_value = 1.0
+	bar.value = b.queue_progress()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 12)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.1, 0.1, 0.1)
+	bg.set_corner_radius_all(3)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.95, 0.6, 0.2) if b.waiting_pop or b.waiting_santo else Color(0.35, 0.85, 0.35)
+	fill.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fill)
+	vb.add_child(bar)
+	var bq := b
+	var x := Button.new()
+	x.text = "✕"
+	x.tooltip_text = Lang.t("Cancelar el último de la cola")
+	x.custom_minimum_size = Vector2(40, 40)
+	x.pressed.connect(func() -> void: game.issue({"k": "cancel", "e": bq.id}))
+	hb.add_child(x)
 
 
 func _qname(k: String) -> String:

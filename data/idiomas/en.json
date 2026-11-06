@@ -718,5 +718,18 @@
  "2 monasterios": "2 monasteries",
  "El [b]monasterio[/b] cura poco a poco a tus unidades cercanas y entrena santos.": "The [b]monastery[/b] slowly heals your nearby units and trains saints.",
  "Construye una [b]maravilla[/b] y lleva 3 reliquias con tus santos: si aguanta la cuenta atrás, ganas.": "Build a [b]wonder[/b] and bring 3 relics with your saints: if it survives the countdown, you win.",
- "Los [b]arqueros[/b] pueden meterse en una torre de guardia y disparar desde arriba.": "[b]Archers[/b] can enter a guard tower and shoot from above."
+ "Los [b]arqueros[/b] pueden meterse en una torre de guardia y disparar desde arriba.": "[b]Archers[/b] can enter a guard tower and shoot from above.",
+ "Arrastra el dedo sobre el mapa para mover la vista": "Drag your finger on the map to move the view",
+ "Mapa grande": "Big map",
+ "Te faltan: %s.": "You're missing: %s.",
+ "Se desbloquea en el nivel %d (%s).": "Unlocks at level %d (%s).",
+ "Además te faltan: %s.": "You're also missing: %s.",
+ "Creando: %s": "Creating: %s",
+ "Subiendo de era: %s": "Advancing age: %s",
+ "Investigando: %s": "Researching: %s",
+ "(+%d en cola)": "(+%d queued)",
+ "· Faltan casas": "· Need more houses",
+ "· Falta un santo junto al monasterio": "· Need a saint next to the monastery",
+ "Palanca: empuja para mover la vista del mapa": "Joystick: push to move the map view",
+ "Requisitos:": "Requirements:"
 }

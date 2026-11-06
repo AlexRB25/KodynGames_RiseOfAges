@@ -332,6 +332,31 @@ func _dev_args() -> void:
 			camera.dist = 12.0
 			camera.target_dist = 12.0
 			controller.set_selection([nu])
+		elif a == "--obra":
+			# Desarrollo: una casa en construcción con un aldeano y 3 aldeanos en cola en el centro.
+			var oc := main_center(local_id)
+			players[local_id].res["comida"] += 300
+			players[local_id].res["madera"] += 100
+			for r in range(6, 14):
+				var ot := MapData.to_tile(oc.center() + Vector2(r, 0))
+				if can_place(local_id, "casa", ot):
+					var ob := place_building(local_id, "casa", ot)
+					var ov := nearest_villager(local_id, ob.center())
+					ov.cmd_build(ob)
+					ob.add_progress(8.0)
+					camera.focus(ob.center())
+					camera.dist = 14.0
+					camera.target_dist = 14.0
+					break
+			for i in 3:
+				train(local_id, oc, "aldeano")
+		elif a == "--palanca" and hud and hud.joystick:
+			# Desarrollo: empujar la palanca a la derecha 1 segundo (celular).
+			var c0 := camera.ground_pos()
+			hud.joystick.vec = Vector2(1, 0)
+			await get_tree().create_timer(1.0).timeout
+			hud.joystick.vec = Vector2.ZERO
+			print("palanca: la cámara se movió %.1f casillas" % camera.ground_pos().distance_to(c0))
 		elif a == "--reliquia":
 			# Desarrollo: una reliquia junto a tu centro.
 			var rl := Relic.new()

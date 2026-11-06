@@ -326,10 +326,47 @@ func _build_visual() -> void:
 		Mat.box(scaffold, Vector3(s * 0.95, 0.05, 0.05), Vector3(0, hh * 0.6, z * s * 0.47), wood)
 		Mat.box(scaffold, Vector3(0.05, 0.05, s * 0.95), Vector3(z * s * 0.47, hh * 0.85, 0), wood)
 	Mat.box(scaffold, Vector3(s * 0.9, 0.04, s * 0.9), Vector3(0, 0.03, 0), Color(0.5, 0.42, 0.3))
+	# Barrita de construcción: verde lo hecho, verde oscuro lo que falta. Siempre mira a la cámara.
+	_build_bar = MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(0.9 + s * 0.35, 0.16)
+	_build_bar.mesh = q
+	_build_mat = ShaderMaterial.new()
+	_build_mat.shader = _bar_shader()
+	_build_bar.material_override = _build_mat
+	_build_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_build_bar.position = Vector3(0, bar_height() + 0.35, 0)
+	add_child(_build_bar)
 	_refresh_construction()
 
 
+var _build_bar: MeshInstance3D
+var _build_mat: ShaderMaterial
+static var _bar_sh: Shader
+
+
+static func _bar_shader() -> Shader:
+	if _bar_sh == null:
+		_bar_sh = Shader.new()
+		_bar_sh.code = """shader_type spatial;
+render_mode unshaded, cull_disabled, depth_test_disabled, shadows_disabled;
+uniform float progress = 0.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment() {
+	vec3 c = UV.x < progress ? vec3(0.25, 0.9, 0.3) : vec3(0.04, 0.18, 0.06);
+	if (UV.y < 0.14 || UV.y > 0.86 || UV.x < 0.015 || UV.x > 0.985) c = vec3(0.0);
+	ALBEDO = c;
+}
+"""
+	return _bar_sh
+
+
 func _refresh_construction() -> void:
+	if _build_bar:
+		_build_bar.visible = not complete
+		_build_mat.set_shader_parameter("progress", progress)
 	if scaffold:
 		scaffold.visible = not complete
 	if visual:

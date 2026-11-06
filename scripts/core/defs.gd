@@ -59,7 +59,7 @@ const SOW_TIME := 10.0              # segundos de trabajo para sembrar
 ## siege: máquina de asedio. only_buildings: solo ataca edificios. splash: daño en área.
 const UNITS := {
 	"aldeano": {"name": "Aldeano", "hp": 25.0, "atk": 3.0, "armor": 0.0, "range": 0.0, "cd": 1.5,
-		"speed": 2.0, "sight": 7, "cost": {"comida": 50}, "time": 12.0, "from": "centro", "villager": true,
+		"speed": 2.0, "sight": 7, "cost": {"comida": 50}, "time": 5.0, "from": "centro", "villager": true,
 		"desc": "Recolecta, caza, pesca, siembra y construye."},
 	"guerrero": {"name": "Guerrero", "hp": 60.0, "atk": 8.0, "armor": 1.0, "range": 0.0, "cd": 1.4,
 		"speed": 2.1, "sight": 7, "cost": {"comida": 60, "oro": 20}, "time": 18.0, "from": "cuartel", "age": 1,

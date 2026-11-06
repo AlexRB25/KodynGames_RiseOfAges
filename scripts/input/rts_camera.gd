@@ -10,6 +10,7 @@ var pitch := deg_to_rad(52.0)
 var dist := 24.0
 var target_dist := 24.0
 var edge_scroll := true
+var joy := Vector2.ZERO        # palanca de la pantalla (celular), -1..1
 var _rotating := false
 var _touches := {}
 var _pinch_d := 0.0
@@ -73,6 +74,7 @@ func _process(dt: float) -> void:
 				move.y -= 1
 			elif m.y > s.y - e:
 				move.y += 1
+	move += joy
 	if move != Vector2.ZERO:
 		var sp := dist * 1.1 * dt
 		var fwd := Vector2(-sin(yaw), -cos(yaw))

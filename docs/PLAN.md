@@ -110,3 +110,13 @@ Pestañas de construcción: **Recursos** (siembra, granja, molino, corral, campa
   barcos, muros ni maravilla.
 - Pruebas: `tests/rasgos_check.tscn` (puertas, torres, mejoras, barcos, asedio, reliquias, maravilla,
   bots largos). Desarrollo: `--era=5 --techs=a,b --edificio=maravilla --unidad=catapulta --reliquia`.
+
+## Interfaz de abajo y navegación (2026-11-05, pedido del usuario)
+- Panel de información angosto (1000 px) y centrado. PC: minimapa aparte abajo a la derecha (clic = ir ahí).
+  Celular: abajo a la izquierda, palanca (scripts/ui/joystick.gd, cámara `joy`), minimapa que se
+  arrastra suave (`Minimap.drag_nav`, tocar no manda lejos) y botón "Mapa grande".
+- Los botones nunca se desactivan: con candado de nivel muestran la insignia de la era y "Nivel N";
+  al tocarlos dicen qué falta (nivel, recursos exactos o requisitos).
+- Cola de producción: cuadrito abajo de la descripción con icono, barrita y cancelar. Aldeano: 5 s.
+- Edificios en construcción: barrita verde (hecho) / verde oscuro (falta) arriba del edificio.
+- Dev: --obra (casa en obra + 3 aldeanos en cola), --palanca, --ver=Nombre.
