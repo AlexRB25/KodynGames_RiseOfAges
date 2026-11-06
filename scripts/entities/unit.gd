@@ -766,6 +766,7 @@ func _do_attack(dt: float) -> void:
 				game.spawn_projectile(self, target, dmg, float(def.get("splash", 0.0)))
 			else:
 				target.take_damage(dmg, self)
+				Sfx.at("golpe", pos, -3.0)
 	elif r == -1:
 		state = S.IDLE
 		target = null

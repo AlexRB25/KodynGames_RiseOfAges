@@ -25,6 +25,8 @@ const TYPES := ["Cerrado", "Tú", "Bot Fácil", "Bot Normal", "Bot Difícil", "B
 
 
 func _ready() -> void:
+	Sfx.game = null
+	Sfx.music("menu")
 	var bg := ColorRect.new()
 	bg.color = Color(0.12, 0.09, 0.06)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)

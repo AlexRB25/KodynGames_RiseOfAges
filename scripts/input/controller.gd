@@ -41,6 +41,8 @@ func cam() -> RtsCamera:
 # ---------------- selecciÃ³n ----------------
 
 func set_selection(list: Array) -> void:
+	var before := selection.duplicate()
+	_selection_sound(list, before)
 	for e in selection:
 		if is_instance_valid(e):
 			e.set_selected(false)
@@ -50,6 +52,19 @@ func set_selection(list: Array) -> void:
 			selection.append(e)
 			e.set_selected(true)
 	game.hud.refresh_selection()
+
+
+## Al elegir algo nuevo: "¿sí?" si son unidades propias; toc si es un edificio.
+func _selection_sound(list: Array, before: Array) -> void:
+	if list.is_empty() or list == before:
+		return
+	var e = list[0]
+	if not Entity.valid(e) or e.owner_id != game.local_id:
+		return
+	if e is Unit:
+		Sfx.order_voice(list, true)
+	elif e is Building:
+		Sfx.play("seleccion", -3.0)
 
 
 func add_to_selection(list: Array) -> void:
@@ -328,6 +343,7 @@ func _command(sp: Vector2, queue: bool) -> void:
 		if target and target is ResourceNode and not game.fog.is_explored_rect(target.rect):
 			target = null
 		game.order_units(us, target, g, queue)
+		Sfx.order_voice(us)
 		_marker(g, target)
 		return
 	var herd := own_animals_selected()
@@ -639,6 +655,7 @@ func _issue_place(k: String, tiles: Array, queue: bool) -> void:
 	for t in tiles:
 		tl.append([t.x, t.y])
 	game.issue({"k": "place", "b": k, "tiles": tl, "u": ids, "q": queue})
+	Sfx.play("colocar")
 
 
 func any_villager() -> Unit:

@@ -54,6 +54,8 @@ signal loaded
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
+	Sfx.game = self
+	Sfx.music("partida")
 	start_match()
 
 
@@ -507,6 +509,8 @@ func destroy_building(b: Building, by_attack: bool) -> void:
 	if b.def.get("gate", false):
 		map.set_gate(b.rect.position, 0)
 	buildings.erase(b)
+	if by_attack:
+		Sfx.at("derribo", b.center())
 	# Los arqueros de adentro salen; las reliquias de la maravilla caen alrededor.
 	for u in b.garrison.duplicate():
 		u._leave_garrison()
@@ -558,6 +562,8 @@ func on_building_complete(b: Building) -> void:
 				notify(q.id, Lang.t("%s terminó una maravilla. Si lleva 3 reliquias, empezará la cuenta atrás.") % players[b.owner_id].name, b.pos)
 	if not b.kind in ["muralla", "puerta", "granja"]:
 		notify(b.owner_id, Lang.t("%s terminado.") % b.display_name(), b.pos)
+	if b.owner_id == local_id:
+		Sfx.play("terminado")
 	if hud:
 		hud.refresh_selection()
 
@@ -568,6 +574,7 @@ func on_attacked(e: Entity, from: Entity) -> void:
 	if e.owner_id == local_id and time - _attack_note_t > 12.0:
 		_attack_note_t = time
 		notify(local_id, Lang.t("¡Te están atacando!"), e.pos)
+		Sfx.play("alerta", -2.0)
 	for b in bots:
 		if b.pid == e.owner_id:
 			b.on_attacked(e, from)
@@ -742,6 +749,8 @@ func _check_victory() -> void:
 		over = true
 		var winner: int = teams_alive.keys()[0] if teams_alive.size() == 1 else -1
 		game_over.emit(winner)
+		Sfx.music("")
+		Sfx.play("victoria" if winner == team_of(local_id) else "derrota")
 		if hud:
 			hud.show_result(winner == team_of(local_id))
 
@@ -751,6 +760,8 @@ func end_by_forfeit(winner_team: int, forfeit: bool) -> void:
 	if over or not forfeit:
 		return
 	over = true
+	Sfx.music("")
+	Sfx.play("victoria" if winner_team == team_of(local_id) else "derrota")
 	if hud:
 		hud.show_result(winner_team == team_of(local_id))
 
@@ -760,6 +771,8 @@ func end_by_forfeit(winner_team: int, forfeit: bool) -> void:
 func ring_bell(pid: int) -> void:
 	var p: PlayerState = players[pid]
 	p.bell = not p.bell
+	if pid == local_id:
+		Sfx.play("campana")
 	if p.bell:
 		var room := {}
 		for b in buildings:
@@ -845,6 +858,7 @@ func _defeat(pid: int, resigned := false) -> void:
 func spawn_projectile(src: Entity, target: Entity, dmg: float, splash := 0.0) -> void:
 	var from := src.center()
 	var h := 1.0 if src is Unit else 2.0
+	Sfx.at("piedra" if splash > 0.0 else "flecha", from, -4.0)
 	var pr := {"p": from, "h": h, "target": target, "dmg": dmg, "src": src, "t": 0.0, "node": null,
 		"start": from, "dur": maxf(0.15, from.distance_to(target.center()) / (14.0 if splash <= 0.0 else 9.0)),
 		"splash": splash, "owner": src.owner_id, "end": target.center()}
@@ -1197,6 +1211,8 @@ func refund(owner: int, k: String, _b: Building) -> void:
 
 
 func spawn_trained(b: Building, k: String) -> void:
+	if b.owner_id == local_id:
+		Sfx.play("listo", -3.0)
 	var toward := b.rally if b.rally != Vector2.INF else b.center() + Vector2(b.def["size"], b.def["size"])
 	var nv := MapData.WATER_NAV if Defs.UNITS[k].get("naval", false) else 0
 	var cands := map.ring_around(b.rect, nv)
@@ -1255,6 +1271,8 @@ func research_age(owner: int, b: Building) -> bool:
 
 func advance_age(owner: int) -> void:
 	var p := players[owner]
+	if owner == local_id:
+		Sfx.play("era")
 	p.age = mini(p.age + 1, Defs.AGES.size())
 	for b in buildings:
 		if b.owner_id == owner:
@@ -1306,6 +1324,8 @@ func finish_tech(owner: int, t: String) -> void:
 	if p.techs.has(t):
 		return
 	p.techs[t] = true
+	if owner == local_id:
+		Sfx.play("mejora")
 	for b in buildings:
 		if b.owner_id == owner:
 			b.on_tech()
@@ -1345,6 +1365,8 @@ func make_relic(owner: int, b: Building) -> bool:
 
 ## La reliquia aparece en un lugar al azar del mapa (en tierra, lejos de las orillas).
 func spawn_relic(owner: int, b: Building) -> Relic:
+	if owner == local_id:
+		Sfx.play("reliquia")
 	var t := Vector2i(-1, -1)
 	for i in 400:
 		var c := Vector2i(sim_rng.randi_range(4, map.w - 5), sim_rng.randi_range(4, map.h - 5))
@@ -1378,6 +1400,8 @@ func store_relic(w: Building, rl: Relic) -> void:
 		return
 	rl.carrier = null
 	rl.wonder = w
+	if w.owner_id == local_id:
+		Sfx.play("reliquia")
 	rl.pos = w.center()
 	w.relics.append(rl)
 	if w.visual:

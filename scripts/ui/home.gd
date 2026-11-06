@@ -509,6 +509,8 @@ func _config() -> void:
 	fs.toggled.connect(func(on: bool) -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED))
 	vb.add_child(fs)
+	vb.add_child(Sfx.volume_row("musica", 20))
+	vb.add_child(Sfx.volume_row("efectos", 20))
 	# Idioma: al cambiarlo se vuelve a armar el menú para que todo salga en el nuevo idioma.
 	var lrow := HBoxContainer.new()
 	lrow.add_theme_constant_override("separation", 12)

@@ -371,6 +371,8 @@ func _build_menu(root: Control) -> void:
 	edge.button_pressed = true
 	edge.toggled.connect(func(on: bool) -> void: game.camera.edge_scroll = on)
 	vb.add_child(edge)
+	vb.add_child(Sfx.volume_row("musica", 14))
+	vb.add_child(Sfx.volume_row("efectos", 14))
 	var help := Label.new()
 	help.text = Lang.t("Clic izq: seleccionar · Arrastrar: recuadro\nClic der: mover / recolectar / atacar\nWASD o bordes: mover · Q/E o rueda central: girar\nRueda: acercar · H: centro · .: aldeano sin tarea\nCtrl+1-9: guardar grupo · Shift: varias obras")
 	help.add_theme_font_size_override("font_size", 12)
@@ -920,6 +922,7 @@ func _try(reason: String, cmd: Dictionary) -> void:
 		game.issue(cmd)
 	else:
 		notify(reason, Vector2.INF)
+		Sfx.play("error")
 
 
 ## Datos del siguiente botón: nivel que pide y costo (para el candado de nivel y

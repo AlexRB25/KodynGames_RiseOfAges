@@ -741,5 +741,7 @@
  "Tocar otra vez la campana: los aldeanos salen y vuelven a lo que estaban haciendo.": "Ring the bell again: the villagers come out and go back to what they were doing.",
  "Tocar la campana: todos los aldeanos corren a refugiarse en el centro urbano (caben 15 por centro y desde adentro disparan flechas). Tócala otra vez para que vuelvan a sus labores.": "Ring the bell: all villagers run to take shelter in the town center (15 fit per center and they shoot arrows from inside). Ring it again to send them back to work.",
  "Refugiados adentro: %d / %d": "Sheltered inside: %d / %d",
- "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Con la campana los aldeanos se refugian adentro (caben 15). Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes.": "Main building: receives all resources, trains villagers, researches upgrades and advances the age. Gives 5 population. With the bell, villagers take shelter inside (15 fit). A second center can be built from level 3. If you run out of centers, you lose."
+ "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Con la campana los aldeanos se refugian adentro (caben 15). Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes.": "Main building: receives all resources, trains villagers, researches upgrades and advances the age. Gives 5 population. With the bell, villagers take shelter inside (15 fit). A second center can be built from level 3. If you run out of centers, you lose.",
+ "Música:": "Music:",
+ "Efectos:": "Effects:"
 }

@@ -24,8 +24,9 @@ if ($null -eq $despues -or $despues -eq $antes) { throw "La exportación web fal
 $ErrorActionPreference = "Stop"
 Remove-Item server/public/jugar/*.import -ErrorAction SilentlyContinue
 
-# 3. Commit y push.
-git add -A
+# 3. Commit y push (git avisa de LF/CRLF en stderr: tampoco debe detenerlo).
+$ErrorActionPreference = "Continue"
+git add -A 2>&1 | Out-Null
 git commit -q -m "V${nueva}: $Mensaje`n`nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 git push -q
 git log --oneline -1
