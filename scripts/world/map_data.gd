@@ -20,7 +20,14 @@ var solid := PackedByteArray()        # >0 = bloqueada (árbol, mina, edificio)
 var reserved := PackedByteArray()     # >0 = ocupada por un edificio (aunque se pueda caminar, ej. granja)
 var ent: Array = []                   # casilla -> Entity estática (recurso o edificio) o null
 var height := PackedFloat32Array()    # altura del suelo de cada casilla (0 llano, LEVEL_H meseta)
-var astar := AStarGrid2D.new()
+var astar := AStarGrid2D.new()        # caminos por tierra (las puertas cerradas)
+var water := AStarGrid2D.new()        # caminos por agua (barcos)
+var gate_team := PackedInt32Array()   # casilla -> equipo dueño de la puerta (0 = no hay)
+var team_grids := {}                  # equipo -> AStarGrid2D por tierra con SUS puertas abiertas
+
+## Modo de paso ("nav"): 0 = por tierra sin puertas; >0 = por tierra, equipo que abre
+## sus puertas; WATER_NAV = por agua.
+const WATER_NAV := -1
 
 const N8 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
 	Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
@@ -39,14 +46,53 @@ func setup(size: int) -> void:
 	ent.fill(null)
 	height.resize(w * h)
 	height.fill(0.0)
+	gate_team.resize(w * h)
+	gate_team.fill(0)
 	active = self
-	astar.region = Rect2i(0, 0, w, h)
-	astar.cell_size = Vector2(1, 1)
-	astar.offset = Vector2(0.5, 0.5)
-	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	astar.update()
+	_init_grid(astar)
+	_init_grid(water)
+
+
+func _init_grid(g: AStarGrid2D) -> void:
+	g.region = Rect2i(0, 0, w, h)
+	g.cell_size = Vector2(1, 1)
+	g.offset = Vector2(0.5, 0.5)
+	g.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	g.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	g.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	g.update()
+
+
+## Rejilla de caminos para un modo de paso.
+func grid(nav: int) -> AStarGrid2D:
+	if nav == WATER_NAV:
+		return water
+	return team_grids.get(nav, astar)
+
+
+## Recalcula si una casilla se puede cruzar, en todas las rejillas.
+func refresh_tile(t: Vector2i) -> void:
+	astar.set_point_solid(t, not is_free(t, 0))
+	water.set_point_solid(t, not is_free(t, WATER_NAV))
+	for team in team_grids:
+		team_grids[team].set_point_solid(t, not is_free(t, team))
+
+
+## Puerta de un equipo en una casilla (0 = quitarla). Crea la rejilla del equipo si hace falta.
+func set_gate(t: Vector2i, team: int) -> void:
+	if not inside(t):
+		return
+	gate_team[idx(t)] = team
+	if team > 0 and not team_grids.has(team):
+		var g := AStarGrid2D.new()
+		_init_grid(g)
+		team_grids[team] = g
+		for y in h:
+			for x in w:
+				var c := Vector2i(x, y)
+				if not is_free(c, team):
+					g.set_point_solid(c, true)
+	refresh_tile(t)
 
 
 ## Llamar cuando el suelo ya está generado: marca el agua y los barrancos como bloqueados.
@@ -58,6 +104,8 @@ func finish_ground() -> void:
 				height[i] = WATER_BED
 			if ground_blocks(i):
 				astar.set_point_solid(Vector2i(x, y), true)
+			if ground[i] != WATER:
+				water.set_point_solid(Vector2i(x, y), true)
 
 
 ## Agua o barranco: no se camina ni se construye.
@@ -113,12 +161,16 @@ func is_water(t: Vector2i) -> bool:
 	return inside(t) and ground[idx(t)] == WATER
 
 
-## Se puede caminar por la casilla.
-func is_free(t: Vector2i) -> bool:
+## Se puede pasar por la casilla (nav: ver WATER_NAV).
+func is_free(t: Vector2i, nav := 0) -> bool:
 	if not inside(t):
 		return false
 	var i := idx(t)
-	return not ground_blocks(i) and solid[i] == 0
+	if nav == WATER_NAV:
+		return ground[i] == WATER and solid[i] == 0
+	if ground_blocks(i):
+		return false
+	return solid[i] == 0 or (nav > 0 and gate_team[i] == nav and solid[i] == 1)
 
 
 ## Libre para construir o colocar algo.
@@ -127,6 +179,14 @@ func is_open(t: Vector2i) -> bool:
 		return false
 	var i := idx(t)
 	return not ground_blocks(i) and solid[i] == 0 and reserved[i] == 0 and ent[i] == null
+
+
+## Libre para poner algo en el agua (trampa para peces).
+func is_open_water(t: Vector2i) -> bool:
+	if not inside(t):
+		return false
+	var i := idx(t)
+	return ground[i] == WATER and solid[i] == 0 and reserved[i] == 0 and ent[i] == null
 
 
 func rect_open(r: Rect2i) -> bool:
@@ -152,7 +212,7 @@ func occupy(r: Rect2i, e, blocks: bool) -> void:
 			reserved[i] = 1
 			if blocks:
 				solid[i] += 1
-				astar.set_point_solid(t, true)
+				refresh_tile(t)
 
 
 func release(r: Rect2i, e, blocks: bool) -> void:
@@ -167,8 +227,7 @@ func release(r: Rect2i, e, blocks: bool) -> void:
 			reserved[i] = 0
 			if blocks and solid[i] > 0:
 				solid[i] -= 1
-				if solid[i] == 0 and not ground_blocks(i):
-					astar.set_point_solid(t, false)
+				refresh_tile(t)
 
 
 func entity_at(t: Vector2i):
@@ -186,8 +245,8 @@ static func center(t: Vector2i) -> Vector2:
 
 
 ## Casilla libre más cercana (búsqueda por anillos).
-func nearest_free(t: Vector2i, max_r := 20) -> Vector2i:
-	if is_free(t):
+func nearest_free(t: Vector2i, max_r := 20, nav := 0) -> Vector2i:
+	if is_free(t, nav):
 		return t
 	for r in range(1, max_r + 1):
 		var best := Vector2i(-1, -1)
@@ -197,7 +256,7 @@ func nearest_free(t: Vector2i, max_r := 20) -> Vector2i:
 				if absi(dx) != r and absi(dy) != r:
 					continue
 				var c := t + Vector2i(dx, dy)
-				if is_free(c):
+				if is_free(c, nav):
 					var d := Vector2(dx, dy).length_squared()
 					if d < best_d:
 						best_d = d
@@ -208,20 +267,20 @@ func nearest_free(t: Vector2i, max_r := 20) -> Vector2i:
 
 
 ## Camino desde una posición hasta una casilla. Si no se puede llegar, llega lo más cerca posible.
-func path_to_tile(from: Vector2, goal: Vector2i, exact_end := Vector2.INF) -> PackedVector2Array:
+func path_to_tile(from: Vector2, goal: Vector2i, exact_end := Vector2.INF, nav := 0) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	var a := to_tile(from)
-	if not is_free(a):
-		a = nearest_free(a)
+	if not is_free(a, nav):
+		a = nearest_free(a, 20, nav)
 	if not inside(goal):
 		goal = Vector2i(clampi(goal.x, 0, w - 1), clampi(goal.y, 0, h - 1))
 	var g := goal
-	if not is_free(g):
-		g = nearest_free(goal, 6)
+	if not is_free(g, nav):
+		g = nearest_free(goal, 6, nav)
 	if a == g:
 		out.append(exact_end if exact_end != Vector2.INF and g == goal else center(g))
 		return out
-	var ids := astar.get_id_path(a, g, true)
+	var ids := grid(nav).get_id_path(a, g, true)
 	for i in range(1, ids.size()):
 		out.append(center(ids[i]))
 	if out.size() > 0 and exact_end != Vector2.INF and ids[ids.size() - 1] == goal:
@@ -230,28 +289,28 @@ func path_to_tile(from: Vector2, goal: Vector2i, exact_end := Vector2.INF) -> Pa
 
 
 ## Casillas libres alrededor de un rectángulo (para acercarse a un edificio o recurso).
-func ring_around(r: Rect2i) -> Array[Vector2i]:
+func ring_around(r: Rect2i, nav := 0) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for y in range(r.position.y - 1, r.end.y + 1):
 		for x in range(r.position.x - 1, r.end.x + 1):
 			if x >= r.position.x and x < r.end.x and y >= r.position.y and y < r.end.y:
 				continue
 			var t := Vector2i(x, y)
-			if is_free(t):
+			if is_free(t, nav):
 				out.append(t)
 	return out
 
 
 ## Camino para quedar junto a un rectángulo. Prueba las casillas cercanas en orden.
-func path_to_rect(from: Vector2, r: Rect2i) -> PackedVector2Array:
-	var cands := ring_around(r)
+func path_to_rect(from: Vector2, r: Rect2i, nav := 0) -> PackedVector2Array:
+	var cands := ring_around(r, nav)
 	if cands.is_empty():
 		return PackedVector2Array()
 	cands.sort_custom(func(p: Vector2i, q: Vector2i) -> bool:
 		return center(p).distance_squared_to(from) < center(q).distance_squared_to(from))
 	var first := PackedVector2Array()
 	for i in mini(cands.size(), 4):
-		var p := path_to_tile(from, cands[i])
+		var p := path_to_tile(from, cands[i], Vector2.INF, nav)
 		if i == 0:
 			first = p
 		var end_t := to_tile(p[p.size() - 1]) if p.size() > 0 else to_tile(from)

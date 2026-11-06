@@ -11,6 +11,7 @@ var era_tex: TextureRect
 var portrait: TextureRect
 var _era_shown := -1
 var time_label: Label
+var wonder_label: Label
 var idle_btn: Button
 var notes: VBoxContainer
 var info_title: Label
@@ -144,6 +145,14 @@ func _build_top(root: Control) -> void:
 	age_label.add_theme_constant_override("outline_size", 5)
 	age_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	mid.add_child(age_label)
+	# Cuenta atrás de una maravilla (se ve para todos).
+	wonder_label = Label.new()
+	wonder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	wonder_label.add_theme_font_size_override("font_size", 18)
+	wonder_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	wonder_label.add_theme_constant_override("outline_size", 6)
+	wonder_label.visible = false
+	mid.add_child(wonder_label)
 	# A la derecha: tiempo, aldeanos sin tarea, mapa (táctil) y menú.
 	var right := PanelContainer.new()
 	right.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -575,6 +584,12 @@ func _process(dt: float) -> void:
 		age_label.tooltip_text = "%s — %s" % [p.age_name(), Lang.t(Defs.CIVS[p.civ]["name"])]
 	var t := int(game.time)
 	time_label.text = "%02d:%02d" % [t / 60, t % 60]
+	var wc := game.wonder_countdown()
+	wonder_label.visible = not wc.is_empty()
+	if not wc.is_empty():
+		var wt := ceili(wc["t"])
+		wonder_label.text = Lang.t("Maravilla de %s: %d:%02d") % [wc["name"], wt / 60, wt % 60]
+		wonder_label.add_theme_color_override("font_color", Color(0.5, 1, 0.5) if wc["mine"] else Color(1, 0.45, 0.35))
 	var idle := game.controller.idle_villagers().size()
 	idle_btn.text = Lang.t("Sin tarea: %d") % idle
 	idle_btn.disabled = idle == 0
@@ -603,12 +618,12 @@ var tab := "aldeanos"
 var _tab_btns := {}
 
 const TAB_NAMES := {"recursos": "Recursos", "pueblo": "Pueblo", "guerra": "Guerra", "aldeanos": "Aldeanos", "seleccion": "Selección"}
-## Recursos: siembra, cosecha, comida, madera y minas.
-const RECURSOS := ["granja", "molino", "corral", "maderero", "minero"]
+## Recursos: siembra, cosecha, comida, madera, minas y pesca.
+const RECURSOS := ["granja", "molino", "corral", "maderero", "minero", "muelle"]
 ## Pueblo: casas, centros y edificios de la aldea.
-const PUEBLO := ["casa", "centro", "mercado", "templo"]
+const PUEBLO := ["casa", "centro", "mercado", "herreria", "universidad", "monasterio", "maravilla"]
 ## Guerra: donde se entrena el ejército y las defensas.
-const GUERRA := ["cuartel", "arqueria", "establo", "castillo", "torre", "muralla"]
+const GUERRA := ["cuartel", "arqueria", "establo", "taller", "castillo", "torre", "muralla", "puerta"]
 
 
 func set_tab(t: String) -> void:
@@ -683,14 +698,16 @@ func _rebuild_actions() -> void:
 
 func _build_button(k: String) -> void:
 	var d: Dictionary = Defs.BUILDINGS[k]
-	var cost := Defs.cost_of(k, game.players[game.local_id].civ)
+	var cost := game.build_cost(game.local_id, k)
 	var ctext := Defs.cost_text(cost) if not d.get("seed", false) else Lang.t("1 siembra (tienes %d)") % game.players[game.local_id].seeds
-	_add_btn(Lang.t(d["name"]), Lang.t("%s\nCosto: %s\n%s\n\nSi no tienes aldeanos seleccionados, va el más cercano sin tarea.") % [Lang.t(d["name"]), ctext, Lang.t(d["desc"])],
+	var nm := game.building_name(game.local_id, k)
+	var fisher := String(d.get("builder", "aldeano")) == "barco_pesca"
+	_add_btn(nm, Lang.t("%s\nCosto: %s\n%s\n\nSi no tienes aldeanos seleccionados, va el más cercano sin tarea.") % [nm, ctext, Lang.t(d["desc"])],
 		func() -> void: game.controller.start_placing(k),
 		func() -> String:
 			var r := game.build_block_reason(game.local_id, k)
-			if r == "" and game.controller.any_villager() == null:
-				return Lang.t("No tienes aldeanos.")
+			if r == "" and game.controller.any_builder(k) == null:
+				return Lang.t("No tienes barcos pesqueros.") if fisher else Lang.t("No tienes aldeanos.")
 			return r, Thumbs.get_icon(game, k))
 
 
@@ -798,9 +815,33 @@ func _selection_tab() -> void:
 		if b.kind == "centro":
 			_seed_button()
 			_age_button(b)
+		if b.kind == "muelle":
+			_build_button("trampa")
+		if b.kind == "monasterio":
+			var bm := b
+			_add_btn(Lang.t("Crear reliquia"), Lang.t("Crear una reliquia\nCosto: %s\nNecesitas un santo junto al monasterio. Tarda %d s y aparece en un lugar al azar del mapa: un santo la recoge y la lleva a tu maravilla.") % [
+				Defs.cost_text(Defs.RELIC_COST), int(Defs.RELIC_TIME)],
+				func() -> void: _try(game.relic_block_reason(game.local_id, bm), {"k": "relic", "e": bm.id}),
+				func() -> String: return game.relic_block_reason(game.local_id, bm))
+		for t in Defs.TECHS:
+			if Defs.TECHS[t]["at"] == b.kind and not game.players[game.local_id].techs.has(t):
+				_tech_button(b, t)
+		if int(b.stat("garrison", 0)) > 0:
+			var bg := b
+			_add_btn(Lang.t("Sacar arqueros"), Lang.t("Sacar a los arqueros de la torre (%d / %d adentro).") % [b.garrison.size(), int(b.stat("garrison", 0))],
+				func() -> void: game.issue({"k": "eject", "e": bg.id}),
+				func() -> String: return "" if not bg.garrison.is_empty() else Lang.t("No hay arqueros adentro."))
 	var bb3 := b
 	_add_btn(Lang.t("Destruir"), Lang.t("Derribar este edificio"), func() -> void:
 		game.issue({"k": "destroy", "e": bb3.id}), func() -> String: return "")
+
+
+func _tech_button(b: Building, t: String) -> void:
+	var d: Dictionary = Defs.TECHS[t]
+	var bb := b
+	_add_btn(Lang.t(d["name"]), Lang.t("%s (mejora)\nCosto: %s\n%s") % [Lang.t(d["name"]), Defs.cost_text(d["cost"]), Lang.t(d["desc"])],
+		func() -> void: _try(game.tech_block_reason(game.local_id, bb, t), {"k": "research", "e": bb.id, "t": t}),
+		func() -> String: return game.tech_block_reason(game.local_id, bb, t))
 
 
 ## Si no hay motivo de bloqueo, manda la orden; si no, avisa.
@@ -836,6 +877,9 @@ func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, ic
 			close = true
 		elif text == Lang.t("Subir de era"):
 			verb = Lang.t("Subir de era")
+			close = true
+		elif tip.contains(Lang.t("(mejora)")) or text == Lang.t("Crear reliquia"):
+			verb = Lang.t("Investigar") if tip.contains(Lang.t("(mejora)")) else Lang.t("Crear")
 			close = true
 		elif text.begins_with(Lang.t("Vender")):
 			verb = Lang.t("Vender")
@@ -1040,7 +1084,9 @@ func _refresh_info() -> void:
 				lines.append(Lang.t("Carga: %d %s") % [int(e.carry), Lang.t(Defs.RES_NAMES[e.carry_type]).to_lower()])
 			if e.idle_notice != "":
 				lines.append("[color=#ffd75a]%s[/color]" % e.idle_notice)
-			lines.append(Lang.t("Ataque %d · Armadura %d%s") % [e.def["atk"], e.def["armor"],
+			if e.relic:
+				lines.append(Lang.t("[color=#ffd75a]Lleva una reliquia: clic derecho en tu maravilla para guardarla.[/color]"))
+			lines.append(Lang.t("Ataque %d · Armadura %d%s") % [e.def["atk"], e.armor(),
 				(Lang.t(" · Alcance %d") % e.attack_range()) if e.attack_range() > 0 else ""])
 		elif e is Building:
 			if not e.complete:
@@ -1062,6 +1108,15 @@ func _refresh_info() -> void:
 						txt += "[color=%s]%s %d/%d[/color]  " % ["#7dff7d" if r["ok"] else "#ff8a7a", r["text"], mini(r["have"], r["need"]), r["need"]]
 					lines.append(txt)
 			lines.append(Lang.t(e.def["desc"]))
+			if e.kind == "trampa" and e.complete:
+				lines.append(Lang.t("Alimento restante: %d") % int(e.food))
+			if int(e.stat("garrison", 0)) > 0:
+				lines.append(Lang.t("Arqueros adentro: %d / %d (cada uno dispara una flecha más)") % [e.garrison.size(), int(e.stat("garrison", 0))])
+			if e.def.get("wonder", false):
+				lines.append(Lang.t("Reliquias: %d / %d") % [e.relics.size(), Defs.WONDER_RELICS])
+				var wp: PlayerState = game.players[e.owner_id]
+				if wp.wonder_t >= 0.0:
+					lines.append(Lang.t("[color=#ffd75a]Cuenta atrás: %d:%02d[/color]") % [ceili(wp.wonder_t) / 60, ceili(wp.wonder_t) % 60])
 			if e.kind == "corral" and e.complete:
 				lines.append(Lang.t("Animales pastando: %d / %d  (+%.1f de alimento por segundo)") % [e.grazers, Defs.CORRAL_CAP, e.grazers * Defs.GRAZE_RATE])
 			if e.kind == "mercado" and e.owner_id == game.local_id:
@@ -1082,6 +1137,8 @@ func _refresh_info() -> void:
 					qb.custom_minimum_size = Vector2(36, 26)
 					qb.pressed.connect(func() -> void: game.issue({"k": "cancel", "e": bq.id}))
 					queue_box.add_child(qb)
+		elif e is Relic:
+			lines.append(Lang.t("Llévala con un santo a tu maravilla. Con 3 reliquias dentro empieza la cuenta atrás para ganar."))
 		elif e.has_resource() or e is ResourceNode or e is Animal:
 			if e is Animal and not e.dead:
 				lines.append(Lang.t("Vida: %d · Carne: %d") % [ceili(e.hp), int(e.food)])
@@ -1111,4 +1168,8 @@ func _refresh_info() -> void:
 func _qname(k: String) -> String:
 	if k == "era":
 		return Lang.t("Era")
+	if k.begins_with("tech:"):
+		return Lang.t(Defs.TECHS[k.trim_prefix("tech:")]["name"])
+	if k == "reliquia":
+		return Lang.t("Reliquia")
 	return Lang.t(Defs.UNITS[k]["name"])

@@ -26,7 +26,7 @@ El nombre "Conquista" es provisional.
 - Edificios por cuadros con vista previa verde/roja y andamio mientras se construyen:
   Centro 4×4, Casa 2×2 (+5 población), Campamento maderero y minero (+25 % velocidad y +15 % de
   producto en su radio), Molino, Granja 2×2, Cuartel, Arquería, Establo, Torre, Muralla (arrastrar),
-  Mercado, Templo (cura), Castillo.
+  Mercado, Monasterio (cura; antes Templo), Castillo. Lista completa por fase abajo.
 - Granjas: la siembra se compra en el Centro (se pueden guardar varias); colocar una granja gasta
   1 siembra; el granjero siembra y luego cosecha 250; al agotarse se resiembra sola si hay siembras.
 - Población: empiezas con 5 y tope 5; cada casa +5 (máx. 200). Los aldeanos se compran en el Centro.
@@ -69,5 +69,44 @@ El nombre "Conquista" es provisional.
 ## Pastoreo (2026-11-04, reglas del usuario)
 - Solo un aldeano puede apropiarse de una cabra o guajolote (Defs.ANIMALS "tame"): clic derecho = pastorear (cursor de cayado), 10 s seguidos (Defs.HERD_TIME) junto al animal, que se queda quieto. Si se aleja, recibe otra orden o lo atacan, vuelve a empezar. Acercarse no basta.
 - Un aldeano enemigo te lo roba igual (10 s seguidos). Si dos pueblos lo pastorean a la vez, nadie avanza.
-- Corral (3x3, 80 de madera, pestaña Campo): hasta 6 animales pastan, dan 0.2 de alimento/s cada uno sin morir y engordan hasta 1.6x su carne. Al apropiarte de uno, si tienes corral cerca se va solo. Con un aldeano, clic derecho en tu animal = sacrificarlo.
+- Corral (3x3, 80 de madera, pestaña Recursos): hasta 6 animales pastan, dan 0.2 de alimento/s cada uno sin morir y engordan hasta 1.6x su carne. Al apropiarte de uno, si tienes corral cerca se va solo. Con un aldeano, clic derecho en tu animal = sacrificarlo.
 - Bots: construyen corral si hay animales cerca, mandan un aldeano a pastorear (uno a la vez) y llevan sus animales al corral.
+
+## Edificios por fase, mejoras, barcos y maravilla (2026-11-05, reglas del usuario)
+
+Pestañas de construcción: **Recursos** (siembra, granja, molino, corral, campamentos, muelle),
+**Pueblo** (casa, centro urbano, mercado, herrería, universidad, monasterio, maravilla) y
+**Guerra** (cuartel, galería de tiro con arco, establo, taller de asedio, castillo, torre, muro, puerta).
+
+| Fase | Se puede construir / pasa |
+|---|---|
+| 1 Aldea Primitiva | Centro urbano (solo el inicial), casa, cuartel, muelle, puesto de avanzada, empalizada, portón de madera, campamentos, molino, granja, corral |
+| 2 Era Tribal | Galería de tiro con arco, establo, mercado, herrería, trampa para peces (desde el muelle). Mejoras en el Centro: muro de piedra (empalizada → muro, portón → puerta de piedra) y torre de guardia (puesto → torre, caben 3 arqueros) |
+| 3 Era de Piedra | Segundo centro urbano, monasterio (antes templo), universidad. Mejoras en la universidad: muro fortificado, torre de guardia mejorada (más vida, 6 arqueros), albañilería |
+| 4 Era de los Metales | Castillo, taller de asedio (ariete y catapulta) |
+| 5 Era Imperial | Maravilla. Mejoras en la universidad: muro de púas (daña a los pegados) y torre bombarda (daño en área) |
+
+- Torre, muralla y puerta son un solo edificio con niveles (`Defs.LEVELS`): las mejoras
+  (`Defs.TECHS`, investigadas una vez, en `PlayerState.techs`) suben de nivel a los que ya existen
+  y a los nuevos (nombre, vida, ataque, costo). Las casas no cambian con mejoras.
+- Herrería: forja, arcos reforzados, escudos (nivel 2) y su segunda versión (nivel 3).
+- Puertas: `MapData.gate_team` + una rejilla de caminos por equipo (`team_grids`); solo pasa el
+  equipo dueño. Las unidades buscan caminos con `Unit.nav()`.
+- Agua: rejilla aparte (`MapData.water`, `WATER_NAV`). El muelle va en la orilla (3+ casillas de
+  agua junto). Barco pesquero: pesca bancos de peces y trampas, lleva el pescado al muelle y construye
+  las trampas (450 de alimento, se acaban). Barco de guerra: dispara (alcance 7). Por tierra cuerpo a
+  cuerpo no se le puede pegar a un barco.
+- Arqueros en torres: clic derecho en tu torre de guardia; cada uno dispara una flecha más.
+  "Sacar arqueros" en la torre. Si la torre cae, salen.
+- Asedio: ariete (solo edificios, incluso muros y puertas), catapulta (alcance 10, no dispara de
+  cerca, daño en área).
+- Reliquias y maravilla: el santo (monasterio, nivel 3) crea una reliquia en el monasterio (200 de
+  oro, 60 s, el santo junto al monasterio). Aparece en un lugar al azar del mapa (igual en todos los
+  equipos en línea: `Game.sim_rng`). Cualquier santo la recoge; si muere, cae al suelo. Llevada a la
+  maravilla (una por jugador) queda guardada; si la maravilla cae, las reliquias caen alrededor.
+  Con 3 reliquias empieza una cuenta atrás de 6 min (`Defs.WONDER_TIME`) que ven todos; al terminar
+  gana ese equipo.
+- Bots: herrería, universidad, monasterio, taller y mejoras de la herrería y torres; todavía no usan
+  barcos, muros ni maravilla.
+- Pruebas: `tests/rasgos_check.tscn` (puertas, torres, mejoras, barcos, asedio, reliquias, maravilla,
+  bots largos). Desarrollo: `--era=5 --techs=a,b --edificio=maravilla --unidad=catapulta --reliquia`.

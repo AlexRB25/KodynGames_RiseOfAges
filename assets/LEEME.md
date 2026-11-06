@@ -18,10 +18,12 @@ assets/
 └── civs/<civilizacion>/         mexica, maya, purepecha, zapoteca, tolteca
     ├── eras/nivel1..5.png       (opcional) insignias propias de esa civilización
     ├── unidades/<unidad>/nivel1..5.png
-    │      aldeano, guerrero, lancero, arquero, jinete, barco_pesca, barco_guerra
+    │      aldeano, guerrero, lancero, arquero, jinete, santo, ariete, catapulta,
+    │      barco_pesca, barco_guerra
     └── edificios/<edificio>/nivel1..5.png
-           centro, casa, maderero, minero, molino, granja, cuartel, arqueria,
-           establo, torre, muralla, puerta, mercado, templo, castillo, muelle
+           centro, casa, maderero, minero, molino, granja, corral, muelle, trampa,
+           cuartel, arqueria, establo, torre, muralla, puerta, mercado, herreria,
+           monasterio, universidad, castillo, taller, maravilla
 ```
 
 ## Ejemplos
@@ -79,3 +81,9 @@ Los personajes (aldeanos, guerreros) todavía son figuras hechas por código. Co
 ## Si no quieres acomodarlo tú
 
 Déjalo todo suelto en una carpeta (como `Downloads/Rise of Ages`) y dime. Yo lo recorto y lo acomodo aquí. Las hojas originales que mandaste quedaron en `arte_referencias/`.
+
+## Torre, muro y puerta
+
+Cambian con las mejoras, no solo con la era: la torre es puesto de avanzada → torre de guardia →
+mejorada → bombarda; el muro es empalizada → piedra → fortificado → púas (igual la puerta). Por
+ahora se dibujan por código; cuando haya arte, cada nivel puede tener su imagen o modelo.

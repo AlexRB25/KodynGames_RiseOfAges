@@ -55,7 +55,7 @@ func _think() -> void:
 			continue
 		if u.is_villager():
 			vills.append(u)
-		else:
+		elif u.is_military() and not u.is_naval():
 			army.append(u)
 	var home := centro.center()
 	# ¿Ahorrar para la siguiente era? (requisitos de edificios ya cumplidos)
@@ -129,10 +129,18 @@ func _think() -> void:
 		_build("torre", home, vills, 5, 9)
 	if p.age >= 3 and g.count_buildings(pid, ["establo"], false) == 0:
 		_build("establo", home, vills, 7, 16)
-	if p.age >= 3 and g.count_buildings(pid, ["templo"], false) == 0:
-		_build("templo", home, vills, 6, 14)
-	if p.age >= 2 and vills.size() >= 20 and g.count_buildings(pid, ["centro"], false) < 2:
+	if p.age >= 3 and g.count_buildings(pid, ["monasterio"], false) == 0:
+		_build("monasterio", home, vills, 6, 14)
+	if p.age >= 3 and vills.size() >= 20 and g.count_buildings(pid, ["centro"], false) < 2:
 		_build("centro", home, vills, 14, 24)
+	if p.age >= 2 and vills.size() >= 18 and g.count_buildings(pid, ["herreria"], false) == 0 and p.res["madera"] > 250:
+		_build("herreria", home, vills, 7, 16)
+	if p.age >= 3 and vills.size() >= 24 and g.count_buildings(pid, ["universidad"], false) == 0 and p.res["madera"] > 300:
+		_build("universidad", home, vills, 7, 16)
+	if p.age >= 4 and vills.size() >= 26 and g.count_buildings(pid, ["taller"], false) == 0 and p.res["madera"] > 350:
+		_build("taller", home, vills, 7, 16)
+	if not saving:
+		_research(vills.size() >= diff["villagers"])
 
 	# 5. Eras
 	if g.age_block_reason(pid, centro) == "":
@@ -145,7 +153,8 @@ func _think() -> void:
 			if b.owner_id != pid or not b.complete or b.queue.size() >= 2:
 				continue
 			for k in b.def.get("trains", []):
-				if k == "aldeano":
+				var ud: Dictionary = Defs.UNITS[k]
+				if k == "aldeano" or ud.get("civil", false) or ud.get("naval", false):
 					continue
 				g.train(pid, b, k)
 
@@ -200,6 +209,26 @@ func _rebalance(vills: Array[Unit]) -> void:
 			if t:
 				u.cmd_gather(t)
 				moved += 1
+
+
+## Investigar mejoras cuando sobran recursos (una a la vez por edificio).
+func _research(enough_villagers: bool) -> void:
+	for b in g.buildings:
+		if b.owner_id != pid or not b.complete or b.queue.size() > (1 if b.kind == "centro" else 0):
+			continue
+		if b.kind == "centro" and not enough_villagers:
+			continue   # el centro está ocupado haciendo aldeanos
+		for t in Defs.TECHS:
+			var d: Dictionary = Defs.TECHS[t]
+			if d["at"] != b.kind or t.begins_with("muro"):
+				continue
+			# Que no se coma lo que necesita para entrenar y crecer.
+			var rich := true
+			for r in d["cost"]:
+				if p.res.get(r, 0.0) < float(d["cost"][r]) + 150.0:
+					rich = false
+			if rich and g.research_tech(pid, b, t):
+				return
 
 
 func _use_market() -> void:
@@ -261,7 +290,7 @@ func _build(k: String, near: Vector2, vills: Array[Unit], rmin: int, rmax: int) 
 	var b := g.place_building(pid, k, tile)
 	if b == null:
 		return
-	var builders := 2 if k in ["centro", "cuartel", "arqueria", "establo", "templo", "torre"] else 1
+	var builders := 2 if k in ["centro", "cuartel", "arqueria", "establo", "monasterio", "torre", "herreria", "universidad", "taller"] else 1
 	var sorted := vills.duplicate()
 	sorted.sort_custom(func(a: Unit, c: Unit) -> bool:
 		return _builder_score(a, b) < _builder_score(c, b))

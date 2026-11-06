@@ -17,6 +17,8 @@ var defeated := false
 var seeds := 0
 var prices := {"comida": 100.0, "madera": 100.0, "piedra": 100.0}
 var start_tile := Vector2i.ZERO
+var techs := {}                # mejoras investigadas (id -> true)
+var wonder_t := -1.0           # cuenta atrás de su maravilla (-1 = no corre)
 var stats := {"recolectado": 0.0, "entrenados": 0, "muertes": 0, "bajas": 0, "edificios": 0}
 
 

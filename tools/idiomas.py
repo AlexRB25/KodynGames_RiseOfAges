@@ -24,6 +24,8 @@ CONSTS = [
     ("scripts/core/defs.gd", "ANIMALS", ["name"]),
     ("scripts/core/defs.gd", "UNITS", ["name", "desc"]),
     ("scripts/core/defs.gd", "BUILDINGS", ["name", "desc"]),
+    ("scripts/core/defs.gd", "LEVELS", ["name"]),
+    ("scripts/core/defs.gd", "TECHS", ["name", "desc"]),
     ("scripts/core/defs.gd", "AGES", "ages"),
     ("scripts/core/defs.gd", "DIFFICULTY", ["name"]),
     ("scripts/core/defs.gd", "MAP_TYPES", ["name", "desc"]),

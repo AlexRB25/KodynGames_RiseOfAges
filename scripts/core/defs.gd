@@ -55,6 +55,8 @@ const SEED_COST := {"madera": 60}   # 1 siembra = 1 granja
 const SOW_TIME := 10.0              # segundos de trabajo para sembrar
 
 ## Unidades. "from" = edificio que la entrena.
+## naval: va por el agua. fisher: barco que pesca y pone trampas. civil: no pelea.
+## siege: máquina de asedio. only_buildings: solo ataca edificios. splash: daño en área.
 const UNITS := {
 	"aldeano": {"name": "Aldeano", "hp": 25.0, "atk": 3.0, "armor": 0.0, "range": 0.0, "cd": 1.5,
 		"speed": 2.0, "sight": 7, "cost": {"comida": 50}, "time": 12.0, "from": "centro", "villager": true,
@@ -67,17 +69,33 @@ const UNITS := {
 		"bonus_vs": {"jinete": 12.0}, "desc": "Barato. Mucho daño contra jinetes."},
 	"arquero": {"name": "Arquero", "hp": 32.0, "atk": 5.0, "armor": 0.0, "range": 6.0, "cd": 1.8,
 		"speed": 2.0, "sight": 8, "cost": {"madera": 40, "oro": 30}, "time": 20.0, "from": "arqueria", "age": 2,
-		"desc": "Ataca a distancia."},
+		"desc": "Ataca a distancia. Puede meterse en una torre de guardia y disparar desde ahí."},
 	"jinete": {"name": "Jinete", "hp": 110.0, "atk": 9.0, "armor": 1.0, "range": 0.0, "cd": 1.6,
-		"speed": 3.2, "sight": 8, "cost": {"comida": 80, "oro": 60}, "time": 26.0, "from": "establo", "age": 3,
+		"speed": 3.2, "sight": 8, "cost": {"comida": 80, "oro": 60}, "time": 26.0, "from": "establo", "age": 2,
 		"desc": "Rápido y resistente. Débil contra lanceros."},
+	"santo": {"name": "Santo", "hp": 30.0, "atk": 0.0, "armor": 0.0, "range": 0.0, "cd": 1.0,
+		"speed": 1.8, "sight": 9, "cost": {"oro": 100}, "time": 30.0, "from": "monasterio", "age": 3, "civil": true,
+		"heal": 1.0, "desc": "Cura a tus unidades cercanas. Crea reliquias en el monasterio y las lleva a la maravilla."},
+	"ariete": {"name": "Ariete", "hp": 200.0, "atk": 28.0, "armor": 3.0, "range": 0.0, "cd": 3.0,
+		"speed": 1.2, "sight": 5, "cost": {"madera": 160, "oro": 75}, "time": 35.0, "from": "taller", "age": 4,
+		"siege": true, "only_buildings": true, "desc": "Tumba puertas, muros y edificios. No ataca a las unidades."},
+	"catapulta": {"name": "Catapulta", "hp": 70.0, "atk": 26.0, "armor": 0.0, "range": 10.0, "cd": 5.0,
+		"speed": 1.0, "sight": 10, "cost": {"madera": 200, "oro": 120}, "time": 40.0, "from": "taller", "age": 4,
+		"siege": true, "splash": 1.4, "min_range": 3.0, "desc": "Lanza piedras muy lejos: daña en área y destroza edificios. No dispara de cerca."},
+	"barco_pesca": {"name": "Barco pesquero", "hp": 60.0, "atk": 0.0, "armor": 0.0, "range": 0.0, "cd": 1.0,
+		"speed": 2.4, "sight": 7, "cost": {"madera": 75}, "time": 20.0, "from": "muelle", "naval": true,
+		"fisher": true, "civil": true, "desc": "Pesca en el mar y en las trampas para peces. Lleva el pescado al muelle y construye las trampas."},
+	"barco_guerra": {"name": "Barco de guerra", "hp": 130.0, "atk": 6.0, "armor": 1.0, "range": 7.0, "cd": 2.0,
+		"speed": 2.6, "sight": 9, "cost": {"madera": 110, "oro": 40}, "time": 28.0, "from": "muelle", "age": 2,
+		"naval": true, "desc": "Dispara a barcos, unidades y edificios cerca del agua."},
 }
 
 ## Edificios. size = lado en casillas. drop = recursos que acepta.
+## Torre, muralla y puerta suben de nivel con mejoras (ver LEVELS).
 const BUILDINGS := {
-	"centro": {"name": "Centro", "age": 2, "size": 4, "hp": 1500.0, "cost": {"madera": 275, "piedra": 100}, "time": 120.0,
+	"centro": {"name": "Centro urbano", "age": 3, "size": 4, "hp": 1500.0, "cost": {"madera": 275, "piedra": 100}, "time": 120.0,
 		"sight": 10, "drop": ["comida", "madera", "oro", "piedra"], "pop": 5, "trains": ["aldeano"],
-		"atk": 5.0, "range": 7.0, "cd": 2.0, "desc": "Edificio principal: recibe todos los recursos, entrena aldeanos y avanza de era. Da 5 de población. Si te quedas sin centros, pierdes."},
+		"atk": 5.0, "range": 7.0, "cd": 2.0, "desc": "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes."},
 	"casa": {"name": "Casa", "size": 2, "hp": 400.0, "cost": {"madera": 30}, "time": 20.0, "sight": 4, "pop": 5,
 		"desc": "+5 de población máxima."},
 	"maderero": {"name": "Campamento maderero", "size": 2, "hp": 500.0, "cost": {"madera": 100}, "time": 25.0,
@@ -92,24 +110,104 @@ const BUILDINGS := {
 	"granja": {"name": "Granja", "size": 2, "hp": 300.0, "cost": {}, "time": 8.0, "sight": 2,
 		"walkable": true, "food": 250.0, "seed": true,
 		"desc": "Ocupa 4 cuadros y gasta 1 siembra (se compra en el Centro). El granjero siembra, luego cosecha 250 de alimento. Si tienes siembras guardadas, se resiembra sola."},
+	"muelle": {"name": "Muelle", "size": 3, "hp": 1000.0, "cost": {"madera": 150}, "time": 35.0, "sight": 6,
+		"dock": true, "drop": ["comida"], "trains": ["barco_pesca", "barco_guerra"],
+		"desc": "Se construye en la orilla. Entrena barcos pesqueros y de guerra, recibe el pescado y desde aquí se ponen las trampas para peces."},
+	"trampa": {"name": "Trampa para peces", "size": 2, "hp": 250.0, "cost": {"madera": 90}, "time": 15.0, "sight": 2,
+		"walkable": true, "water": true, "food": 450.0, "needs": "muelle", "builder": "barco_pesca", "hidden": true,
+		"desc": "Va en el agua. Un barco pesquero la construye y la pesca: da 450 de alimento."},
 	"cuartel": {"name": "Cuartel", "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
 		"trains": ["guerrero", "lancero"], "desc": "Entrena guerreros y lanceros."},
-	"arqueria": {"name": "Arquería", "age": 2, "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
+	"arqueria": {"name": "Galería de tiro con arco", "age": 2, "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
 		"trains": ["arquero"], "needs": "cuartel", "desc": "Entrena arqueros."},
-	"establo": {"name": "Establo", "age": 3, "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
+	"establo": {"name": "Establo", "age": 2, "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
 		"trains": ["jinete"], "needs": "cuartel", "desc": "Entrena jinetes."},
-	"torre": {"name": "Torre", "age": 2, "size": 2, "hp": 900.0, "cost": {"madera": 25, "piedra": 125}, "time": 45.0,
-		"sight": 9, "atk": 6.0, "range": 7.0, "cd": 2.0, "desc": "Dispara flechas a los enemigos cercanos."},
-	"muralla": {"name": "Muralla", "size": 1, "hp": 700.0, "cost": {"piedra": 5}, "time": 6.0, "sight": 2,
-		"wall": true, "desc": "Arrastra para trazar una línea de muralla."},
+	"torre": {"name": "Puesto de avanzada", "size": 2, "hp": 500.0, "cost": {"madera": 25, "piedra": 25}, "time": 30.0,
+		"sight": 11, "atk": 3.0, "range": 6.0, "cd": 2.5, "levels": "torre",
+		"desc": "Vigía: ve muy lejos y lanza flechas débiles. Sube a torre de guardia con mejoras."},
+	"muralla": {"name": "Empalizada", "size": 1, "hp": 300.0, "cost": {"madera": 4}, "time": 4.0, "sight": 2,
+		"wall": true, "levels": "muralla", "desc": "Arrastra para trazar una línea de muro. Sube a muro de piedra con mejoras."},
+	"puerta": {"name": "Portón de madera", "size": 1, "hp": 350.0, "cost": {"madera": 10}, "time": 6.0, "sight": 2,
+		"wall": true, "gate": true, "levels": "puerta",
+		"desc": "Va dentro del muro: tus unidades y las de tu equipo pasan, las enemigas no. Arrastra para poner varias."},
 	"mercado": {"name": "Mercado", "age": 2, "size": 3, "hp": 1200.0, "cost": {"madera": 175}, "time": 50.0, "sight": 6,
 		"market": true, "desc": "Compra y vende alimento, madera y piedra a cambio de oro. Los precios cambian con cada trato."},
-	"templo": {"name": "Templo", "age": 3, "size": 3, "hp": 1500.0, "cost": {"piedra": 175, "oro": 50}, "time": 60.0,
-		"sight": 7, "heal": 1.5, "desc": "Cura poco a poco a tus unidades cercanas."},
+	"herreria": {"name": "Herrería", "age": 2, "size": 3, "hp": 1200.0, "cost": {"madera": 150}, "time": 40.0, "sight": 6,
+		"desc": "Investiga mejoras de ataque y armadura para tu ejército."},
+	"monasterio": {"name": "Monasterio", "age": 3, "size": 3, "hp": 1500.0, "cost": {"piedra": 175, "oro": 50}, "time": 60.0,
+		"sight": 7, "heal": 1.5, "trains": ["santo"],
+		"desc": "Cura poco a poco a tus unidades cercanas. Entrena santos y, con un santo a su lado, crea reliquias."},
+	"universidad": {"name": "Universidad", "age": 3, "size": 3, "hp": 1300.0, "cost": {"madera": 200, "piedra": 100}, "time": 60.0,
+		"sight": 6, "desc": "Investiga mejoras de muros, torres y edificios."},
 	"castillo": {"name": "Castillo", "age": 4, "size": 4, "hp": 4000.0, "cost": {"piedra": 650}, "time": 150.0,
 		"sight": 11, "atk": 10.0, "range": 8.0, "cd": 1.2, "pop": 10,
 		"desc": "Fortaleza de piedra: dispara a los enemigos y da 10 de población."},
+	"taller": {"name": "Taller de maquinaria de asedio", "age": 4, "size": 3, "hp": 1300.0, "cost": {"madera": 200, "oro": 50}, "time": 50.0,
+		"sight": 6, "trains": ["ariete", "catapulta"], "desc": "Construye arietes y catapultas."},
+	"maravilla": {"name": "Maravilla", "age": 5, "size": 6, "hp": 6000.0, "cost": {"madera": 1000, "piedra": 1000, "oro": 1000}, "time": 400.0,
+		"sight": 10, "wonder": true,
+		"desc": "Lleva aquí 3 reliquias con tus santos. Con las 3 dentro empieza una cuenta atrás: si sigue en pie al terminar, ganas la partida."},
 }
+
+## Niveles de torre, muralla y puerta. El nivel lo dan las mejoras investigadas (tech).
+## Cada nivel cambia nombre y números; lo que no dice, se toma del edificio.
+const LEVELS := {
+	"torre": [
+		{"name": "Puesto de avanzada"},
+		{"tech": "torre_guardia", "name": "Torre de guardia", "hp": 900.0, "atk": 6.0, "range": 7.0, "cd": 2.0, "garrison": 3, "sight": 10},
+		{"tech": "torre_mejorada", "name": "Torre de guardia mejorada", "hp": 1400.0, "atk": 7.0, "range": 8.0, "cd": 1.8, "garrison": 6, "sight": 10},
+		{"tech": "torre_bombarda", "name": "Torre bombarda", "hp": 1800.0, "atk": 20.0, "range": 9.0, "cd": 3.0, "garrison": 6, "splash": 1.5, "sight": 10},
+	],
+	"muralla": [
+		{"name": "Empalizada"},
+		{"tech": "muro_piedra", "name": "Muro de piedra", "hp": 900.0, "cost": {"piedra": 5}, "time": 6.0},
+		{"tech": "muro_fortificado", "name": "Muro fortificado", "hp": 1600.0, "cost": {"piedra": 5}, "time": 6.0},
+		{"tech": "muro_puas", "name": "Muro de púas", "hp": 1800.0, "cost": {"piedra": 6}, "time": 7.0, "thorns": 2.5},
+	],
+	"puerta": [
+		{"name": "Portón de madera"},
+		{"tech": "muro_piedra", "name": "Puerta de piedra", "hp": 1000.0, "cost": {"piedra": 10}, "time": 8.0},
+		{"tech": "muro_fortificado", "name": "Puerta fortificada", "hp": 1700.0, "cost": {"piedra": 10}, "time": 8.0},
+		{"tech": "muro_puas", "name": "Puerta de púas", "hp": 1900.0, "cost": {"piedra": 12}, "time": 9.0, "thorns": 2.5},
+	],
+}
+
+## Mejoras que se investigan en un edificio ("at"). Una vez cada una.
+## melee/ranged/armor/bld_hp: lo que suman. Las de torre y muro cambian el nivel (LEVELS).
+const TECHS := {
+	"muro_piedra": {"name": "Muro de piedra", "at": "centro", "age": 2, "cost": {"piedra": 150, "madera": 100}, "time": 40.0,
+		"desc": "La empalizada pasa a muro de piedra y el portón a puerta de piedra (los que ya tienes también)."},
+	"torre_guardia": {"name": "Torre de guardia", "at": "centro", "age": 2, "cost": {"madera": 100, "piedra": 100}, "time": 40.0,
+		"desc": "Los puestos de avanzada pasan a torres de guardia: más vida y daño, y les caben 3 arqueros que disparan desde arriba."},
+	"forja": {"name": "Forja", "at": "herreria", "age": 2, "cost": {"comida": 150, "oro": 50}, "time": 40.0, "melee": 1.0,
+		"desc": "+1 de ataque a guerreros, lanceros y jinetes."},
+	"arcos": {"name": "Arcos reforzados", "at": "herreria", "age": 2, "cost": {"comida": 100, "madera": 50}, "time": 40.0, "ranged": 1.0,
+		"desc": "+1 de ataque a arqueros, torres y barcos de guerra."},
+	"escudos": {"name": "Escudos de cuero", "at": "herreria", "age": 2, "cost": {"comida": 100, "oro": 40}, "time": 40.0, "armor": 1.0,
+		"desc": "+1 de armadura a tu ejército."},
+	"forja2": {"name": "Armas de obsidiana", "at": "herreria", "age": 3, "cost": {"comida": 220, "oro": 120}, "time": 55.0, "melee": 1.0, "needs": "forja",
+		"desc": "+1 más de ataque cuerpo a cuerpo."},
+	"arcos2": {"name": "Flechas de obsidiana", "at": "herreria", "age": 3, "cost": {"comida": 200, "oro": 100}, "time": 55.0, "ranged": 1.0, "needs": "arcos",
+		"desc": "+1 más de ataque a distancia."},
+	"escudos2": {"name": "Armadura de algodón", "at": "herreria", "age": 3, "cost": {"comida": 200, "oro": 100}, "time": 55.0, "armor": 1.0, "needs": "escudos",
+		"desc": "+1 más de armadura a tu ejército."},
+	"muro_fortificado": {"name": "Muro fortificado", "at": "universidad", "age": 3, "cost": {"piedra": 250, "oro": 100}, "time": 60.0, "needs": "muro_piedra",
+		"desc": "Muros y puertas de piedra pasan a fortificados: casi el doble de vida."},
+	"torre_mejorada": {"name": "Torre de guardia mejorada", "at": "universidad", "age": 3, "cost": {"piedra": 200, "oro": 100}, "time": 60.0, "needs": "torre_guardia",
+		"desc": "Las torres de guardia duran más, disparan más lejos y les caben 6 arqueros."},
+	"albanileria": {"name": "Albañilería", "at": "universidad", "age": 3, "cost": {"madera": 150, "piedra": 150}, "time": 50.0, "bld_hp": 0.15,
+		"desc": "+15 % de vida a todos tus edificios."},
+	"muro_puas": {"name": "Muro de púas", "at": "universidad", "age": 5, "cost": {"piedra": 400, "oro": 200}, "time": 70.0, "needs": "muro_fortificado",
+		"desc": "Muros y puertas lastiman poco a poco a los enemigos que se les pegan."},
+	"torre_bombarda": {"name": "Torre bombarda", "at": "universidad", "age": 5, "cost": {"piedra": 300, "oro": 300}, "time": 70.0, "needs": "torre_mejorada",
+		"desc": "Las torres dejan las flechas: lanzan bombas que dañan en área (los arqueros de adentro siguen disparando)."},
+}
+
+## Reliquias y maravilla.
+const RELIC_COST := {"oro": 200}
+const RELIC_TIME := 60.0          # segundos que tarda el santo en crearla
+const WONDER_RELICS := 3          # reliquias dentro para empezar la cuenta atrás
+const WONDER_TIME := 360.0        # segundos de cuenta atrás para ganar
 
 ## Eras (5). Para avanzar: pagar en el Centro y cumplir los requisitos de edificios.
 ## req: Array de [lista de edificios aceptados, cantidad, texto]
@@ -121,12 +219,43 @@ const AGES := [
 	{"name": "Era de Piedra", "cost": {"comida": 800, "oro": 200}, "time": 90.0,
 		"req": [[["cuartel", "arqueria", "establo"], 2, "2 edificios militares"], [["mercado"], 1, "1 mercado"], [["granja"], 4, "4 granjas"]]},
 	{"name": "Era de los Metales", "cost": {"comida": 1000, "oro": 600}, "time": 110.0,
-		"req": [[["templo"], 1, "1 templo"], [["torre"], 2, "2 torres"], [["centro"], 2, "2 centros"]]},
+		"req": [[["monasterio"], 1, "1 monasterio"], [["torre"], 2, "2 torres"], [["centro"], 2, "2 centros"]]},
 	{"name": "Era Imperial", "cost": {"comida": 1500, "oro": 1000, "piedra": 300}, "time": 140.0,
-		"req": [[["castillo"], 1, "1 castillo"], [["casa"], 12, "12 casas"], [["templo"], 2, "2 templos"]]},
+		"req": [[["castillo"], 1, "1 castillo"], [["casa"], 12, "12 casas"], [["monasterio"], 2, "2 monasterios"]]},
 ]
 const AGE_HP := 0.2   # +20 % de vida a los edificios por cada era
-const BUILD_MENU := ["casa", "maderero", "minero", "molino", "granja", "corral", "cuartel", "arqueria", "establo", "torre", "muralla", "mercado", "centro", "templo", "castillo"]
+
+
+## Nivel de torre/muralla/puerta de un jugador (0 = el básico).
+static func level_of(kind: String, techs: Dictionary) -> int:
+	var lv: String = BUILDINGS.get(kind, {}).get("levels", "")
+	if lv == "":
+		return 0
+	var n := 0
+	var list: Array = LEVELS[lv]
+	for i in range(1, list.size()):
+		if techs.has(list[i]["tech"]):
+			n = i
+	return n
+
+
+## Dato de un edificio según el nivel del jugador (si el nivel no lo cambia, el del edificio).
+static func bstat(kind: String, techs: Dictionary, key: String, default_v = null):
+	var d: Dictionary = BUILDINGS[kind]
+	var lv: String = d.get("levels", "")
+	if lv != "":
+		var l: Dictionary = LEVELS[lv][level_of(kind, techs)]
+		if l.has(key):
+			return l[key]
+	return d.get(key, default_v)
+
+
+## Suma de un efecto de las mejoras investigadas (melee, ranged, armor, bld_hp).
+static func tech_sum(techs: Dictionary, key: String) -> float:
+	var s := 0.0
+	for t in techs:
+		s += float(TECHS.get(t, {}).get(key, 0.0))
+	return s
 
 ## Civilizaciones: se cargan de data/civs/*.json (ver docs/CIVILIZACIONES.md).
 static var CIVS: Dictionary = _load_civs()
@@ -220,6 +349,8 @@ static func cost_of(kind: String, civ: String) -> Dictionary:
 	var c: Dictionary
 	if UNITS.has(kind):
 		c = UNITS[kind]["cost"].duplicate()
+	elif TECHS.has(kind):
+		return TECHS[kind]["cost"].duplicate()
 	else:
 		c = BUILDINGS[kind]["cost"].duplicate()
 	var mult: Dictionary = civ_mod(civ, "cost_mult", {})

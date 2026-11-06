@@ -1,8 +1,9 @@
 class_name Building
 extends Entity
 ## Edificio de un jugador. Empieza como cimiento con andamio; los aldeanos lo
-## levantan. Completo: recibe recursos, entrena unidades, investiga la era,
-## dispara (torre/centro/castillo) o cura (templo). Cambia de aspecto por era.
+## levantan. Completo: recibe recursos, entrena unidades, investiga la era y las
+## mejoras, dispara (torre/centro/castillo) o cura (monasterio). Cambia de aspecto
+## por era; torre, muralla y puerta además por nivel (mejoras).
 
 var def: Dictionary
 var complete := false
@@ -20,6 +21,11 @@ var sow := 0.0               # granjas: avance de la siembra (0..1); en 1 se cos
 var visual: Node3D
 var scaffold: Node3D
 var built_age := 1
+var built_level := 0
+var garrison: Array = []     # arqueros dentro (torres)
+var relics: Array = []       # reliquias guardadas (maravilla)
+var thorn_t := 0.0
+var waiting_santo := false
 var _flag: Node3D
 var _crops: Node3D
 
@@ -33,7 +39,23 @@ func is_static() -> bool:
 
 
 func display_name() -> String:
-	return Lang.t(def["name"])
+	return Lang.t(stat("name", def["name"]))
+
+
+## Dato del edificio según el nivel del dueño (torre, muralla, puerta) o el de siempre.
+func stat(key: String, default_v = null):
+	return Defs.bstat(kind, game.players[owner_id].techs, key, default_v)
+
+
+func level() -> int:
+	return Defs.level_of(kind, game.players[owner_id].techs)
+
+
+## Lugares libres para arqueros dentro (torres de guardia).
+func garrison_space() -> int:
+	if not complete:
+		return 0
+	return int(stat("garrison", 0)) - garrison.size()
 
 
 func blocks() -> bool:
@@ -50,7 +72,7 @@ func init(g: Game, k: String, owner: int, tile: Vector2i, done: bool) -> void:
 	pos = center()
 	position = Vector3(pos.x, MapData.active.tile_h(tile) if MapData.active else 0.0, pos.y)
 	radius = sz * 0.5
-	sight = def["sight"]
+	sight = int(stat("sight", def["sight"]))
 	max_hp = _hp_for_age()
 	food = def.get("food", 0.0)
 	if done:
@@ -60,12 +82,14 @@ func init(g: Game, k: String, owner: int, tile: Vector2i, done: bool) -> void:
 	else:
 		hp = max_hp * 0.1
 	built_age = game.players[owner].age
+	built_level = level()
 	_build_visual()
 
 
 func _hp_for_age() -> float:
-	var base: float = def["hp"] * game.players[owner_id].civ_value("bld_hp", 1.0)
-	return base * (1.0 + Defs.AGE_HP * (game.players[owner_id].age - 1))
+	var p: PlayerState = game.players[owner_id]
+	var base: float = float(stat("hp", def["hp"])) * p.civ_value("bld_hp", 1.0) * (1.0 + Defs.tech_sum(p.techs, "bld_hp"))
+	return base * (1.0 + Defs.AGE_HP * (p.age - 1))
 
 
 ## Llamado por los aldeanos cada paso mientras construyen.
@@ -92,6 +116,18 @@ func on_age_up() -> void:
 		_rebuild_visual()
 
 
+## Se investigó una mejora: vida y aspecto según el nuevo nivel.
+func on_tech() -> void:
+	var old := max_hp
+	max_hp = _hp_for_age()
+	hp += max_hp - old
+	sight = int(stat("sight", def["sight"]))
+	if level() != built_level:
+		built_level = level()
+		if visual:
+			_rebuild_visual()
+
+
 func can_train(k: String) -> bool:
 	return complete and def.get("trains", []).has(k)
 
@@ -105,6 +141,10 @@ func enqueue(k: String) -> void:
 func train_time(k: String) -> float:
 	if k == "era":
 		return Defs.AGES[game.players[owner_id].age]["time"]
+	if k.begins_with("tech:"):
+		return Defs.TECHS[k.trim_prefix("tech:")]["time"]
+	if k == "reliquia":
+		return Defs.RELIC_TIME
 	var t: float = Defs.UNITS[k]["time"]
 	if k != "aldeano":
 		t *= game.players[owner_id].civ_value("mil_train", 1.0)
@@ -134,33 +174,62 @@ func sim(dt: float) -> void:
 	# entrenamiento / investigación
 	if not queue.is_empty():
 		var k: String = queue[0]
-		if k != "era" and not game.has_pop_room(owner_id):
+		var is_unit := Defs.UNITS.has(k)
+		if is_unit and not game.has_pop_room(owner_id):
 			if not waiting_pop:
 				waiting_pop = true
 				game.notify(owner_id, Lang.t("Necesitas más casas para entrenar."), pos)
+		elif k == "reliquia" and game.santo_near(self) == null:
+			# La reliquia la hace un santo: sin santo junto al monasterio, no avanza.
+			if not waiting_santo:
+				waiting_santo = true
+				game.notify(owner_id, Lang.t("Para crear la reliquia necesitas un santo junto al monasterio."), pos)
 		else:
 			waiting_pop = false
+			waiting_santo = false
 			train_t += dt * game.players[owner_id].speed_mult()
 			if train_t >= train_time(k):
 				train_t = 0.0
 				queue.pop_front()
 				if k == "era":
 					game.advance_age(owner_id)
+				elif k.begins_with("tech:"):
+					game.finish_tech(owner_id, k.trim_prefix("tech:"))
+				elif k == "reliquia":
+					game.spawn_relic(owner_id, self)
 				else:
 					game.spawn_trained(self, k)
-	# disparar
-	if def.has("atk"):
+	# disparar (y los arqueros de adentro, una flecha más cada uno)
+	var atk: float = float(stat("atk", 0.0))
+	if atk > 0.0 or not garrison.is_empty():
 		atk_timer -= dt
 		if atk_timer <= 0.0:
-			var en := game.find_enemy_near(self, def["range"])
+			var rng: float = float(stat("range", 7.0))
+			var en := game.find_enemy_near(self, rng)
 			if en:
-				atk_timer = def["cd"]
-				var dmg: float = def["atk"]
-				if kind == "torre":
-					dmg += game.players[owner_id].civ_value("tower_atk", 0.0)
-				game.spawn_projectile(self, en, dmg)
+				atk_timer = float(stat("cd", 2.0))
+				var p: PlayerState = game.players[owner_id]
+				var ranged := Defs.tech_sum(p.techs, "ranged")
+				if atk > 0.0:
+					var dmg := atk
+					if kind == "torre":
+						dmg += p.civ_value("tower_atk", 0.0) + ranged
+					game.spawn_projectile(self, en, dmg, float(stat("splash", 0.0)))
+				for u in garrison:
+					var en2 := game.find_enemy_near(self, rng + 1.0)
+					if en2:
+						game.spawn_projectile(self, en2, float(u.def["atk"]) + ranged, 0.0)
 			else:
 				atk_timer = 0.5
+	# muro de púas: lastima a los enemigos pegados
+	var thorns: float = float(stat("thorns", 0.0))
+	if thorns > 0.0:
+		thorn_t -= dt
+		if thorn_t <= 0.0:
+			thorn_t = 1.0
+			for u in game.units_near(center(), 1.4):
+				if game.is_enemy(owner_id, u.owner_id) and not u.is_naval():
+					u.take_damage(thorns, self)
 	# curar
 	if def.has("heal"):
 		heal_timer -= dt
@@ -172,17 +241,17 @@ func sim(dt: float) -> void:
 					u.refresh_bar()
 
 
-## Granjas: la comida se va acabando.
+## Granjas y trampas para peces: la comida se va acabando.
 func has_resource() -> bool:
-	return kind == "granja" and complete and food > 0.0 and not removed
+	return (kind == "granja" or kind == "trampa") and complete and food > 0.0 and not removed
 
 
 func res_type() -> String:
-	return "comida" if kind == "granja" else ""
+	return "comida" if kind == "granja" or kind == "trampa" else ""
 
 
 func res_group() -> String:
-	return "granja" if kind == "granja" else ""
+	return kind if kind == "granja" or kind == "trampa" else ""
 
 
 func remaining() -> float:
@@ -197,6 +266,13 @@ func sowing() -> bool:
 func take_resource(a: float) -> float:
 	if not has_resource():
 		return 0.0
+	if kind == "trampa":
+		var tt := minf(a, food)
+		food -= tt
+		if food <= 0.0:
+			game.notify(owner_id, Lang.t("Una trampa para peces se vació. Pon otra desde el muelle."), pos)
+			game.destroy_building(self, false)
+		return tt
 	if sow < 1.0:
 		sow = minf(1.0, sow + a / Defs.FARM_RATE / Defs.SOW_TIME)
 		_refresh_crops()
@@ -409,18 +485,119 @@ func _rebuild_visual() -> void:
 						Mat.box(v, Vector3(0.05, 0.4, 1.2), Vector3(x, 0.2, 0.8), wood)
 					Mat.box(v, Vector3(2.6, 0.05, 0.05), Vector3(0, 0.35, 1.4), wood)
 		"torre":
-			var c := wood if age < 3 else stone
-			Mat.box(v, Vector3(1.1, 2.6, 1.1), Vector3(0, 1.3, 0), c)
-			Mat.box(v, Vector3(1.4, 0.3, 1.4), Vector3(0, 2.7, 0), c.lightened(0.1))
-			var tr := Mat.cyl(v, 0.0, 1.0, 0.7, Vector3(0, 3.2, 0), roof_c, 4)
-			tr.rotation.y = PI * 0.25
-			Mat.box(v, Vector3(1.12, 0.15, 1.12), Vector3(0, 2.2, 0), team)
-		"muralla":
-			var c := wood if age < 2 else stone
-			Mat.box(v, Vector3(1.0, 1.3, 1.0), Vector3(0, 0.65, 0), c)
-			Mat.box(v, Vector3(0.3, 0.25, 0.3), Vector3(0.3, 1.42, 0.3), c.lightened(0.08))
-			Mat.box(v, Vector3(0.3, 0.25, 0.3), Vector3(-0.3, 1.42, -0.3), c.lightened(0.08))
-		"templo":
+			var lv := level()
+			if lv == 0:
+				# puesto de avanzada: plataforma de madera sobre cuatro postes
+				for cx in [-0.4, 0.4]:
+					for cz in [-0.4, 0.4]:
+						Mat.box(v, Vector3(0.1, 2.0, 0.1), Vector3(cx, 1.0, cz), wood)
+				Mat.box(v, Vector3(1.1, 0.1, 1.1), Vector3(0, 2.0, 0), wood.lightened(0.1))
+				for z in [-0.5, 0.5]:
+					Mat.box(v, Vector3(1.1, 0.3, 0.05), Vector3(0, 2.2, z), wood)
+				var tr0 := Mat.cyl(v, 0.0, 0.8, 0.5, Vector3(0, 2.6, 0), thatch, 4)
+				tr0.rotation.y = PI * 0.25
+				Mat.box(v, Vector3(0.3, 0.2, 0.03), Vector3(0.2, 2.95, 0), team)
+			else:
+				var c := stone if lv >= 2 else stone.lightened(0.05)
+				var hgt := 2.6 + 0.4 * lv
+				Mat.box(v, Vector3(1.2, hgt, 1.2), Vector3(0, hgt * 0.5, 0), c)
+				Mat.box(v, Vector3(1.5, 0.3, 1.5), Vector3(0, hgt + 0.1, 0), c.lightened(0.1))
+				for cx in [-0.6, 0.6]:
+					for cz in [-0.6, 0.6]:
+						Mat.box(v, Vector3(0.25, 0.25, 0.25), Vector3(cx, hgt + 0.35, cz), c.lightened(0.1))
+				if lv == 3:
+					# bombarda: cañón de bronce asomado
+					var gun := Mat.cyl(v, 0.12, 0.16, 0.9, Vector3(0.6, hgt + 0.3, 0), Color(0.55, 0.42, 0.2), 8)
+					gun.rotation.z = PI * 0.5
+				else:
+					var tr := Mat.cyl(v, 0.0, 1.0, 0.7, Vector3(0, hgt + 0.6, 0), roof_c, 4)
+					tr.rotation.y = PI * 0.25
+				Mat.box(v, Vector3(1.22, 0.15, 1.22), Vector3(0, hgt * 0.8, 0), team)
+		"muralla", "puerta":
+			var lv := level()
+			var c := wood if lv == 0 else (stone if lv == 1 else stone.darkened(0.08))
+			var hgt := 1.3 + 0.2 * lv
+			if kind == "puerta":
+				# dos pilares y un dintel; el hueco se ve abierto
+				for x in [-0.38, 0.38]:
+					Mat.box(v, Vector3(0.24, hgt, 1.0), Vector3(x, hgt * 0.5, 0), c)
+				Mat.box(v, Vector3(1.0, 0.3, 1.0), Vector3(0, hgt - 0.15, 0), c.lightened(0.08))
+				Mat.box(v, Vector3(0.52, hgt - 0.3, 0.08), Vector3(0, (hgt - 0.3) * 0.5, 0), wood.darkened(0.15) if lv == 0 else Color(0.35, 0.3, 0.25))
+				Mat.box(v, Vector3(0.5, 0.08, 0.1), Vector3(0, hgt - 0.5, 0.05), team)
+			elif lv == 0:
+				# empalizada: troncos con punta
+				for x in [-0.33, 0.0, 0.33]:
+					for z in [-0.33, 0.0, 0.33]:
+						if absf(x) + absf(z) > 0.5:
+							continue
+						Mat.cyl(v, 0.13, 0.15, hgt, Vector3(x, hgt * 0.5, z), c.lightened(randf_range(-0.04, 0.04)), 6)
+						Mat.cyl(v, 0.0, 0.13, 0.25, Vector3(x, hgt + 0.12, z), c.lightened(0.1), 6)
+			else:
+				Mat.box(v, Vector3(1.0, hgt, 1.0), Vector3(0, hgt * 0.5, 0), c)
+				Mat.box(v, Vector3(0.3, 0.25, 0.3), Vector3(0.3, hgt + 0.12, 0.3), c.lightened(0.08))
+				Mat.box(v, Vector3(0.3, 0.25, 0.3), Vector3(-0.3, hgt + 0.12, -0.3), c.lightened(0.08))
+				if lv == 3:
+					for a in 6:
+						var sp := Mat.cyl(v, 0.0, 0.05, 0.4, Vector3(0.5 * cos(a), 0.6, 0.5 * sin(a)), Color(0.3, 0.3, 0.32), 4)
+						sp.rotation = Vector3(0, -a, PI * 0.5)
+		"muelle":
+			# plataforma de madera sobre el agua con postes y una caseta
+			Mat.box(v, Vector3(s * 0.96, 0.15, s * 0.96), Vector3(0, 0.08, 0), wood.lightened(0.1))
+			for cx in [-1, 1]:
+				for cz in [-1, 1]:
+					Mat.cyl(v, 0.1, 0.1, 0.9, Vector3(cx * s * 0.45, -0.25, cz * s * 0.45), wood.darkened(0.2), 6)
+			Mat.box(v, Vector3(1.4, 0.9, 1.2), Vector3(-0.5, 0.6, -0.5), wall_c)
+			Mat.roof(v, Vector3(1.6, 0.5, 1.4), Vector3(-0.5, 1.3, -0.5), roof_c)
+			Mat.box(v, Vector3(0.6, 0.3, 0.4), Vector3(0.7, 0.3, 0.7), Color(0.35, 0.55, 0.7))
+			Mat.box(v, Vector3(1.42, 0.1, 1.22), Vector3(-0.5, 1.0, -0.5), team)
+		"trampa":
+			# cerco de varas en el agua
+			var hs2 := s * 0.45
+			for i in 8:
+				var t2 := -hs2 + i * (hs2 * 2.0 / 7.0)
+				for side in [Vector3(t2, 0, -hs2), Vector3(t2, 0, hs2), Vector3(-hs2, 0, t2), Vector3(hs2, 0, t2)]:
+					Mat.box(v, Vector3(0.06, 0.6, 0.06), side + Vector3(0, 0.1, 0), wood)
+			for z in [-hs2, hs2]:
+				Mat.box(v, Vector3(s * 0.9, 0.04, 0.04), Vector3(0, 0.3, z), wood.lightened(0.1))
+			Mat.box(v, Vector3(s * 0.85, 0.02, s * 0.85), Vector3(0, 0.0, 0), Color(0.28, 0.42, 0.45))
+			Mat.box(v, Vector3(0.25, 0.05, 0.04), Vector3(hs2, 0.45, 0), team)
+		"herreria":
+			Mat.box(v, Vector3(s * 0.85, 0.9, s * 0.75), Vector3(0, 0.45, -0.1), wall_c)
+			Mat.roof(v, Vector3(s * 0.95, 0.55, s * 0.85), Vector3(0, 1.15, -0.1), roof_c)
+			Mat.box(v, Vector3(0.5, 1.6, 0.5), Vector3(0.8, 1.0, -0.6), stone.darkened(0.15))   # chimenea
+			Mat.box(v, Vector3(0.5, 0.3, 0.3), Vector3(0.2, 0.15, 1.1), Color(0.25, 0.25, 0.28))  # yunque
+			Mat.box(v, Vector3(0.3, 0.2, 0.3), Vector3(-0.6, 0.1, 1.1), Color(0.9, 0.4, 0.1))    # brasas
+			Mat.box(v, Vector3(s * 0.86, 0.1, s * 0.76), Vector3(0, 0.82, -0.1), team)
+		"universidad":
+			Mat.box(v, Vector3(s * 0.9, 0.2, s * 0.9), Vector3(0, 0.1, 0), stone)
+			Mat.box(v, Vector3(s * 0.75, 1.1, s * 0.6), Vector3(0, 0.75, -0.2), wall_c)
+			for x in [-0.9, -0.3, 0.3, 0.9]:
+				Mat.cyl(v, 0.12, 0.12, 1.1, Vector3(x, 0.75, 0.55), stone.lightened(0.1), 8)
+			Mat.box(v, Vector3(s * 0.85, 0.2, s * 0.8), Vector3(0, 1.4, 0), stone.lightened(0.05))
+			Mat.cyl(v, 0.0, 0.7, 0.6, Vector3(0, 1.8, -0.2), roof_c, 8)
+			Mat.box(v, Vector3(s * 0.86, 0.08, s * 0.81), Vector3(0, 1.3, 0), team)
+		"taller":
+			Mat.box(v, Vector3(s * 0.8, 0.8, s * 0.6), Vector3(-0.2, 0.4, -0.3), wall_c)
+			Mat.roof(v, Vector3(s * 0.9, 0.5, s * 0.7), Vector3(-0.2, 1.05, -0.3), roof_c)
+			Mat.box(v, Vector3(s * 0.81, 0.1, s * 0.61), Vector3(-0.2, 0.75, -0.3), team)
+			# rueda grande y viga de catapulta
+			var wh := Mat.cyl(v, 0.45, 0.45, 0.1, Vector3(0.9, 0.45, 0.9), wood.darkened(0.2), 10)
+			wh.rotation.x = PI * 0.5
+			Mat.box(v, Vector3(1.4, 0.1, 0.1), Vector3(0.3, 0.6, 1.0), wood, Vector3(0, 0, 0.4))
+		"maravilla":
+			# gran pirámide escalonada con templo dorado
+			for i in 6:
+				var w2 := s * (0.98 - i * 0.14)
+				Mat.box(v, Vector3(w2, 0.6, w2), Vector3(0, 0.3 + i * 0.6, 0), stone.lightened(0.03 * i))
+			var top2 := 6 * 0.6
+			var st2 := Mat.box(v, Vector3(4.2, 0.15, 1.2), Vector3(s * 0.25, top2 * 0.5, 0), stone.darkened(0.15))
+			st2.rotation.z = -atan2(top2, s * 0.5)
+			Mat.box(v, Vector3(1.4, 1.0, 1.4), Vector3(0, top2 + 0.5, 0), Look.GOLD)
+			Mat.roof(v, Vector3(1.7, 0.7, 1.7), Vector3(0, top2 + 1.35, 0), roof_c)
+			Mat.box(v, Vector3(s * 0.99, 0.2, s * 0.99), Vector3(0, 0.6, 0), team)
+			for r in relics.size():
+				Mat.box(v, Vector3(0.3, 0.3, 0.3), Vector3(-0.6 + r * 0.6, top2 + 0.15, 0.9), Look.GOLD.lightened(0.2))
+		"monasterio":
 			for i in 4:
 				var w := s * (0.95 - i * 0.2)
 				Mat.box(v, Vector3(w, 0.4, w), Vector3(0, 0.2 + i * 0.4, 0), stone.lightened(0.05 * i))
@@ -438,12 +615,14 @@ func _rebuild_visual() -> void:
 		_:
 			Mat.box(v, Vector3(s * 0.9, 1.0, s * 0.9), Vector3(0, 0.5, 0), wall_c)
 	# Bandera del jugador
-	if kind in ["centro", "cuartel", "arqueria", "establo", "castillo", "templo", "mercado"]:
+	if kind in ["centro", "cuartel", "arqueria", "establo", "castillo", "monasterio", "mercado", "herreria", "universidad", "taller", "maravilla"]:
 		var h := 1.0 + s * 0.3
 		if kind == "centro":
 			h = 0.6
 		if kind == "castillo":
 			h = 3.6
+		if kind == "maravilla":
+			h = 5.5
 		var base_y := 0.0
 		var fx := -s * 0.4
 		if kind == "centro":

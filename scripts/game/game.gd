@@ -13,7 +13,9 @@ var units: Array[Unit] = []
 var buildings: Array[Building] = []
 var animals: Array[Animal] = []
 var resources: Array[ResourceNode] = []
+var relics: Array[Relic] = []
 var projectiles: Array = []
+var sim_rng := RandomNumberGenerator.new()   # azar de la simulación (igual en todos los equipos en línea)
 var bots: Array = []
 var local_id := 0
 var time := 0.0
@@ -121,6 +123,7 @@ func start_match() -> void:
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
+	sim_rng.seed = seed_v * 31 + 7
 	for n in plan["nodes"]:
 		spawn_resource(n["kind"], n["tile"], rng.randi())
 	for a in plan["animals"]:
@@ -189,20 +192,22 @@ func _dev_args() -> void:
 				camera.dist = float(v[2])
 				camera.target_dist = float(v[2])
 		elif a.begins_with("--edificio="):
-			# Desarrollo: --edificio=templo:1  pone ese edificio terminado junto al centro del jugador 1.
+			# Desarrollo: --edificio=monasterio:1  pone ese edificio terminado junto al centro del jugador 1.
 			var parts := a.get_slice("=", 1).split(":")
 			var who := int(parts[1]) if parts.size() > 1 else local_id
 			var ec := main_center(who).center()
 			var eb: Building = null
-			for r in range(7, 18):
-				for k in 16:
-					var t := MapData.to_tile(ec + Vector2.from_angle(TAU * k / 16.0) * r)
+			var far := 70 if Defs.BUILDINGS[parts[0]].get("dock", false) or Defs.BUILDINGS[parts[0]].get("water", false) else 18
+			for r in range(7, far):
+				for k in 32:
+					var t := MapData.to_tile(ec + Vector2.from_angle(TAU * k / 32.0) * r)
 					if eb == null and can_place(who, parts[0], t):
 						eb = spawn_building(parts[0], who, t, true)
 			if eb:
+				print("edificio en ", eb.rect)
 				camera.focus(eb.center())
-				camera.dist = 16.0
-				camera.target_dist = 16.0
+				camera.dist = maxf(16.0, eb.def["size"] * 4.0)
+				camera.target_dist = camera.dist
 				controller.set_selection([eb])
 		elif a == "--corral":
 			# Desarrollo: un corral junto a tu centro con las cabras cercanas pastando.
@@ -306,6 +311,37 @@ func _dev_args() -> void:
 			for b in hud.menu_panel.find_children("*", "Button", true, false):
 				if b.text == Lang.t("Rendirse"):
 					b.pressed.emit()
+		elif a.begins_with("--techs="):
+			# Desarrollo: --techs=torre_guardia,muro_piedra  da esas mejoras al jugador local.
+			for t in a.get_slice("=", 1).split(","):
+				if Defs.TECHS.has(t):
+					finish_tech(local_id, t)
+		elif a.begins_with("--era="):
+			# Desarrollo: --era=5  sube al jugador local a esa era.
+			while players[local_id].age < int(a.get_slice("=", 1)):
+				advance_age(local_id)
+		elif a.begins_with("--unidad="):
+			# Desarrollo: --unidad=catapulta  pone una junto al centro (barcos: en el agua más cercana).
+			var uk := a.get_slice("=", 1)
+			var uc := main_center(local_id).center() + Vector2(5, 3)
+			var nv := MapData.WATER_NAV if Defs.UNITS[uk].get("naval", false) else 0
+			var ut := map.nearest_free(MapData.to_tile(uc), 60, nv)
+			var nu := spawn_unit(uk, local_id, MapData.center(ut))
+			recount_pop(local_id)
+			camera.focus(nu.pos)
+			camera.dist = 12.0
+			camera.target_dist = 12.0
+			controller.set_selection([nu])
+		elif a == "--reliquia":
+			# Desarrollo: una reliquia junto a tu centro.
+			var rl := Relic.new()
+			rl.init(self, MapData.center(map.nearest_free(MapData.to_tile(main_center(local_id).center() + Vector2(5, -2)))))
+			relics.append(rl)
+			_register(rl)
+			camera.focus(rl.pos)
+			camera.dist = 9.0
+			camera.target_dist = 9.0
+			controller.set_selection([rl])
 		elif a == "--rendirse":
 			# Ver la pantalla final (y el premio de la partida).
 			_defeat(local_id, true)
@@ -374,6 +410,8 @@ func spawn_building(k: String, owner: int, tile: Vector2i, done: bool) -> Buildi
 	var b := Building.new()
 	b.init(self, k, owner, tile, done)
 	map.occupy(b.rect, b, b.blocks())
+	if b.def.get("gate", false):
+		map.set_gate(tile, team_of(owner))
 	if b.blocks():
 		_push_units_out(b.rect)
 	buildings.append(b)
@@ -406,8 +444,7 @@ func release_static(e: Entity, clear_owner: bool) -> void:
 			var i := map.idx(t)
 			if map.solid[i] > 0:
 				map.solid[i] -= 1
-				if map.solid[i] == 0 and not map.ground_blocks(i):
-					map.astar.set_point_solid(t, false)
+				map.refresh_tile(t)
 			if clear_owner and map.ent[i] == e:
 				map.ent[i] = null
 
@@ -433,7 +470,19 @@ func destroy_building(b: Building, by_attack: bool) -> void:
 	b.dead = true
 	b.removed = true
 	map.release(b.rect, b, b.blocks())
+	if b.def.get("gate", false):
+		map.set_gate(b.rect.position, 0)
 	buildings.erase(b)
+	# Los arqueros de adentro salen; las reliquias de la maravilla caen alrededor.
+	for u in b.garrison.duplicate():
+		u._leave_garrison()
+	b.garrison.clear()
+	for i in b.relics.size():
+		var rl: Relic = b.relics[i]
+		rl.drop_at(b.center() + Vector2.from_angle(TAU * i / maxf(1, b.relics.size())) * (b.def["size"] * 0.5 + 1.5))
+	b.relics.clear()
+	if b.def.get("wonder", false):
+		players[b.owner_id].wonder_t = -1.0
 	if b.worker:
 		b.worker = null
 	if controller:
@@ -469,7 +518,11 @@ func on_animal_killed(_a: Animal) -> void:
 func on_building_complete(b: Building) -> void:
 	recount_pop(b.owner_id)
 	players[b.owner_id].stats["edificios"] += 1
-	if b.kind != "muralla" and b.kind != "granja":
+	if b.def.get("wonder", false):
+		for q in players:
+			if q.id != b.owner_id:
+				notify(q.id, Lang.t("%s terminó una maravilla. Si lleva 3 reliquias, empezará la cuenta atrás.") % players[b.owner_id].name, b.pos)
+	if not b.kind in ["muralla", "puerta", "granja"]:
 		notify(b.owner_id, Lang.t("%s terminado.") % b.display_name(), b.pos)
 	if hud:
 		hud.refresh_selection()
@@ -513,6 +566,8 @@ func _process(delta: float) -> void:
 		u.render(alpha, delta)
 	for a in animals:
 		a.render(alpha, delta)
+	for r in relics:
+		r.render(delta)
 	for b in buildings:
 		b.tick_bar(delta)
 	_render_projectiles(delta)
@@ -570,6 +625,9 @@ func step() -> void:
 		a.sim(dt)
 	for b in buildings.duplicate():
 		b.sim(dt)
+	for r in relics:
+		r.sim(dt)
+	_sim_wonders(dt)
 	_sim_projectiles(dt)
 	for bot in bots:
 		bot.tick(dt)
@@ -606,7 +664,9 @@ func _update_fog() -> void:
 			src.append([a.pos, 3.0])
 	fog.update(src)
 	for u in units:
-		if team_of(u.owner_id) != lt:
+		if u.garrison_in:
+			u.visible = false
+		elif team_of(u.owner_id) != lt:
 			u.visible = fog.is_visible(u.pos)
 	for a in animals:
 		a.visible = fog.is_visible(a.pos) or (a.dead and fog.is_explored_rect(Rect2i(MapData.to_tile(a.pos), Vector2i.ONE))) \
@@ -618,10 +678,14 @@ func _update_fog() -> void:
 			b.visible = b.seen_once
 	for r in resources:
 		r.visible = fog.is_explored_rect(r.rect)
+	for rl in relics:
+		if rl.on_ground():
+			rl.visible = fog.is_visible(rl.pos) or fog.is_explored_rect(Rect2i(MapData.to_tile(rl.pos), Vector2i.ONE))
 
 
 ## Regla: pierde quien se queda sin ningún Centro terminado. El centro más
-## antiguo que siga en pie es el "principal".
+## antiguo que siga en pie es el "principal". También gana quien mantiene su
+## maravilla con 3 reliquias hasta que termina la cuenta atrás.
 func _check_victory() -> void:
 	if over:
 		return
@@ -630,6 +694,12 @@ func _check_victory() -> void:
 			continue
 		if main_center(p.id) == null:
 			_defeat(p.id)
+	for p in players:
+		if not p.defeated and p.wonder_t == 0.0:
+			for q in players:
+				if not q.defeated and q.team != p.team:
+					q.defeated = true
+					notify(local_id, Lang.t("La maravilla de %s cumplió su cuenta atrás.") % p.name, Vector2.INF)
 	var teams_alive := {}
 	for p in players:
 		if not p.defeated:
@@ -675,17 +745,18 @@ func _defeat(pid: int, resigned := false) -> void:
 
 # ---------------- proyectiles ----------------
 
-func spawn_projectile(src: Entity, target: Entity, dmg: float) -> void:
+func spawn_projectile(src: Entity, target: Entity, dmg: float, splash := 0.0) -> void:
 	var from := src.center()
 	var h := 1.0 if src is Unit else 2.0
 	var pr := {"p": from, "h": h, "target": target, "dmg": dmg, "src": src, "t": 0.0, "node": null,
-		"start": from, "dur": maxf(0.15, from.distance_to(target.center()) / 14.0)}
+		"start": from, "dur": maxf(0.15, from.distance_to(target.center()) / (14.0 if splash <= 0.0 else 9.0)),
+		"splash": splash, "owner": src.owner_id, "end": target.center()}
 	if not headless and (fog.is_visible(from) or fog.is_visible(target.center())):
 		var mi := MeshInstance3D.new()
 		var m := BoxMesh.new()
-		m.size = Vector3(0.5, 0.04, 0.04)
+		m.size = Vector3(0.5, 0.04, 0.04) if splash <= 0.0 else Vector3(0.22, 0.22, 0.22)
 		mi.mesh = m
-		mi.material_override = Mat.flat(Color(0.25, 0.18, 0.1))
+		mi.material_override = Mat.flat(Color(0.25, 0.18, 0.1) if splash <= 0.0 else Color(0.2, 0.2, 0.22))
 		_world.add_child(mi)
 		pr["node"] = mi
 	projectiles.append(pr)
@@ -696,8 +767,15 @@ func _sim_projectiles(dt: float) -> void:
 		pr["t"] += dt
 		if pr["t"] >= pr["dur"]:
 			var t: Entity = pr["target"]
+			var src: Entity = pr["src"] if is_instance_valid(pr["src"]) else null
 			if Entity.live(t):
-				t.take_damage(pr["dmg"], pr["src"] if is_instance_valid(pr["src"]) else null)
+				pr["end"] = t.center()
+				t.take_damage(pr["dmg"], src)
+			# Bomba o piedra: también lastima a los enemigos de alrededor.
+			if pr["splash"] > 0.0:
+				for u in units_near(pr["end"], pr["splash"]):
+					if u != t and is_enemy(pr["owner"], u.owner_id) and u.garrison_in == null:
+						u.take_damage(pr["dmg"] * 0.5, src)
 			if pr["node"]:
 				pr["node"].queue_free()
 			projectiles.erase(pr)
@@ -740,12 +818,16 @@ func units_near(p: Vector2, r: float) -> Array[Unit]:
 
 
 ## Enemigo más cercano a una entidad (prefiere unidades; luego edificios).
+## Una unidad solo busca lo que puede atacar (los arietes, solo edificios).
 func find_enemy_near(e: Entity, r: float) -> Entity:
 	var best: Entity = null
 	var best_d := INF
 	var c := e.center()
+	var me: Unit = e as Unit
 	for u in units:
-		if u.dead or not is_enemy(e.owner_id, u.owner_id):
+		if u.dead or u.garrison_in or not is_enemy(e.owner_id, u.owner_id):
+			continue
+		if me and not me.can_hit(u):
 			continue
 		var d := e.dist_to(u.pos) if e is Building else u.pos.distance_to(c)
 		if d <= r and d < best_d:
@@ -753,8 +835,9 @@ func find_enemy_near(e: Entity, r: float) -> Entity:
 			best = u
 	if best or e is Building:
 		return best
+	var siege := me != null and me.is_siege()
 	for b in buildings:
-		if b.dead or not is_enemy(e.owner_id, b.owner_id) or b.kind == "muralla":
+		if b.dead or not is_enemy(e.owner_id, b.owner_id) or (b.def.get("wall", false) and not siege) or b.def.get("hidden", false):
 			continue
 		var d := b.dist_to(c)
 		if d <= r and d < best_d:
@@ -783,9 +866,9 @@ func find_resource_near(group: String, p: Vector2, r: float, owner: int, exclude
 					if d < best_d:
 						best_d = d
 						best = a
-		"granja":
+		"granja", "trampa":
 			for b in buildings:
-				if b.kind != "granja" or b.owner_id != owner or b == exclude or not b.has_resource():
+				if b.kind != group or b.owner_id != owner or b == exclude or not b.has_resource():
 					continue
 				if b.worker != null and b.worker != asker and Entity.live(b.worker):
 					continue
@@ -813,11 +896,14 @@ func find_resource_near(group: String, p: Vector2, r: float, owner: int, exclude
 	return best
 
 
-func nearest_dropoff(owner: int, rt: String, p: Vector2) -> Building:
+## Edificio más cercano que recibe ese recurso (los barcos, solo en un muelle).
+func nearest_dropoff(owner: int, rt: String, p: Vector2, naval := false) -> Building:
 	var best: Building = null
 	var best_d := INF
 	for b in buildings:
 		if b.owner_id != owner or not b.complete or b.dead:
+			continue
+		if naval and not b.def.get("dock", false):
 			continue
 		if not b.def.get("drop", []).has(rt):
 			continue
@@ -891,6 +977,22 @@ func notify(owner: int, text: String, p: Vector2) -> void:
 
 # ---------------- construcción, entrenamiento y eras ----------------
 
+## Nombre de un edificio para un jugador (torre, muralla y puerta cambian con su nivel).
+func building_name(owner: int, k: String) -> String:
+	return Lang.t(Defs.bstat(k, players[owner].techs, "name", Defs.BUILDINGS[k]["name"]))
+
+
+## Costo de un edificio para un jugador (según su nivel y su civilización).
+func build_cost(owner: int, k: String) -> Dictionary:
+	var p := players[owner]
+	var c: Dictionary = Defs.bstat(k, p.techs, "cost", Defs.BUILDINGS[k]["cost"]).duplicate()
+	var mult: Dictionary = Defs.civ_mod(p.civ, "cost_mult", {})
+	if mult.has(k):
+		for r in c:
+			c[r] = roundi(c[r] * float(mult[k]))
+	return c
+
+
 ## Devuelve "" si se puede, o el motivo por el que no.
 func build_block_reason(owner: int, k: String) -> String:
 	var d: Dictionary = Defs.BUILDINGS[k]
@@ -901,16 +1003,30 @@ func build_block_reason(owner: int, k: String) -> String:
 		return Lang.t("No tienes siembras. Cómpralas en el Centro.")
 	if d.has("needs") and count_buildings(owner, [d["needs"]]) == 0:
 		return Lang.t("Requiere %s.") % Lang.t(Defs.BUILDINGS[d["needs"]]["name"])
-	if not p.can_afford(Defs.cost_of(k, p.civ)):
+	if d.get("wonder", false) and count_buildings(owner, [k], false) > 0:
+		return Lang.t("Solo puedes tener una maravilla.")
+	if not p.can_afford(build_cost(owner, k)):
 		return Lang.t("Faltan recursos.")
 	return ""
 
 
 func can_place(owner: int, k: String, tile: Vector2i) -> bool:
-	var sz: int = Defs.BUILDINGS[k]["size"]
+	var d: Dictionary = Defs.BUILDINGS[k]
+	var sz: int = d["size"]
 	var r := Rect2i(tile, Vector2i(sz, sz))
+	if d.get("water", false):
+		# En el agua (trampa para peces).
+		for y in range(r.position.y, r.end.y):
+			for x in range(r.position.x, r.end.x):
+				if not map.is_open_water(Vector2i(x, y)):
+					return false
+		return true
 	if not map.rect_open(r):
 		return false
+	if d.get("dock", false):
+		# En la orilla: al menos 3 casillas de agua libres junto al muelle.
+		if map.ring_around(r, MapData.WATER_NAV).size() < 3:
+			return false
 	for u in units:
 		if not u.dead and u.owner_id != owner and r.has_point(MapData.to_tile(u.pos)):
 			return false
@@ -934,7 +1050,7 @@ func _rect_explored(r: Rect2i) -> bool:
 func place_building(owner: int, k: String, tile: Vector2i) -> Building:
 	if build_block_reason(owner, k) != "" or not can_place(owner, k, tile):
 		return null
-	players[owner].pay(Defs.cost_of(k, players[owner].civ))
+	players[owner].pay(build_cost(owner, k))
 	if Defs.BUILDINGS[k].get("seed", false):
 		players[owner].seeds -= 1
 	return spawn_building(k, owner, tile, false)
@@ -953,6 +1069,8 @@ func train_block_reason(owner: int, b: Building, k: String) -> String:
 	var p := players[owner]
 	if not b.can_train(k):
 		return Lang.t("Este edificio no lo entrena.")
+	if Defs.UNITS[k].get("naval", false) and map.ring_around(b.rect, MapData.WATER_NAV).is_empty():
+		return Lang.t("No hay agua libre junto al muelle.")
 	if Defs.UNITS[k].get("age", 1) > p.age:
 		return Lang.t("Requiere el nivel %d (%s).") % [Defs.UNITS[k]["age"], Lang.t(Defs.AGES[Defs.UNITS[k]["age"] - 1]["name"])]
 	if b.queue.size() >= 10:
@@ -973,15 +1091,20 @@ func train(owner: int, b: Building, k: String) -> bool:
 func refund(owner: int, k: String, _b: Building) -> void:
 	if k == "era":
 		players[owner].give(Defs.AGES[players[owner].age]["cost"])
+	elif k.begins_with("tech:"):
+		players[owner].give(Defs.TECHS[k.trim_prefix("tech:")]["cost"])
+	elif k == "reliquia":
+		players[owner].give(Defs.RELIC_COST)
 	else:
 		players[owner].give(Defs.cost_of(k, players[owner].civ))
 
 
 func spawn_trained(b: Building, k: String) -> void:
 	var toward := b.rally if b.rally != Vector2.INF else b.center() + Vector2(b.def["size"], b.def["size"])
-	var cands := map.ring_around(b.rect)
+	var nv := MapData.WATER_NAV if Defs.UNITS[k].get("naval", false) else 0
+	var cands := map.ring_around(b.rect, nv)
 	if cands.is_empty():
-		cands = [map.nearest_free(MapData.to_tile(b.center()), 30)]
+		cands = [map.nearest_free(MapData.to_tile(b.center()), 30, nv)]
 	cands.sort_custom(func(x: Vector2i, y: Vector2i) -> bool:
 		return MapData.center(x).distance_squared_to(toward) < MapData.center(y).distance_squared_to(toward))
 	var u := spawn_unit(k, b.owner_id, MapData.center(cands[0]))
@@ -1049,6 +1172,155 @@ func advance_age(owner: int) -> void:
 		hud.refresh_selection()
 
 
+# ---------------- mejoras, reliquias y maravilla ----------------
+
+## "" si se puede investigar esa mejora en ese edificio, o el motivo.
+func tech_block_reason(owner: int, b: Building, t: String) -> String:
+	var d: Dictionary = Defs.TECHS.get(t, {})
+	var p := players[owner]
+	if d.is_empty() or b == null or b.kind != d["at"] or not b.complete:
+		return Lang.t("Se investiga en: %s.") % Lang.t(Defs.BUILDINGS[d.get("at", "centro")]["name"])
+	if p.techs.has(t):
+		return Lang.t("Ya la investigaste.")
+	if int(d["age"]) > p.age:
+		return Lang.t("Requiere el nivel %d (%s).") % [d["age"], Lang.t(Defs.AGES[int(d["age"]) - 1]["name"])]
+	if d.has("needs") and not p.techs.has(d["needs"]):
+		return Lang.t("Primero investiga: %s.") % Lang.t(Defs.TECHS[d["needs"]]["name"])
+	for bb in buildings:
+		if bb.owner_id == owner and bb.queue.has("tech:" + t):
+			return Lang.t("Ya se está investigando.")
+	if b.queue.size() >= 10:
+		return Lang.t("La cola está llena.")
+	if not p.can_afford(d["cost"]):
+		return Lang.t("Faltan recursos.")
+	return ""
+
+
+func research_tech(owner: int, b: Building, t: String) -> bool:
+	if b == null or b.owner_id != owner or tech_block_reason(owner, b, t) != "":
+		return false
+	players[owner].pay(Defs.TECHS[t]["cost"])
+	b.enqueue("tech:" + t)
+	return true
+
+
+func finish_tech(owner: int, t: String) -> void:
+	var p := players[owner]
+	if p.techs.has(t):
+		return
+	p.techs[t] = true
+	for b in buildings:
+		if b.owner_id == owner:
+			b.on_tech()
+	notify(owner, Lang.t("Mejora lista: %s.") % Lang.t(Defs.TECHS[t]["name"]), Vector2.INF)
+	if hud:
+		Thumbs.clear()
+		hud.refresh_selection()
+
+
+## Santo tuyo junto al edificio (para crear reliquias).
+func santo_near(b: Building) -> Unit:
+	for u in units:
+		if u.owner_id == b.owner_id and u.kind == "santo" and not u.dead and u.garrison_in == null and b.dist_to(u.pos) <= 3.0:
+			return u
+	return null
+
+
+func relic_block_reason(owner: int, b: Building) -> String:
+	if b == null or b.kind != "monasterio" or not b.complete or b.owner_id != owner:
+		return Lang.t("Las reliquias se crean en el monasterio.")
+	if b.queue.has("reliquia"):
+		return Lang.t("Ya se está creando una reliquia.")
+	if santo_near(b) == null:
+		return Lang.t("Necesitas un santo junto al monasterio.")
+	if not players[owner].can_afford(Defs.RELIC_COST):
+		return Lang.t("Faltan recursos.")
+	return ""
+
+
+func make_relic(owner: int, b: Building) -> bool:
+	if relic_block_reason(owner, b) != "":
+		return false
+	players[owner].pay(Defs.RELIC_COST)
+	b.enqueue("reliquia")
+	return true
+
+
+## La reliquia aparece en un lugar al azar del mapa (en tierra, lejos de las orillas).
+func spawn_relic(owner: int, b: Building) -> Relic:
+	var t := Vector2i(-1, -1)
+	for i in 400:
+		var c := Vector2i(sim_rng.randi_range(4, map.w - 5), sim_rng.randi_range(4, map.h - 5))
+		if map.is_free(c) and map.reserved[map.idx(c)] == 0:
+			t = c
+			break
+	if t.x < 0:
+		t = map.nearest_free(MapData.to_tile(b.center()))
+	var rl := Relic.new()
+	rl.init(self, MapData.center(t))
+	relics.append(rl)
+	_register(rl)
+	notify(owner, Lang.t("¡Tu santo creó una reliquia! Apareció en algún lugar del mapa: búscala y llévala a tu maravilla."), rl.pos)
+	for q in players:
+		if q.id != owner:
+			notify(q.id, Lang.t("Apareció una reliquia en el mapa. Un santo puede llevarla a una maravilla."), rl.pos)
+	_update_fog()
+	return rl
+
+
+func own_wonder(owner: int) -> Building:
+	for b in buildings:
+		if b.owner_id == owner and b.def.get("wonder", false) and b.complete and not b.dead:
+			return b
+	return null
+
+
+## El santo deja la reliquia dentro de la maravilla.
+func store_relic(w: Building, rl: Relic) -> void:
+	if rl == null:
+		return
+	rl.carrier = null
+	rl.wonder = w
+	rl.pos = w.center()
+	w.relics.append(rl)
+	if w.visual:
+		w._rebuild_visual()
+	notify(w.owner_id, Lang.t("Reliquia guardada en tu maravilla (%d / %d).") % [w.relics.size(), Defs.WONDER_RELICS], w.pos)
+
+
+## Cuenta atrás de las maravillas con todas sus reliquias.
+func _sim_wonders(dt: float) -> void:
+	for p in players:
+		if p.defeated:
+			continue
+		var w := own_wonder(p.id)
+		var ready := w != null and w.relics.size() >= Defs.WONDER_RELICS
+		if not ready:
+			if p.wonder_t >= 0.0:
+				p.wonder_t = -1.0
+				notify(local_id, Lang.t("Se detuvo la cuenta atrás de la maravilla de %s.") % p.name, Vector2.INF)
+			continue
+		if p.wonder_t < 0.0:
+			p.wonder_t = Defs.WONDER_TIME
+			for q in players:
+				if q.id == p.id:
+					notify(q.id, Lang.t("¡Tu maravilla tiene sus 3 reliquias! Si sigue en pie %d minutos, ganas.") % int(Defs.WONDER_TIME / 60.0), w.pos)
+				else:
+					notify(q.id, Lang.t("¡%s empezó la cuenta atrás de su maravilla! Destrúyela antes de %d minutos.") % [p.name, int(Defs.WONDER_TIME / 60.0)], w.pos)
+		p.wonder_t = maxf(0.0, p.wonder_t - dt)
+		if p.wonder_t == 0.0:
+			_vic_t = 0.0
+
+
+## La cuenta atrás de maravilla que más pronto termina: {name, t, mine} o {}.
+func wonder_countdown() -> Dictionary:
+	var best := {}
+	for p in players:
+		if not p.defeated and p.wonder_t >= 0.0 and (best.is_empty() or p.wonder_t < best["t"]):
+			best = {"name": p.name, "t": p.wonder_t, "mine": team_of(p.id) == team_of(local_id)}
+	return best
+
+
 # ---------------- mercado ----------------
 
 const MARKET_LOT := 100.0
@@ -1088,16 +1360,46 @@ func command_units(list: Array, target: Entity, point: Vector2, queue: bool) -> 
 	for u in list:
 		if not (u is Unit) or u.dead:
 			continue
+		if u.garrison_in:
+			u._leave_garrison()
+		# Santo: reliquia del suelo o llevarla a tu maravilla.
+		if u.kind == "santo" and target is Relic and target.on_ground():
+			u.cmd_relic(target)
+			continue
+		if u.kind == "santo" and u.relic and target is Building and target.owner_id == u.owner_id and target.def.get("wonder", false) and target.complete:
+			u.cmd_relic(target)
+			continue
+		# Arquero: entrar a una torre de guardia tuya con lugar.
+		if u.kind == "arquero" and target is Building and target.owner_id == u.owner_id and target.garrison_space() > 0:
+			u.cmd_garrison(target)
+			continue
+		# Barco pesquero: pescar en bancos de peces y trampas, o construir trampas.
+		if u.is_fisher() and Entity.valid(target):
+			if target is Building and target.owner_id == u.owner_id and target.kind == "trampa":
+				if not target.complete:
+					u.cmd_build(target, queue)
+				else:
+					u.cmd_gather(target)
+				continue
+			if target is ResourceNode and target.kind == "pesca" and target.has_resource():
+				u.cmd_gather(target)
+				continue
+			if target is Building and target.owner_id == u.owner_id and target.def.get("dock", false) and u.carry > 0.0:
+				u.cmd_drop(target)
+				continue
 		if Entity.live(target) or (Entity.valid(target) and target.has_resource()):
 			# Aldeano + cabra o guajolote vivo que no es tuyo = pastorearlo (también para robarlo).
 			if u.is_villager() and target is Animal and not target.dead and target.tame and target.owner_id != u.owner_id:
 				u.cmd_herd(target)
 				continue
 			if is_enemy(u.owner_id, target.owner_id):
-				u.cmd_attack(target)
+				if u.can_hit(target):
+					u.cmd_attack(target)
+					continue
+				movers.append(u)
 				continue
 			if target is Building and target.owner_id == u.owner_id:
-				if u.is_villager():
+				if u.is_villager() and not target.def.get("water", false):
 					if not target.complete:
 						u.cmd_build(target, queue)
 						continue
@@ -1109,7 +1411,7 @@ func command_units(list: Array, target: Entity, point: Vector2, queue: bool) -> 
 						continue
 				movers.append(u)
 				continue
-			if target.has_resource() or target is Animal:
+			if (target.has_resource() or target is Animal) and not u.is_naval():
 				u.cmd_gather(target)
 				continue
 		movers.append(u)
@@ -1138,7 +1440,7 @@ func _group_move(list: Array[Unit], point: Vector2) -> void:
 		var col := i % cols
 		var off := side * (col - (cols - 1) * 0.5) * spacing - dir * row * spacing
 		var dest := point + off if n > 1 else point
-		if not map.is_free(MapData.to_tile(dest)):
+		if not map.is_free(MapData.to_tile(dest), list[i].nav()):
 			dest = point
 		list[i].cmd_move(dest)
 
@@ -1238,12 +1540,13 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 					placed.append(b)
 			if placed.is_empty():
 				return
+			var fisher := String(Defs.BUILDINGS[k].get("builder", "aldeano")) == "barco_pesca"
 			var vills: Array[Unit] = []
 			for u in _own_units(pid, c.get("u", [])):
-				if u.is_villager():
+				if (u.is_fisher() if fisher else u.is_villager()):
 					vills.append(u)
 			if vills.is_empty():
-				var near := nearest_villager(pid, placed[0].center())
+				var near := nearest_villager(pid, placed[0].center(), fisher)
 				if near:
 					vills.append(near)
 			for i in placed.size():
@@ -1265,6 +1568,19 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 				b = main_center(pid)
 			if b:
 				research_age(pid, b)
+		"research":
+			var b := _own_building(pid, c.get("e", 0))
+			if b:
+				research_tech(pid, b, String(c.get("t", "")))
+		"relic":
+			var b := _own_building(pid, c.get("e", 0))
+			if b:
+				make_relic(pid, b)
+		"eject":
+			var b := _own_building(pid, c.get("e", 0))
+			if b:
+				for u in b.garrison.duplicate():
+					u._leave_garrison()
 		"seed":
 			buy_seed(pid)
 		"buy":
@@ -1288,12 +1604,12 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 			_check_victory()
 
 
-## Aldeano más cercano de un jugador (prefiere los que no tienen tarea).
-func nearest_villager(pid: int, p: Vector2) -> Unit:
+## Aldeano (o barco pesquero) más cercano de un jugador (prefiere los que no tienen tarea).
+func nearest_villager(pid: int, p: Vector2, fisher := false) -> Unit:
 	var best: Unit = null
 	var bd := INF
 	for u in units:
-		if u.owner_id != pid or not u.is_villager() or u.dead:
+		if u.owner_id != pid or u.dead or not (u.is_fisher() if fisher else u.is_villager()):
 			continue
 		var d := u.pos.distance_to(p)
 		if not u.is_idle():

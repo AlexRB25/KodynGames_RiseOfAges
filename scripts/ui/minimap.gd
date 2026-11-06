@@ -81,6 +81,11 @@ func _refresh() -> void:
 			var c := game.players[u.owner_id].color
 			_put(buf, t, c, w)
 			_put(buf, t + Vector2i(1, 0), c, w)
+	for rl in game.relics:
+		if rl.visible and rl.wonder == null:
+			var rt := MapData.to_tile(rl.pos)
+			for d in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]:
+				_put(buf, rt + d, Color(1.0, 0.85, 0.2), w)
 	img.set_data(w, w, false, Image.FORMAT_RGB8, buf)
 	tex.update(img)
 

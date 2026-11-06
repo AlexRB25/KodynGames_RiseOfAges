@@ -111,6 +111,13 @@ func pick(sp: Vector2) -> Entity:
 		if d < bd:
 			bd = d
 			best = a
+	for rl in game.relics:
+		if not rl.visible or not rl.on_ground():
+			continue
+		var d := _screen_of(rl.pos, 0.3).distance_to(sp)
+		if d < bd:
+			bd = d
+			best = rl
 	if best:
 		return best
 	var g := cam().screen_to_ground(sp)
@@ -405,7 +412,7 @@ func _key(ev: InputEventKey) -> void:
 func idle_villagers() -> Array[Unit]:
 	var out: Array[Unit] = []
 	for u in game.units:
-		if u.owner_id == game.local_id and u.is_villager() and u.is_idle():
+		if u.owner_id == game.local_id and u.is_worker() and u.is_idle():
 			out.append(u)
 	return out
 
@@ -423,8 +430,8 @@ func select_next_idle() -> void:
 
 func start_placing(k: String) -> void:
 	var reason := game.build_block_reason(game.local_id, k)
-	if reason == "" and any_villager() == null:
-		reason = Lang.t("No tienes aldeanos.")
+	if reason == "" and any_builder(k) == null:
+		reason = Lang.t("No tienes barcos pesqueros.") if _fisher_build(k) else Lang.t("No tienes aldeanos.")
 	if reason != "":
 		game.hud.notify(reason, Vector2.INF)
 		return
@@ -470,12 +477,29 @@ func action_for(target: Entity) -> String:
 	var us := own_units_selected()
 	if us.is_empty() or target == null:
 		return ""
+	for u in us:
+		if u.kind == "santo" and target is Relic and target.on_ground():
+			return "recolectar"
+		if u.kind == "santo" and u.relic and target is Building and target.owner_id == game.local_id and target.def.get("wonder", false):
+			return "depositar"
+		if u.kind == "arquero" and target is Building and target.owner_id == game.local_id and target.garrison_space() > 0:
+			return "depositar"
+		if u.is_fisher():
+			if target is Building and target.owner_id == game.local_id and target.kind == "trampa":
+				return "pescar" if target.complete else "construir"
+			if target is ResourceNode and target.kind == "pesca":
+				return "pescar"
+	if target is Relic:
+		return ""
 	if target is Animal and not target.dead and target.tame and target.owner_id != game.local_id:
 		for u in us:
 			if u.is_villager():
 				return "pastorear"
 	if target.owner_id >= 0 and game.is_enemy(game.local_id, target.owner_id) and not target.dead:
-		return "atacar"
+		for u in us:
+			if u.can_hit(target):
+				return "atacar"
+		return ""
 	var vill := false
 	var carrying := {}
 	for u in us:
@@ -609,7 +633,7 @@ func _place_wall(sp: Vector2, keep: bool) -> void:
 func _issue_place(k: String, tiles: Array, queue: bool) -> void:
 	var ids: Array = []
 	for u in own_units_selected():
-		if u.is_villager():
+		if (u.is_fisher() if _fisher_build(k) else u.is_villager()):
 			ids.append(u.id)
 	var tl: Array = []
 	for t in tiles:
@@ -620,5 +644,20 @@ func _issue_place(k: String, tiles: Array, queue: bool) -> void:
 func any_villager() -> Unit:
 	for u in game.units:
 		if u.owner_id == game.local_id and u.is_villager() and not u.dead:
+			return u
+	return null
+
+
+## Lo construyen los barcos pesqueros (trampa para peces) en vez de los aldeanos.
+func _fisher_build(k: String) -> bool:
+	return String(Defs.BUILDINGS[k].get("builder", "aldeano")) == "barco_pesca"
+
+
+## Alguien que pueda construir ese edificio.
+func any_builder(k: String) -> Unit:
+	if not _fisher_build(k):
+		return any_villager()
+	for u in game.units:
+		if u.owner_id == game.local_id and u.is_fisher() and not u.dead:
 			return u
 	return null
