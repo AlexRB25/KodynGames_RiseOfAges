@@ -366,11 +366,18 @@ func show_result(win: bool) -> void:
 	rating_label.fit_content = true
 	rating_label.visible = false
 	vb.add_child(rating_label)
+	prize_label = RichTextLabel.new()
+	prize_label.bbcode_enabled = true
+	prize_label.fit_content = true
+	prize_label.visible = false
+	vb.add_child(prize_label)
 	if Net.ranked:
 		rating_label.visible = true
 		rating_label.text = Lang.t("[center]Calculando tus puntos…[/center]")
 		if not Net.last_rated.is_empty():
 			show_rating(Net.last_rated)
+	elif not Setup.online and not Setup.tutorial:
+		_bot_prize(win)
 	var b := Button.new()
 	b.text = Lang.t("Volver al menú")
 	b.pressed.connect(func() -> void:
@@ -382,6 +389,39 @@ func show_result(win: bool) -> void:
 
 
 var rating_label: RichTextLabel
+var prize_label: RichTextLabel
+
+
+## Contra bots: experiencia de temporada y monedas (con tope diario, ver supabase/temporadas.sql).
+func _bot_prize(win: bool) -> void:
+	if not Account.accounts_ready() and not Economy.demo:
+		return
+	prize_label.visible = true
+	prize_label.text = Lang.t("[center]Guardando tu experiencia…[/center]")
+	var d: Dictionary = await Economy.bot_result(win, int(game.time))
+	if not is_instance_valid(prize_label):
+		return
+	if d.is_empty():
+		prize_label.text = Lang.t("[center][color=#cbb894]No se pudo guardar la experiencia (sin conexión).[/color][/center]")
+	elif d.get("why", "") == "off":
+		prize_label.visible = false
+	elif not d.get("ok", false):
+		var why := {"short": Lang.t("Las partidas de menos de 5 minutos no dan experiencia."),
+			"limit": Lang.t("Ya jugaste las partidas contra bots con premio de hoy. Las de con rango siguen dando experiencia."),
+			"soon": Lang.t("Esta partida no dio experiencia: fue muy seguida de la anterior.")}
+		prize_label.text = "[center][color=#cbb894]%s[/color][/center]" % why.get(String(d.get("why", "")), "")
+	else:
+		_show_prize(d)
+
+
+## "+100 xp de temporada · +25 monedas".
+func _show_prize(d: Dictionary) -> void:
+	prize_label.visible = true
+	var t := Lang.t("[center][font_size=20][color=#ffd75a]+%d xp de temporada[/color]  ·  [color=#ffe08a]+%d monedas[/color][/font_size]") % [
+		int(d.get("xp", 0)), int(d.get("coins", 0))]
+	if d.has("tier"):
+		t += "\n" + Lang.t("Game Pass: nivel %d") % int(d["tier"])
+	prize_label.text = t + "[/center]"
 
 
 ## Puntos ganados o perdidos en la partida con rango.
@@ -400,6 +440,9 @@ func show_rating(m: Dictionary) -> void:
 	if bool(m.get("forfeit", false)):
 		txt += Lang.t("\n(el rival abandonó la partida)")
 	rating_label.text = txt + "[/center]"
+	if m.get("prize") is Dictionary and prize_label:
+		_show_prize(m["prize"])
+		Economy.refresh()
 
 
 var _drag_line: Line2D

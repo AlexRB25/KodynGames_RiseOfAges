@@ -7,6 +7,7 @@ const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const Pagos = require('./pagos');
 
 const PORT = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, 'public');
@@ -78,8 +79,17 @@ function serveStatic(req, res) {
 const server = http.createServer((req, res) => {
   if (req.url === '/salud') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ ok: true, salas: rooms.size, cuentas: ACCOUNTS,
+    return res.end(JSON.stringify({ ok: true, salas: rooms.size, cuentas: ACCOUNTS, tienda: !!process.env.STRIPE_SECRET_KEY,
       en_cola: Object.values(queues).reduce((s, q) => s + q.length, 0) }));
+  }
+  // Tienda: comprar gemas con Stripe (server/pagos.js).
+  const route = (req.url || '').split('?')[0];
+  if (req.method === 'POST' && (route === '/api/checkout' || route === '/api/stripe')) {
+    const fn = route === '/api/checkout' ? pagos.checkout : pagos.webhook;
+    return fn(req, res).catch(e => {
+      console.log(route, e.message);
+      if (!res.headersSent) { res.writeHead(500); res.end(); }
+    });
   }
   serveStatic(req, res);
 });
@@ -343,6 +353,8 @@ function rpc(fn, args) {
   return supa('/rest/v1/rpc/' + fn, { method: 'POST', body: JSON.stringify(args) });
 }
 
+const pagos = Pagos.create({ supa, rpc, accounts: ACCOUNTS });
+
 // Quién es y cuántos puntos tiene. Con Supabase se verifica la sesión del jugador.
 async function identify(m) {
   const name = clean(m.name, 16) || 'Jugador';
@@ -362,6 +374,11 @@ async function enqueue(ws, m) {
   dequeue(ws);
   const who = await identify(m);
   if (ws.readyState !== 1) return;
+  const civ = clean(m.civ, 24) || 'mexica';
+  // Civilizaciones de temporada o de la tienda: solo quien las tiene.
+  if (ACCOUNTS && !(await rpc('roa_can_use_civ', { p_user: who.uid, p_civ: civ }).catch(() => true))) {
+    return send(ws, { t: 'error', msg: 'Todavía no tienes esa civilización.' });
+  }
   // La misma cuenta no puede estar dos veces en la cola.
   for (const k in queues) {
     for (const e of queues[k].filter(e => e.uid === who.uid)) {
@@ -370,7 +387,7 @@ async function enqueue(ws, m) {
     }
     queues[k] = queues[k].filter(e => e.uid !== who.uid);
   }
-  const entry = { ws, uid: who.uid, name: who.name, points: who.points, civ: clean(m.civ, 24) || 'mexica', since: Date.now() };
+  const entry = { ws, uid: who.uid, name: who.name, points: who.points, civ, since: Date.now() };
   queues[mode].push(entry);
   ws.queued = mode;
   send(ws, { t: 'queued', mode, points: who.points, level: level(who.points), name: who.name,
@@ -464,12 +481,25 @@ async function finishRanked(room, forcedWinner) {
   } catch (e) {
     console.log(`[${room.code}] no se guardaron los puntos:`, e.message);
   }
+  // Experiencia de temporada y monedas (aparte de los puntos de rango). Quien abandona no gana nada.
+  const prizes = new Map();
+  if (winner != null) {
+    await Promise.all(room.all.filter(x => !leftIds.has(x.uid)).map(async x => {
+      const won = x.team === winner;
+      try {
+        prizes.set(x.uid, ACCOUNTS ? await rpc('roa_award', { p_user: x.uid, p_kind: 'ranked', p_won: won })
+          : { xp: won ? 200 : 80, coins: won ? 60 : 20 });
+      } catch (e) {
+        console.log(`[${room.code}] no se guardó la experiencia:`, e.message);
+      }
+    }));
+  }
   console.log(`[${room.code}] fin con rango: gana equipo ${winner}`,
     results.map(x => `${x.user_id} ${x.delta >= 0 ? '+' : ''}${x.delta}`).join(', '));
   for (const x of room.all) {
     const mine = results.find(rr => rr.user_id === x.uid);
     send(x.ws, {
-      t: 'rated', winner, forfeit: forcedWinner !== undefined, you: mine || null,
+      t: 'rated', winner, forfeit: forcedWinner !== undefined, you: mine || null, prize: prizes.get(x.uid) || null,
       results: room.all.map(o => {
         const rr = results.find(z => z.user_id === o.uid) || {};
         return { slot: o.slot, name: o.name, delta: rr.delta | 0, points: rr.points | 0, level: rr.level || level(rr.points | 0) };

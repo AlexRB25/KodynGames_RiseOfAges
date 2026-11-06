@@ -288,6 +288,10 @@ func _dev_args() -> void:
 			var sc := main_center(int(a.get_slice("=", 1)))
 			if sc:
 				controller.set_selection([sc])
+		elif a == "--rendirse":
+			# Ver la pantalla final (y el premio de la partida).
+			_defeat(local_id, true)
+			_check_victory()
 		elif a.begins_with("--shot="):
 			var path := a.get_slice("=", 1)
 			await get_tree().create_timer(2.5).timeout

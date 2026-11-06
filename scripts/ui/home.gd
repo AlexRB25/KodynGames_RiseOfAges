@@ -1,13 +1,16 @@
 class_name Home
 extends Control
 ## Pantalla principal: tu aldeano nivel 5 de tu civilización favorita (girando en 3D),
-## las formas de juego a la derecha, y arriba tu nivel en línea, Tienda y Configuración.
+## las formas de juego a la derecha con el Game Pass encima, arriba tu tarjeta de perfil,
+## tus monedas y gemas, Tienda y Configuración.
 
 var menu: Node
 var font: Font
 var civ_label: Label
 var civ_desc: Label
-var chip: RichTextLabel
+var card_slot: Control      # tarjeta de perfil (se rehace al cambiar)
+var wallet: HBoxContainer   # monedas y gemas
+var pass_slot: Control      # botón del Game Pass
 var fig_view: CivFigure
 var overlay: Control
 
@@ -23,14 +26,35 @@ func setup(m: Node) -> void:
 	font = load("res://assets/ui/fuentes/LilitaOne-Regular.ttf")
 	_build()
 	Account.changed.connect(_refresh_chip)
+	Economy.changed.connect(_refresh_chip)
+	Economy.message.connect(func(t: String) -> void: Kit.ask(self, Lang.t("Tienda"), t))
 	_refresh_chip()
 	_show_civ()
 	# La primera vez: directo al tutorial (dentro está "Omitir tutorial").
 	if not Account.tutorial_done() and not OS.has_feature("headless") and DisplayServer.get_name() != "headless":
 		menu.start_tutorial.call_deferred()
-	# Si ya jugaste en línea en este equipo, carga tu nivel.
-	if Account.accounts_ready() and Account.refresh_token != "" and not Account.signed_in():
-		Account.sign_in()
+	# Tu cuenta (de invitado si no tienes otra): monedas, gemas, pase y nivel en línea.
+	if Account.accounts_ready() and not Economy.demo:
+		_load_account()
+	# Desarrollo: --abrir=pase|tienda|gemas|perfil abre esa página.
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--abrir="):
+			match a.get_slice("=", 1):
+				"pase":
+					open_pass.call_deferred()
+				"tienda":
+					open_store.call_deferred("articulos")
+				"gemas":
+					open_store.call_deferred("gemas")
+				"perfil":
+					open_profile.call_deferred()
+
+
+func _load_account() -> void:
+	if not Account.signed_in():
+		if await Account.sign_in() != "":
+			return
+	Economy.refresh()
 
 
 # ---------------- estilo ----------------
@@ -113,20 +137,11 @@ func _build() -> void:
 	top.offset_right = -24
 	top.offset_top = 22
 	add_child(top)
-	var chip_panel := PanelContainer.new()
-	chip_panel.add_theme_stylebox_override("panel", _box(Color(0.12, 0.08, 0.05, 0.85), GOLD, 12, 2))
-	top.add_child(chip_panel)
-	chip = RichTextLabel.new()
-	chip.bbcode_enabled = true
-	chip.fit_content = true
-	chip.autowrap_mode = TextServer.AUTOWRAP_OFF
-	chip.custom_minimum_size = Vector2(240, 0)
-	chip.add_theme_font_override("normal_font", font)
-	chip.add_theme_font_size_override("normal_font_size", 20)
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip_panel.add_child(chip)
+	wallet = HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 8)
+	top.add_child(wallet)
 	var shop := art_button(Lang.t("Tienda"), Vector2(140, 58), 24, Color(0.16, 0.42, 0.22))
-	shop.pressed.connect(func() -> void: _soon(Lang.t("Tienda"), Lang.t("Aquí podrás conseguir civilizaciones especiales, vestimentas y estandartes para tu pueblo.\n\nPróximamente.")))
+	shop.pressed.connect(open_store.bind("articulos"))
 	top.add_child(shop)
 	var cfg := art_button(Lang.t("Configuración"), Vector2(200, 58), 24, Color(0.25, 0.22, 0.20))
 	cfg.pressed.connect(_config)
@@ -135,6 +150,11 @@ func _build() -> void:
 		var quit := art_button(Lang.t("Salir"), Vector2(110, 58), 24, Color(0.25, 0.22, 0.20))
 		quit.pressed.connect(func() -> void: get_tree().quit())
 		top.add_child(quit)
+	# Tu tarjeta de perfil, junto al logo (tócala para ver tu colección).
+	card_slot = Control.new()
+	card_slot.position = Vector2(372, 22)
+	card_slot.size = Vector2(420, 96)
+	add_child(card_slot)
 	# Al centro-izquierda: tu aldeano nivel 5 girando sobre un pedestal.
 	var left := VBoxContainer.new()
 	left.anchor_left = 0.08
@@ -165,6 +185,13 @@ func _build() -> void:
 	right.anchor_bottom = 0.92
 	right.add_theme_constant_override("separation", 16)
 	add_child(right)
+	# Encima de las formas de juego: el Game Pass de la temporada.
+	pass_slot = Control.new()
+	pass_slot.anchor_left = 0.62
+	pass_slot.anchor_right = 0.95
+	pass_slot.offset_top = 100
+	pass_slot.offset_bottom = 236
+	add_child(pass_slot)
 	right.add_child(_mode(Lang.t("UN JUGADOR"), Lang.t("Contra bots, de 1 vs 1 hasta 4 vs 4"), func() -> void: menu.open_mode("solo")))
 	right.add_child(_mode(Lang.t("JUGAR CON RANGO"), Lang.t("En línea: te emparejamos con alguien de tu nivel"), func() -> void: menu.open_mode("rango")))
 	right.add_child(_mode(Lang.t("SALA CON AMIGOS"), Lang.t("Crea una sala y comparte el código"), func() -> void: menu.open_mode("amigos")))
@@ -207,16 +234,143 @@ func _show_civ() -> void:
 	fig_view.set_civ(civ)
 
 
-func _refresh_chip() -> void:
+## Nombre que se muestra (el guardado en este equipo o el de la cuenta).
+func player_display_name() -> String:
 	var n := Account.player_name if Account.player_name != "" else String(Account.profile.get("name", ""))
-	var t := "[center]"
-	if n != "":
-		t += "[color=#f5e8c7]%s[/color]  " % n
+	return n if n != "" else Lang.t("Jugador")
+
+
+## "Nivel 3 · 240 pts" en línea, con color.
+func rank_text() -> String:
 	if Account.profile.has("points"):
-		t += Lang.t("[color=#ffd75a]Nivel %d[/color] · %d pts") % [Account.level(), Account.points()]
-	else:
-		t += Lang.t("[color=#cbb894]Nivel en línea: juega con rango[/color]")
-	chip.text = t + "[/center]"
+		return Lang.t("[color=#ffd75a]Nivel %d[/color] · %d pts") % [Account.level(), Account.points()]
+	return Lang.t("[color=#cbb894]Rango: juega en línea[/color]")
+
+
+func _refresh_chip() -> void:
+	if card_slot == null:
+		return
+	# Tarjeta de perfil.
+	for c in card_slot.get_children():
+		c.queue_free()
+	var card := Kit.profile_card(player_display_name(), Economy.equipped("titulo"), rank_text(),
+		Economy.equipped("imagen"), Economy.equipped("estandarte"))
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	card.tooltip_text = Lang.t("Tu perfil: imágenes, estandartes y títulos")
+	card.gui_input.connect(func(e: InputEvent) -> void:
+		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
+			open_profile())
+	card_slot.add_child(card)
+	# Monedas y gemas.
+	for c in wallet.get_children():
+		c.queue_free()
+	if Economy.ready_to_use():
+		wallet.add_child(Kit.wallet_chip("coins", Economy.coins()))
+		wallet.add_child(Kit.wallet_chip("gems", Economy.gems()))
+		var plus := Kit.button("+", Vector2(48, 48), 28, Kit.GREEN)
+		plus.tooltip_text = Lang.t("Conseguir gemas")
+		plus.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		plus.pressed.connect(open_store.bind("gemas"))
+		wallet.add_child(plus)
+	# Game Pass.
+	for c in pass_slot.get_children():
+		c.queue_free()
+	pass_slot.add_child(_pass_button())
+
+
+func _pass_button() -> Control:
+	var b := art_button("", Vector2.ZERO, 30, Color(0.30, 0.13, 0.42))
+	b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	b.pressed.connect(open_pass)
+	var hb := HBoxContainer.new()
+	hb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hb.offset_left = 18
+	hb.offset_right = -18
+	hb.add_theme_constant_override("separation", 14)
+	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(hb)
+	var ic := Kit.icon("premium", 76)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(ic)
+	var vb := VBoxContainer.new()
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.add_theme_constant_override("separation", 4)
+	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_child(vb)
+	var t := Kit.label(Lang.t("GAME PASS") + ("  · PREMIUM" if Economy.premium() else ""), 32, GOLD)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	vb.add_child(t)
+	var s := Economy.season()
+	if s.is_empty():
+		var sub := Kit.label(Lang.t("Temporadas con premios: gratis y Premium") if Economy.status.is_empty() \
+			else Lang.t("La próxima temporada empieza pronto"), 18)
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		vb.add_child(sub)
+		return b
+	var line := Kit.label(Lang.t("Nivel %d de %d") % [Economy.tier(), Economy.tiers()] + "   ·   " + Lang.t("Quedan %d días") % Economy.days_left(), 18)
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	vb.add_child(line)
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 16)
+	bar.max_value = 1.0
+	bar.value = Economy.tier_progress()
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg := Kit.box(Color(0.08, 0.05, 0.03), GOLD.darkened(0.3), 8, 2, false)
+	bg.set_content_margin_all(0)
+	var fg := Kit.box(Color(0.95, 0.68, 0.18), Color(1, 0.9, 0.5), 8, 1, false)
+	fg.set_content_margin_all(0)
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fg)
+	vb.add_child(bar)
+	var n := Economy.claimable_count()
+	if n > 0:
+		var badge := PanelContainer.new()
+		var bs := Kit.box(Color(0.75, 0.12, 0.1), Color(1, 0.9, 0.5), 18, 3, false)
+		bs.content_margin_left = 12
+		bs.content_margin_right = 12
+		bs.content_margin_top = 2
+		bs.content_margin_bottom = 2
+		badge.add_theme_stylebox_override("panel", bs)
+		badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.add_child(Kit.label(Lang.t("¡%d por reclamar!") % n, 18))
+		hb.add_child(badge)
+	return b
+
+
+# ---------------- páginas ----------------
+
+func _cloud_ready() -> bool:
+	if Economy.demo or Account.accounts_ready():
+		return true
+	_soon(Lang.t("Tienda"), Lang.t("Las cuentas en línea aún no están listas en esta versión."))
+	return false
+
+
+func open_pass() -> void:
+	if not _cloud_ready():
+		return
+	var p := SeasonScreen.new()
+	add_child(p)
+	p.setup(self)
+
+
+func open_store(tab := "articulos") -> void:
+	if not _cloud_ready():
+		return
+	var p := StoreScreen.new()
+	add_child(p)
+	p.setup(self, tab)
+
+
+func open_profile() -> void:
+	if not _cloud_ready():
+		return
+	var p := ProfileScreen.new()
+	add_child(p)
+	p.setup(self)
 
 
 # ---------------- ventanas ----------------
@@ -295,6 +449,7 @@ func _civ_picker() -> void:
 	for c in Defs.CIV_ORDER:
 		var d: Dictionary = Defs.CIVS[c]
 		var mine: bool = c == Account.fav_civ()
+		var locked := Economy.civ_locked(c)
 		var b := art_button(Lang.t(d["name"]), Vector2(310, 150), 28, Color(0.35, 0.10, 0.08) if not mine else Color(0.62, 0.42, 0.12))
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var desc := Label.new()
@@ -314,7 +469,13 @@ func _civ_picker() -> void:
 			sb.content_margin_bottom = 90
 			b.add_theme_stylebox_override(k, sb)
 		var cc: String = c
+		if locked:
+			b.text = "🔒 " + b.text
+			b.modulate = Color(0.7, 0.7, 0.7)
 		b.pressed.connect(func() -> void:
+			if locked:
+				Kit.ask(self, Lang.t(Defs.CIVS[cc]["name"]), Lang.t("Esta civilización se consigue en el Game Pass o en la Tienda."))
+				return
 			Account.set_fav_civ(cc)
 			_show_civ()
 			menu.apply_fav_civ()

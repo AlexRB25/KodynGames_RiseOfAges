@@ -15,3 +15,9 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
+      # Tienda: compra de gemas con Stripe (la misma cuenta de Stripe que Zombie War).
+      # Sin estas dos la tienda dice "aún no está lista". Ver docs/TEMPORADAS.md.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

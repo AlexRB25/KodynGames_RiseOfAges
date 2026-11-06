@@ -59,3 +59,7 @@ Para activarlo de verdad:
 3. Render → servicio → Environment: `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` (la clave **service_role**; solo va en el servidor, nunca en el juego).
 
 Los jugadores entran como invitados automáticamente. En la pantalla de rango pueden guardar su progreso con correo, o entrar con su cuenta de Kodyn Games.
+
+### Monedas, gemas, Game Pass y Tienda
+
+Ver [TEMPORADAS.md](TEMPORADAS.md). Hace falta correr también `supabase/temporadas.sql` (después de `esquema.sql`).
