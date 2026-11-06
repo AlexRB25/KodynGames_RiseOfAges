@@ -263,9 +263,23 @@ func sowing() -> bool:
 
 
 ## Granja: primero se siembra (no da alimento), después se cosecha.
+var _left_t := 0.0   # segundos que sigue viéndose la barrita de lo que queda
+
+
+func tick_bar(dt: float) -> void:
+	super.tick_bar(dt)
+	if _left_t > 0.0:
+		_left_t -= dt
+		if _left_t <= 0.0:
+			_refresh_construction()
+
+
 func take_resource(a: float) -> float:
 	if not has_resource():
 		return 0.0
+	if sow >= 1.0 or kind == "trampa":
+		_left_t = 2.5
+		_refresh_construction()
 	if kind == "trampa":
 		var tt := minf(a, food)
 		food -= tt
@@ -365,8 +379,8 @@ void fragment() {
 
 func _refresh_construction() -> void:
 	if _build_bar:
-		_build_bar.visible = not complete
-		_build_mat.set_shader_parameter("progress", progress)
+		_build_bar.visible = not complete or _left_t > 0.0
+		_build_mat.set_shader_parameter("progress", progress if not complete else clampf(food / maxf(1.0, def.get("food", 1.0)), 0.0, 1.0))
 	if scaffold:
 		scaffold.visible = not complete
 	if visual:

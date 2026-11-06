@@ -187,10 +187,41 @@ func take_resource(a: float) -> float:
 			_fall_t = 0.001   # figura por código: el árbol cae
 		game.release_static(self, false)   # ya talado, su casilla se puede caminar
 	_refresh_scale()
+	_show_left()
 	if amount <= 0.0:
 		_leave_stump()
 		game.remove_entity(self)
 	return t
+
+
+## Barrita de lo que queda (verde) mientras alguien recolecta; se va achicando.
+var _left_bar: MeshInstance3D
+var _left_mat: ShaderMaterial
+var _left_t := 0.0
+
+
+func _show_left() -> void:
+	if game.headless:
+		return
+	if _left_bar == null:
+		_left_bar = MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(0.9, 0.13)
+		_left_bar.mesh = q
+		_left_mat = ShaderMaterial.new()
+		_left_mat.shader = Building._bar_shader()
+		_left_bar.material_override = _left_mat
+		_left_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_left_bar)
+	var h := 1.3
+	if kind == "arbol":
+		h = 1.2 if felled else 2.8
+	elif kind == "pesca":
+		h = 0.8
+	_left_bar.position = Vector3(0, h, 0)
+	_left_mat.set_shader_parameter("progress", clampf(amount / maxf(max_amount, 1.0), 0.0, 1.0))
+	_left_bar.visible = true
+	_left_t = 2.5
 
 
 ## Al acabarse un árbol queda su tocón unos minutos.
@@ -234,6 +265,10 @@ func _refresh_scale() -> void:
 
 
 func _process(dt: float) -> void:
+	if _left_t > 0.0:
+		_left_t -= dt
+		if _left_t <= 0.0 and _left_bar:
+			_left_bar.visible = false
 	if _fall_t > 0.0 and _fall_t < 1.0:
 		_fall_t = minf(1.0, _fall_t + dt * 1.8)
 		visual.rotation.z = -PI * 0.5 * ease(_fall_t, 2.0)

@@ -179,12 +179,12 @@ func _build_top(root: Control) -> void:
 func _build_bottom(root: Control) -> void:
 	# Panel de información angosto y centrado; a los lados, la navegación del mapa.
 	var bar := PanelContainer.new()
-	bar.anchor_left = 0.5
-	bar.anchor_right = 0.5
+	bar.anchor_left = 0.0
+	bar.anchor_right = 1.0
 	bar.anchor_top = 1.0
 	bar.anchor_bottom = 1.0
-	bar.offset_left = -BAR_W * 0.5
-	bar.offset_right = BAR_W * 0.5
+	bar.offset_left = (JOY_W + 8.0) if is_touch() else 4.0
+	bar.offset_right = -(MAP_W + 8.0)
 	bar.offset_top = -220
 	bar.offset_bottom = -4
 	root.add_child(bar)
@@ -247,7 +247,8 @@ func _build_bottom(root: Control) -> void:
 	_build_full_map(root)
 
 
-const BAR_W := 1000.0
+const JOY_W := 170.0    # cuadro de la palanca (celular), a la izquierda
+const MAP_W := 300.0    # cuadro del minimapa, a la derecha
 var bottom_bar: PanelContainer
 var joystick: Joystick
 
@@ -264,30 +265,35 @@ func _build_nav(root: Control) -> void:
 	box.offset_bottom = -4
 	root.add_child(box)
 	minimap = Minimap.new()
+	box.anchor_left = 1.0
+	box.anchor_right = 1.0
+	box.offset_left = -MAP_W - 4.0
+	box.offset_right = -4
 	if not is_touch():
-		box.anchor_left = 1.0
-		box.anchor_right = 1.0
-		box.offset_left = -290
-		box.offset_right = -4
-		minimap.custom_minimum_size = Vector2(270, 200)
+		minimap.custom_minimum_size = Vector2(MAP_W - 20.0, 200)
 		box.add_child(minimap)
 		minimap.setup(game)
 		return
-	box.offset_left = 4
-	box.offset_right = 290
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 4)
-	box.add_child(hb)
+	# Celular: palanca sola a la izquierda.
+	var jb := PanelContainer.new()
+	jb.anchor_top = 1.0
+	jb.anchor_bottom = 1.0
+	jb.offset_top = -220
+	jb.offset_bottom = -4
+	jb.offset_left = 4
+	jb.offset_right = JOY_W + 4.0
+	root.add_child(jb)
 	joystick = Joystick.new()
 	joystick.setup(game)
+	joystick.custom_minimum_size = Vector2(150, 150)
 	joystick.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	hb.add_child(joystick)
+	joystick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	jb.add_child(joystick)
 	var vb := VBoxContainer.new()
-	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_theme_constant_override("separation", 4)
-	hb.add_child(vb)
+	box.add_child(vb)
 	minimap.drag_nav = true
-	minimap.custom_minimum_size = Vector2(150, 140)
+	minimap.custom_minimum_size = Vector2(MAP_W - 20.0, 140)
 	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	minimap.tooltip_text = Lang.t("Arrastra el dedo sobre el mapa para mover la vista")
 	vb.add_child(minimap)

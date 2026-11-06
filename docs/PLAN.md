@@ -112,9 +112,10 @@ Pestañas de construcción: **Recursos** (siembra, granja, molino, corral, campa
   bots largos). Desarrollo: `--era=5 --techs=a,b --edificio=maravilla --unidad=catapulta --reliquia`.
 
 ## Interfaz de abajo y navegación (2026-11-05, pedido del usuario)
-- Panel de información angosto (1000 px) y centrado. PC: minimapa aparte abajo a la derecha (clic = ir ahí).
-  Celular: abajo a la izquierda, palanca (scripts/ui/joystick.gd, cámara `joy`), minimapa que se
-  arrastra suave (`Minimap.drag_nav`, tocar no manda lejos) y botón "Mapa grande".
+- Abajo, todo el ancho: celular = palanca a la izquierda (scripts/ui/joystick.gd, cámara `joy`), panel de
+  información al centro y a la derecha minimapa que se arrastra suave (`Minimap.drag_nav`, tocar no manda
+  lejos) + botón "Mapa grande". PC: panel + minimapa a la derecha (clic = ir ahí).
+- Barrita verde de lo que queda sobre árboles, minas, bayas, peces, granjas y trampas mientras se recolectan.
 - Los botones nunca se desactivan: con candado de nivel muestran la insignia de la era y "Nivel N";
   al tocarlos dicen qué falta (nivel, recursos exactos o requisitos).
 - Cola de producción: cuadrito abajo de la descripción con icono, barrita y cancelar. Aldeano: 5 s.
