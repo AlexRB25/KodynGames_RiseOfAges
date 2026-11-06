@@ -30,6 +30,7 @@ var herd_t := 0.0             # segundos seguidos pastoreando
 var garrison_in: Building = null   # torre donde está metido (arqueros)
 var relic: Relic = null       # reliquia que lleva (santos)
 var heal_t := 0.0
+var bell_prev := {}           # lo que hacía antes de la campana (para volver)
 
 var atk_timer := 0.0
 var scan_timer := 0.0
@@ -173,6 +174,47 @@ func _reset_task() -> void:
 		dropoff = null
 	_leave_farm()
 	_leave_garrison()
+	bell_prev = {}
+
+
+## Lo que está haciendo ahora, para retomarlo después de la campana.
+func task_snapshot() -> Dictionary:
+	return {"s": state, "t": target, "g": work_group, "w": work_pos, "m": move_goal, "a": attack_move, "q": build_queue.duplicate()}
+
+
+## Volver a lo que hacía antes de la campana.
+func restore_task(d: Dictionary) -> void:
+	var t = d["t"]
+	if not Entity.valid(t):
+		t = null
+	match int(d["s"]):
+		S.GATHER, S.RETURN:
+			if t and (t.has_resource() or (t is Animal and not t.dead)):
+				cmd_gather(t)
+			elif String(d["g"]) != "":
+				_reset_task()
+				build_queue.clear()
+				work_group = d["g"]
+				work_pos = d["w"]
+				state = S.GATHER   # sin objetivo: busca el más cercano del mismo tipo
+			elif carry > 0.0:
+				_reset_task()
+				finish_after_drop = true
+				_start_return()
+		S.BUILD:
+			var first := true
+			for b in [t] + d["q"]:
+				if Entity.live(b) and b is Building and not b.complete:
+					cmd_build(b, not first)
+					first = false
+		S.HERD:
+			if t is Animal and not t.dead:
+				cmd_herd(t)
+		S.MOVE:
+			cmd_move(d["m"], d["a"])
+		S.ATTACK:
+			if Entity.live(t):
+				cmd_attack(t)
 
 
 func cmd_stop() -> void:
@@ -380,6 +422,9 @@ func _do_garrison(dt: float) -> void:
 		return
 	var r := _approach(b, 0.8, dt)
 	if r == 1:
+		if carry > 0.0 and b.def.get("drop", []).has(carry_type):
+			game.deposit(owner_id, carry_type, carry)
+			carry = 0.0
 		garrison_in = b
 		b.garrison.append(self)
 		target = null
@@ -389,7 +434,7 @@ func _do_garrison(dt: float) -> void:
 			set_selected(false)
 		visible = false
 	elif r == -1:
-		_go_idle(Lang.t("No puedo llegar a la torre."))
+		_go_idle(Lang.t("No puedo llegar a la torre.") if b.kind != "centro" else Lang.t("No puedo llegar al centro urbano."))
 
 
 func _do_relic(dt: float) -> void:

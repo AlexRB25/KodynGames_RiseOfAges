@@ -95,7 +95,7 @@ const UNITS := {
 const BUILDINGS := {
 	"centro": {"name": "Centro urbano", "age": 3, "size": 4, "hp": 1500.0, "cost": {"madera": 275, "piedra": 100}, "time": 120.0,
 		"sight": 10, "drop": ["comida", "madera", "oro", "piedra"], "pop": 5, "trains": ["aldeano"],
-		"atk": 5.0, "range": 7.0, "cd": 2.0, "desc": "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes."},
+		"atk": 5.0, "range": 7.0, "cd": 2.0, "garrison": 15, "desc": "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Con la campana los aldeanos se refugian adentro (caben 15). Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes."},
 	"casa": {"name": "Casa", "size": 2, "hp": 400.0, "cost": {"madera": 30}, "time": 20.0, "sight": 4, "pop": 5,
 		"desc": "+5 de población máxima."},
 	"maderero": {"name": "Campamento maderero", "size": 2, "hp": 500.0, "cost": {"madera": 100}, "time": 25.0,

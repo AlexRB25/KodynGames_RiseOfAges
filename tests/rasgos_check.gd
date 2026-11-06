@@ -18,6 +18,7 @@ func _ready() -> void:
 	await _naval_test()
 	await _siege_test()
 	await _wonder_test()
+	await _bell_test()
 	await _bots_long_test()
 	print("RESULTADO: %s (%d fallos)" % ["BIEN" if fails == 0 else "MAL", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -259,6 +260,39 @@ func _wonder_test() -> void:
 	check(g.players[0].wonder_t > 0.0, "con 3 reliquias empieza la cuenta atrás (%.0f s)" % g.players[0].wonder_t)
 	g.run_seconds(Defs.WONDER_TIME + 3.0)
 	check(g.players[1].defeated and g.over, "al terminar la cuenta atrás, A gana")
+	g.queue_free()
+	await get_tree().process_frame
+
+
+## Campana: los aldeanos se refugian en el centro y luego vuelven a lo que hacían.
+func _bell_test() -> void:
+	var g := await _new_game(781)
+	var c := g.main_center(0)
+	var vills: Array = []
+	for u in g.units:
+		if u.owner_id == 0 and u.is_villager():
+			vills.append(u)
+	var tree := g.find_resource_near("arbol", c.center(), 40.0, 0)
+	for u in vills:
+		u.cmd_gather(tree)
+	g.run_seconds(8.0)
+	g.apply_cmd(0, {"k": "bell"})
+	check(g.players[0].bell, "la campana queda sonando")
+	g.run_seconds(25.0)
+	check(g.refugees(0) == vills.size(), "todos los aldeanos se refugiaron (%d / %d)" % [g.refugees(0), vills.size()])
+	var hidden := true
+	for u in vills:
+		if u.garrison_in != c:
+			hidden = false
+	check(hidden, "están adentro del centro")
+	g.apply_cmd(0, {"k": "bell"})
+	g.run_seconds(0.5)
+	check(g.refugees(0) == 0 and not g.players[0].bell, "al tocarla otra vez salen")
+	var back := 0
+	for u in vills:
+		if u.state == Unit.S.GATHER or u.state == Unit.S.RETURN:
+			back += 1
+	check(back == vills.size(), "vuelven a cortar madera (%d / %d)" % [back, vills.size()])
 	g.queue_free()
 	await get_tree().process_frame
 

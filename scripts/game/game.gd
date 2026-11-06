@@ -367,6 +367,15 @@ func _dev_args() -> void:
 			camera.dist = 9.0
 			camera.target_dist = 9.0
 			controller.set_selection([rl])
+		elif a == "--campana":
+			# Desarrollo: tocar la campana y ver a los aldeanos refugiados en el centro.
+			var cc := main_center(local_id)
+			apply_cmd(local_id, {"k": "bell"})
+			run_seconds(15.0)
+			camera.focus(cc.center())
+			camera.dist = 16.0
+			camera.target_dist = 16.0
+			controller.set_selection([cc])
 		elif a == "--rendirse":
 			# Ver la pantalla final (y el premio de la partida).
 			_defeat(local_id, true)
@@ -744,6 +753,69 @@ func end_by_forfeit(winner_team: int, forfeit: bool) -> void:
 	over = true
 	if hud:
 		hud.show_result(winner_team == team_of(local_id))
+
+
+## Campana del centro: los aldeanos corren a refugiarse al centro más cercano con
+## lugar; al tocarla otra vez salen y vuelven a lo que hacían.
+func ring_bell(pid: int) -> void:
+	var p: PlayerState = players[pid]
+	p.bell = not p.bell
+	if p.bell:
+		var room := {}
+		for b in buildings:
+			if b.owner_id == pid and b.kind == "centro" and b.complete and not b.dead:
+				room[b] = b.garrison_space()
+		if room.is_empty():
+			p.bell = false
+			return
+		var left := 0
+		for u in units:
+			if u.owner_id != pid or u.dead or not u.is_villager() or u.garrison_in != null:
+				continue
+			var best: Building = null
+			var bd := INF
+			for b in room:
+				if room[b] > 0:
+					var d: float = b.center().distance_squared_to(u.pos)
+					if d < bd:
+						bd = d
+						best = b
+			if best == null:
+				left += 1
+				continue
+			room[best] -= 1
+			var prev := u.task_snapshot()
+			u.cmd_garrison(best)
+			u.bell_prev = prev
+		notify(pid, Lang.t("¡Campana! Los aldeanos corren a refugiarse al centro urbano."), main_center(pid).pos if main_center(pid) else Vector2.ZERO)
+		if left > 0:
+			notify(pid, Lang.t("No caben todos: %d aldeanos siguen afuera. Construye otro centro urbano.") % left, main_center(pid).pos if main_center(pid) else Vector2.ZERO)
+	else:
+		for b in buildings:
+			if b.owner_id == pid and b.kind == "centro":
+				for u in b.garrison.duplicate():
+					if u.is_villager():
+						u._leave_garrison()
+		for u in units:
+			if u.owner_id != pid or u.dead or u.bell_prev.is_empty():
+				continue
+			var prev: Dictionary = u.bell_prev
+			u.bell_prev = {}
+			if u.garrison_in == null and (u.state == Unit.S.GARRISON or u.state == Unit.S.IDLE):
+				u.cmd_stop()
+				u.restore_task(prev)
+		notify(pid, Lang.t("Los aldeanos vuelven a sus labores."), main_center(pid).pos if main_center(pid) else Vector2.ZERO)
+
+
+## Aldeanos refugiados en los centros.
+func refugees(pid: int) -> int:
+	var n := 0
+	for b in buildings:
+		if b.owner_id == pid and b.kind == "centro":
+			for u in b.garrison:
+				if u.is_villager():
+					n += 1
+	return n
 
 
 func main_center(pid: int) -> Building:
@@ -1601,6 +1673,8 @@ func apply_cmd(pid: int, c: Dictionary) -> void:
 			var b := _own_building(pid, c.get("e", 0))
 			if b:
 				make_relic(pid, b)
+		"bell":
+			ring_bell(pid)
 		"eject":
 			var b := _own_building(pid, c.get("e", 0))
 			if b:

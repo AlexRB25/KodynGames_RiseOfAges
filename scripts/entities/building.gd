@@ -266,8 +266,57 @@ func sowing() -> bool:
 var _left_t := 0.0   # segundos que sigue viéndose la barrita de lo que queda
 
 
+var _refuge: Node3D
+var _refuge_lbl: Label3D
+var _refuge_n := -1
+
+
+## Centro: carita de aldeano con el número de refugiados encima del edificio.
+func _show_refuge() -> void:
+	var n := 0
+	for u in garrison:
+		if Entity.valid(u) and u.is_villager():
+			n += 1
+	if n == _refuge_n and (_refuge == null or _refuge.get_child_count() > 1 or n == 0):
+		return
+	_refuge_n = n
+	if n == 0:
+		if _refuge:
+			_refuge.visible = false
+		return
+	if _refuge == null:
+		_refuge = Node3D.new()
+		_refuge.position = Vector3(0, bar_height() + 0.9, 0)
+		add_child(_refuge)
+		_refuge_lbl = Label3D.new()
+		_refuge_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_refuge_lbl.no_depth_test = true
+		_refuge_lbl.fixed_size = false
+		_refuge_lbl.pixel_size = 0.012
+		_refuge_lbl.font_size = 56
+		_refuge_lbl.outline_size = 14
+		_refuge_lbl.modulate = Color(1, 0.95, 0.75)
+		_refuge_lbl.position = Vector3(0.3, 0, 0)
+		_refuge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_refuge.add_child(_refuge_lbl)
+	if _refuge.get_child_count() < 2:
+		var tex := Thumbs.get_icon(game, "aldeano")
+		if tex:
+			var sp := Sprite3D.new()
+			sp.texture = tex
+			sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			sp.no_depth_test = true
+			sp.pixel_size = 1.3 / maxf(1.0, tex.get_width())
+			sp.position = Vector3(-0.3, 0, 0)
+			_refuge.add_child(sp)
+	_refuge_lbl.text = "× %d" % n
+	_refuge.visible = true
+
+
 func tick_bar(dt: float) -> void:
 	super.tick_bar(dt)
+	if kind == "centro" and not game.headless:
+		_show_refuge()
 	if _left_t > 0.0:
 		_left_t -= dt
 		if _left_t <= 0.0:

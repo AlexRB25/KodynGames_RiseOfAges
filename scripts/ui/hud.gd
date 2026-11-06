@@ -665,7 +665,7 @@ func _selection_sig() -> String:
 		if Entity.valid(e):
 			s += "%d:%s;" % [e.id, str(e.complete) if e is Building else ""]
 	if game.controller.selection.size() > 0 and game.controller.selection[0] is Building:
-		s += str(game.players[game.local_id].age)
+		s += str(game.players[game.local_id].age) + str(game.players[game.local_id].bell)
 	return s
 
 
@@ -874,6 +874,13 @@ func _selection_tab() -> void:
 					func() -> String:
 						return "" if game.players[game.local_id].res[rr] >= 100 else Lang.t("Faltan recursos."))
 		if b.kind == "centro":
+			var on: bool = game.players[game.local_id].bell
+			_add_btn(Lang.t("Volver al trabajo") if on else Lang.t("Campana"),
+				Lang.t("Tocar otra vez la campana: los aldeanos salen y vuelven a lo que estaban haciendo.") if on else
+				Lang.t("Tocar la campana: todos los aldeanos corren a refugiarse en el centro urbano (caben 15 por centro y desde adentro disparan flechas). Tócala otra vez para que vuelvan a sus labores."),
+				func() -> void: game.issue({"k": "bell"}),
+				func() -> String: return "",
+				bell_icon(on))
 			_seed_button()
 			_age_button(b)
 		if b.kind == "muelle":
@@ -888,7 +895,7 @@ func _selection_tab() -> void:
 		for t in Defs.TECHS:
 			if Defs.TECHS[t]["at"] == b.kind and not game.players[game.local_id].techs.has(t):
 				_tech_button(b, t)
-		if int(b.stat("garrison", 0)) > 0:
+		if int(b.stat("garrison", 0)) > 0 and b.kind != "centro":
 			var bg := b
 			_add_btn(Lang.t("Sacar arqueros"), Lang.t("Sacar a los arqueros de la torre (%d / %d adentro).") % [b.garrison.size(), int(b.stat("garrison", 0))],
 				func() -> void: game.issue({"k": "eject", "e": bg.id}),
@@ -938,6 +945,51 @@ func _explain(reason: String, meta: Dictionary) -> String:
 		if m != "":
 			return Lang.t("Te faltan: %s.") % m
 	return reason
+
+
+static var _bell_tex := {}
+
+
+## Icono de la campana: dorada en reposo; roja con ondas cuando está sonando.
+static func bell_icon(on: bool) -> Texture2D:
+	if _bell_tex.has(on):
+		return _bell_tex[on]
+	var n := 64
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var body := Color(0.95, 0.42, 0.22) if on else Color(1.0, 0.8, 0.28)
+	var dark := Color(0.3, 0.16, 0.04)
+	var inside := func(x: float, y: float) -> bool:
+		if y >= 10.0 and y < 22.0:
+			return Vector2(x - 32.0, y - 22.0).length() <= 12.0
+		if y >= 22.0 and y <= 46.0:
+			var t := (y - 22.0) / 24.0
+			return absf(x - 32.0) <= 12.0 + 10.0 * pow(t, 1.8)
+		if y > 46.0 and y <= 50.0:
+			return absf(x - 32.0) <= 24.0
+		if Vector2(x - 32.0, y - 53.0).length() <= 5.0:
+			return true
+		var r := Vector2(x - 32.0, y - 7.0).length()
+		return r <= 5.0 and r >= 2.5
+	for y in n:
+		for x in n:
+			var fx := float(x)
+			var fy := float(y)
+			if bool(inside.call(fx, fy)):
+				var edge: bool = not (inside.call(fx - 1.5, fy) and inside.call(fx + 1.5, fy) and inside.call(fx, fy - 1.5) and inside.call(fx, fy + 1.5))
+				var c: Color = dark if edge else body
+				if not edge and fx < 28.0 and fy > 14.0 and fy < 44.0:
+					c = c.lightened(0.3)
+				img.set_pixel(x, y, c)
+			elif on:
+				# Ondas a los lados: está sonando.
+				var d := Vector2(fx - 32.0, fy - 30.0)
+				var l := d.length()
+				if absf(d.y) < absf(d.x) * 0.6 and ((l > 26.0 and l < 28.5) or (l > 31.0 and l < 33.0)):
+					img.set_pixel(x, y, Color(1, 0.9, 0.5))
+	var tex := ImageTexture.create_from_image(img)
+	_bell_tex[on] = tex
+	return tex
 
 
 func _add_btn(text: String, tip: String, on_press: Callable, block: Callable, icon: Texture2D = null) -> void:
@@ -1270,7 +1322,9 @@ func _refresh_info() -> void:
 			lines.append(Lang.t(e.def["desc"]))
 			if e.kind == "trampa" and e.complete:
 				lines.append(Lang.t("Alimento restante: %d") % int(e.food))
-			if int(e.stat("garrison", 0)) > 0:
+			if e.kind == "centro" and e.complete:
+				lines.append(Lang.t("Refugiados adentro: %d / %d") % [e.garrison.size(), int(e.stat("garrison", 0))])
+			elif int(e.stat("garrison", 0)) > 0:
 				lines.append(Lang.t("Arqueros adentro: %d / %d (cada uno dispara una flecha más)") % [e.garrison.size(), int(e.stat("garrison", 0))])
 			if e.def.get("wonder", false):
 				lines.append(Lang.t("Reliquias: %d / %d") % [e.relics.size(), Defs.WONDER_RELICS])

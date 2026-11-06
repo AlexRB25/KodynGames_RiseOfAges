@@ -731,5 +731,15 @@
  "· Faltan casas": "· Faltam casas",
  "· Falta un santo junto al monasterio": "· Falta um santo ao lado do mosteiro",
  "Palanca: empuja para mover la vista del mapa": "Alavanca: empurre para mover a vista do mapa",
- "Requisitos:": "Requisitos:"
+ "Requisitos:": "Requisitos:",
+ "No puedo llegar al centro urbano.": "Não consigo chegar ao centro da cidade.",
+ "¡Campana! Los aldeanos corren a refugiarse al centro urbano.": "Sino! Os aldeões correm para se abrigar no centro da cidade.",
+ "No caben todos: %d aldeanos siguen afuera. Construye otro centro urbano.": "Não cabem todos: %d aldeões continuam fora. Construa outro centro da cidade.",
+ "Los aldeanos vuelven a sus labores.": "Os aldeões voltam ao trabalho.",
+ "Volver al trabajo": "Voltar ao trabalho",
+ "Campana": "Sino",
+ "Tocar otra vez la campana: los aldeanos salen y vuelven a lo que estaban haciendo.": "Tocar o sino de novo: os aldeões saem e voltam ao que estavam fazendo.",
+ "Tocar la campana: todos los aldeanos corren a refugiarse en el centro urbano (caben 15 por centro y desde adentro disparan flechas). Tócala otra vez para que vuelvan a sus labores.": "Tocar o sino: todos os aldeões correm para se abrigar no centro da cidade (cabem 15 por centro e de dentro atiram flechas). Toque de novo para que voltem ao trabalho.",
+ "Refugiados adentro: %d / %d": "Abrigados dentro: %d / %d",
+ "Edificio principal: recibe todos los recursos, entrena aldeanos, investiga mejoras y avanza de era. Da 5 de población. Con la campana los aldeanos se refugian adentro (caben 15). Un segundo centro se puede construir desde el nivel 3. Si te quedas sin centros, pierdes.": "Edifício principal: recebe todos os recursos, treina aldeões, pesquisa melhorias e avança de era. Dá 5 de população. Com o sino, os aldeões se abrigam dentro (cabem 15). Um segundo centro pode ser construído a partir do nível 3. Se ficar sem centros, você perde."
 }
