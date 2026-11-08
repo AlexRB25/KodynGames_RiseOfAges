@@ -33,6 +33,21 @@
 Todo lo decide Supabase: el juego solo muestra (`roa_status`) y pide acciones. Nadie puede
 darse monedas, gemas, xp ni el pase desde el juego.
 
+## Tienda: ofertas del día, regalo, monedas y saltar nivel
+
+- **Ofertas del día**: 5 artículos de `roa_shop` con 25 % de descuento, distintos para cada jugador
+  y cada día (cambian a las 00:00 UTC). Cantidad y descuento en `roa_deal_count()` y `roa_deal_off()`.
+  `roa_buy_item` cobra el precio de oferta.
+- **Regalo del día**: 50 monedas gratis una vez al día (`roa_daily_gift`, `roa_gift_coins()`).
+- **Monedas con gemas**: paquetes en `roa_coin_packs` (1,000 = 60, 10,000 = 500, 100,000 = 4,500 gemas),
+  se compran con `roa_buy_coins`.
+- **Saltar nivel** del pase: 30 gemas (`roa_skip_tier`, `roa_skip_gems()`); deja al jugador al
+  inicio del siguiente nivel.
+- Paquetes de gemas: 6 (se agregaron 5,000 + 2,000 y 10,000 + 5,000 de regalo).
+- Al subir de rango o de nivel del pase sale una animación (`scripts/ui/level_up.gd`).
+  Para verla: `-- --subir-rango` o `-- --subir-pase`. Tienda y pase de ejemplo:
+  `-- --demo-tienda --tienda` / `--tienda-gemas` / `--pase`.
+
 ## Compras con dinero: Premium y paquetes de gemas
 
 | Paquete | Gemas | USD | MXN | EUR | BRL | COP |

@@ -483,8 +483,21 @@ def music():
     song(72, 12, 0.95, 3, 0.55, "musica_menu")
 
 
+def extra():
+    """Sonidos agregados después (van al final para no cambiar los demás)."""
+    # Subir de nivel / rango: redoble de tambor, arpegio de flauta que sube, campana y caracol.
+    roll = mix(*[(i * 0.06, drum(90 + i * 3, 0.25, 2.0, 0.25 + i * 0.05)) for i in range(10)])
+    arp = mix(*[(0.62 + i * 0.11, flute(note(n), 0.5 if i < 4 else 1.5, 0.45)) for i, n in enumerate(["A4", "C5", "E5", "G5", "A5"])])
+    up = mix((0, roll), (0.6, drum(62, 1.2, 1.8, 1.1)), (0, arp), (1.05, bell(880, 2.0, 0.5)),
+             (1.05, conch(110, 1.5, 0.3)), (1.05, chime(note("E5") * 2, 1.4, 0.35)), (0.6, rattle(0.9, 0.25)))
+    write("subir_nivel", reverb(up, 1.6, 0.3), peak=0.9)
+
+
 if __name__ == "__main__":
+    import sys
     os.makedirs(ROOT, exist_ok=True)
-    voices()
-    effects()
-    music()
+    if "--extra" not in sys.argv:
+        voices()
+        effects()
+        music()
+    extra()

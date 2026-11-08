@@ -514,6 +514,26 @@ func show_result(win: bool) -> void:
 
 var rating_label: RichTextLabel
 var prize_label: RichTextLabel
+var _start_level := Account.level()    # para saber si subió de rango en esta partida
+var _start_tier := Economy.tier()      # y de nivel del Game Pass
+var _anims: Array = []                 # animaciones de subir de nivel en fila
+
+
+## Muestra una animación de subir de nivel (una tras otra si hay varias).
+func _queue_level_up(k: String, from_n: int, to_n: int, sub: String) -> void:
+	_anims.append([k, from_n, to_n, sub])
+	if _anims.size() == 1:
+		_next_level_up()
+
+
+func _next_level_up() -> void:
+	if _anims.is_empty():
+		return
+	var a: Array = _anims[0]
+	var l := LevelUp.play(get_child(0), a[0], a[1], a[2], a[3])
+	l.closed.connect(func() -> void:
+		_anims.pop_front()
+		_next_level_up())
 
 
 ## Contra bots: experiencia de temporada y monedas (con tope diario, ver supabase/temporadas.sql).
@@ -545,6 +565,9 @@ func _show_prize(d: Dictionary) -> void:
 		int(d.get("xp", 0)), int(d.get("coins", 0))]
 	if d.has("tier"):
 		t += "\n" + Lang.t("Game Pass: nivel %d") % int(d["tier"])
+		if int(d["tier"]) > _start_tier:
+			_queue_level_up("pase", _start_tier, int(d["tier"]), Lang.t("Tienes premios para reclamar"))
+			_start_tier = int(d["tier"])
 	prize_label.text = t + "[/center]"
 
 
@@ -564,6 +587,10 @@ func show_rating(m: Dictionary) -> void:
 	if bool(m.get("forfeit", false)):
 		txt += Lang.t("\n(el rival abandonó la partida)")
 	rating_label.text = txt + "[/center]"
+	var lv := int(you.get("level", 1))
+	if lv > _start_level:
+		_queue_level_up("rango", _start_level, lv, Lang.t("%d puntos") % int(you.get("points", 0)))
+		_start_level = lv
 	if m.get("prize") is Dictionary and prize_label:
 		_show_prize(m["prize"])
 		Economy.refresh()

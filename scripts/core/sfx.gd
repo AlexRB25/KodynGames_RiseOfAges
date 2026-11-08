@@ -11,7 +11,7 @@ const SOUNDS := {
 	"clic": 0, "seleccion": 0, "colocar": 0, "terminado": 0, "era": 0, "listo": 0,
 	"mejora": 0, "campana": 0, "alerta": 0, "flecha": 0, "piedra": 0, "golpe": 3,
 	"derribo": 0, "error": 0, "reliquia": 0, "hacha": 2, "pico": 2, "cosecha": 0,
-	"martillo": 0, "victoria": 0, "derrota": 0,
+	"martillo": 0, "victoria": 0, "derrota": 0, "subir_nivel": 0,
 }
 ## Tiempo mínimo entre dos veces el mismo sonido (para que no se amontone).
 const GAP := {"golpe": 0.07, "flecha": 0.06, "voz": 0.35, "clic": 0.04, "terminado": 0.4, "listo": 0.25,

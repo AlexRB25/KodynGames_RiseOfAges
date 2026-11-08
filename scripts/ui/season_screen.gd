@@ -119,9 +119,17 @@ func _build_top(s: Dictionary) -> void:
 	if Economy.premium():
 		pv.add_child(Kit.label(Lang.t("¡Activo! Fila premium abierta y +%d %% de experiencia.") % roundi(float(s.get("premium_bonus", 0.2)) * 100), 18))
 	else:
-		var why := Kit.text(Lang.t("Abre la fila premium (más monedas, gemas, imágenes, estandartes y títulos) y gana +%d %% de experiencia el resto de la temporada.") % roundi(float(s.get("premium_bonus", 0.2)) * 100), 16)
+		var why := Kit.text(Lang.t("Fila premium y +%d %% de experiencia.") % roundi(float(s.get("premium_bonus", 0.2)) * 100), 16)
 		why.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pv.add_child(why)
+		var shelf := HBoxContainer.new()
+		shelf.alignment = BoxContainer.ALIGNMENT_CENTER
+		shelf.add_theme_constant_override("separation", 8)
+		pv.add_child(shelf)
+		for r in StoreScreen.best_premium(4):
+			var v := Kit.reward_view(r, 56)
+			v.tooltip_text = Kit.reward_name(r)
+			shelf.add_child(v)
 		var prices := Economy.premium_prices()
 		var cur := Money.pick(prices)
 		var price_text := Money.format(float(prices.get(cur, 0)), cur) if prices.has(cur) else ""
@@ -311,6 +319,20 @@ func _build_bottom() -> void:
 	how.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	how.add_theme_constant_override("outline_size", 4)
 	row.add_child(how)
+	if Economy.tier() < Economy.tiers():
+		var skip := Kit.button("", Vector2(260, 64), 24, Kit.PURPLE.lightened(0.05))
+		var hb := HBoxContainer.new()
+		hb.alignment = BoxContainer.ALIGNMENT_CENTER
+		hb.add_theme_constant_override("separation", 8)
+		hb.set_anchors_preset(Control.PRESET_FULL_RECT)
+		hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		skip.add_child(hb)
+		hb.add_child(Kit.label(Lang.t("Saltar nivel"), 24))
+		hb.add_child(Kit.icon("gems", 30))
+		hb.add_child(Kit.label(str(Economy.skip_gems()), 24))
+		skip.tooltip_text = Lang.t("Pasa al siguiente nivel del pase por %d gemas.") % Economy.skip_gems()
+		skip.pressed.connect(_skip)
+		row.add_child(skip)
 	var n := Economy.claimable_count()
 	var all := Kit.button(Lang.t("Reclamar todo") + (" (%d)" % n if n > 0 else ""), Vector2(300, 64), 26, Kit.GREEN)
 	all.disabled = n == 0
@@ -319,6 +341,23 @@ func _build_bottom() -> void:
 		if e != "":
 			Kit.ask(self, Lang.t("Game Pass"), e))
 	row.add_child(all)
+
+
+func _skip() -> void:
+	var cost := Economy.skip_gems()
+	if Economy.gems() < cost:
+		Kit.ask(self, Lang.t("Te faltan gemas"), Lang.t("Cuesta %d gemas y tienes %d.") % [cost, Economy.gems()], Lang.t("Conseguir gemas"),
+			func() -> void:
+				close()
+				home.open_store("gemas"))
+		return
+	Kit.ask(self, Lang.t("Saltar nivel"), Lang.t("¿Pasar al nivel %d del pase por %d gemas?") % [Economy.tier() + 1, cost], Lang.t("Saltar"), func() -> void:
+		var before := Economy.tier()
+		var e: String = await Economy.skip_tier()
+		if e != "":
+			Kit.ask(self, Lang.t("Game Pass"), e)
+		elif Economy.tier() > before:
+			LevelUp.play(self, "pase", before, Economy.tier(), Lang.t("Tienes premios para reclamar")))
 
 
 func _buy_premium(b: Button, price_text: String) -> void:

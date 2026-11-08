@@ -267,13 +267,95 @@ func buy_item(id: String) -> String:
 		for s in status.get("shop", []):
 			if s["item"] == id:
 				var cur := "coins" if s.get("coins") != null else "gems"
-				if int(status.get(cur, 0)) < int(s[cur]):
+				var price := int(s[cur])
+				var dl := deal_of(id)
+				if not dl.is_empty():
+					price = int(dl[cur])
+				if int(status.get(cur, 0)) < price:
 					return Lang.t("No te alcanzan las monedas") if cur == "coins" else Lang.t("No te alcanzan las gemas")
-				status[cur] = int(status[cur]) - int(s[cur])
+				status[cur] = int(status[cur]) - price
 				status["owned"].append(id)
 				changed.emit()
 		return ""
 	return await _act("roa_buy_item", {"p_item": id})
+
+
+## Ofertas del día: [{item, coins, gems, old_coins, old_gems}] (precios con descuento).
+func deals() -> Array:
+	var d = status.get("deals", [])
+	return d if d is Array else []
+
+
+func deal_of(id: String) -> Dictionary:
+	for d in deals():
+		if d["item"] == id:
+			return d
+	return {}
+
+
+## Segundos para que cambien las ofertas (00:00 UTC).
+func deals_left() -> int:
+	var end := Time.get_unix_time_from_datetime_string(String(status.get("deals_end", "")).left(19))
+	var now := int(Time.get_unix_time_from_system())
+	if end <= 0:
+		var t := now % 86400
+		return 86400 - t
+	return maxi(0, end - now)
+
+
+func gift_ready() -> bool:
+	return not bool(status.get("gift_today", true))
+
+
+func gift_coins() -> int:
+	return int(status.get("gift_coins", 50))
+
+
+func coin_packs() -> Array:
+	var c = status.get("coin_packs", [])
+	return c if c is Array else []
+
+
+func skip_gems() -> int:
+	return int(status.get("skip_gems", 30))
+
+
+func claim_gift() -> String:
+	if demo:
+		if not gift_ready():
+			return Lang.t("Ya reclamaste el regalo de hoy")
+		status["gift_today"] = true
+		status["coins"] = coins() + gift_coins()
+		changed.emit()
+		return ""
+	return await _act("roa_daily_gift", {})
+
+
+func buy_coins(pack_id: String) -> String:
+	if demo:
+		for c in coin_packs():
+			if c["id"] == pack_id:
+				if gems() < int(c["gems"]):
+					return Lang.t("No te alcanzan las gemas")
+				status["gems"] = gems() - int(c["gems"])
+				status["coins"] = coins() + int(c["coins"])
+				changed.emit()
+		return ""
+	return await _act("roa_buy_coins", {"p_pack": pack_id})
+
+
+## Pasar al siguiente nivel del pase con gemas.
+func skip_tier() -> String:
+	if demo:
+		if tier() >= tiers():
+			return Lang.t("Ya estás en el último nivel del pase")
+		if gems() < skip_gems():
+			return Lang.t("No te alcanzan las gemas")
+		status["gems"] = gems() - skip_gems()
+		status["xp"] = (tier() + 1) * tier_xp()
+		changed.emit()
+		return ""
+	return await _act("roa_skip_tier", {})
 
 
 func equip(kind: String, id: String) -> String:
@@ -429,10 +511,20 @@ func _demo_status() -> Dictionary:
 			{"item": "est_noche", "coins": null, "gems": 150}, {"item": "est_jaguar", "coins": null, "gems": 300},
 			{"item": "tit_hijo_sol", "coins": null, "gems": 200}, {"item": "est_jade", "coins": null, "gems": 600},
 			{"item": "img_maya_4", "coins": null, "gems": 250}],
+		"deals": [{"item": "est_jaguar", "coins": null, "gems": 225, "old_coins": null, "old_gems": 300},
+			{"item": "tit_rey_maiz", "coins": 1125, "gems": null, "old_coins": 1500, "old_gems": null},
+			{"item": "est_rojo", "coins": 600, "gems": null, "old_coins": 800, "old_gems": null},
+			{"item": "img_maya_4", "coins": null, "gems": 188, "old_coins": null, "old_gems": 250},
+			{"item": "tit_comerciante", "coins": 375, "gems": null, "old_coins": 500, "old_gems": null}],
+		"deal_off": 0.25, "deals_end": "", "gift_today": false, "gift_coins": 50, "skip_gems": 30,
+		"coin_packs": [{"id": "monedas_1000", "coins": 1000, "gems": 60}, {"id": "monedas_10000", "coins": 10000, "gems": 500},
+			{"id": "monedas_100000", "coins": 100000, "gems": 4500}],
 		"packs": [{"id": "gemas_100", "gems": 100, "bonus": 0, "prices": {"USD": 0.99, "MXN": 19, "EUR": 0.99, "BRL": 4.9}},
 			{"id": "gemas_500", "gems": 500, "bonus": 50, "prices": {"USD": 4.99, "MXN": 99, "EUR": 4.99, "BRL": 24.9}},
 			{"id": "gemas_1000", "gems": 1000, "bonus": 200, "prices": {"USD": 9.99, "MXN": 199, "EUR": 9.99, "BRL": 49.9}},
-			{"id": "gemas_2000", "gems": 2000, "bonus": 600, "prices": {"USD": 19.99, "MXN": 399, "EUR": 19.99, "BRL": 99.9}}],
+			{"id": "gemas_2000", "gems": 2000, "bonus": 600, "prices": {"USD": 19.99, "MXN": 399, "EUR": 19.99, "BRL": 99.9}},
+			{"id": "gemas_5000", "gems": 5000, "bonus": 2000, "prices": {"USD": 49.99, "MXN": 999, "EUR": 49.99, "BRL": 249.9}},
+			{"id": "gemas_10000", "gems": 10000, "bonus": 5000, "prices": {"USD": 99.99, "MXN": 1999, "EUR": 99.99, "BRL": 499.9}}],
 		"premium_prices": {"USD": 4.99, "MXN": 99, "EUR": 4.99, "BRL": 24.9, "COP": 19900},
 		"bot_games_today": 2, "bot_daily": 8,
 		"prizes": {"ranked_win": {"xp": 200, "coins": 60}, "ranked_loss": {"xp": 80, "coins": 20},

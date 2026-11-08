@@ -216,6 +216,16 @@ func _ready() -> void:
 			for ch in get_children():
 				if ch is SoloScreen:
 					ch._set_preset(arg.get_slice("=", 1))
+		elif arg == "--tienda":
+			_home.open_store()
+		elif arg == "--tienda-gemas":
+			_home.open_store("gemas")
+		elif arg == "--pase":
+			_home.open_pass()
+		elif arg == "--subir-rango":
+			LevelUp.play(self, "rango", 4, 5, Lang.t("%d puntos") % 412)
+		elif arg == "--subir-pase":
+			LevelUp.play(self, "pase", 12, 13, Lang.t("Tienes premios para reclamar"))
 		elif arg == "--solo":
 			main_box.visible = false
 			setup_box.visible = true

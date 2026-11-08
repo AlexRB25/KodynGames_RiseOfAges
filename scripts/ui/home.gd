@@ -357,7 +357,7 @@ func open_pass() -> void:
 	p.setup(self)
 
 
-func open_store(tab := "articulos") -> void:
+func open_store(tab := "ofertas") -> void:
 	if not _cloud_ready():
 		return
 	var p := StoreScreen.new()

@@ -11,6 +11,9 @@
 --   * Game Pass Premium: se paga con dinero (Stripe; luego Google Play), NUNCA con gemas.
 --     Abre la fila premium y da +20 % de xp. Precio por moneda en roa_premium_prices.
 --   * Jugar en línea es gratis para todos (no hace falta el pase).
+--   * Tienda: ofertas del día (5 artículos con descuento, distintos para cada jugador y
+--     cada día), regalo diario de monedas, paquetes de monedas que se pagan con gemas y
+--     "saltar nivel" del pase con gemas.
 --
 -- Seguridad: el jugador solo LEE y pide acciones por funciones que revisan todo
 -- (reclamar, comprar, equipar). La xp de las partidas con rango la da el servidor del
@@ -133,6 +136,7 @@ create table if not exists public.roa_daily (
   last_bot_at timestamptz,
   primary key (user_id, day)
 );
+alter table public.roa_daily add column if not exists gift boolean not null default false;   -- regalo del día reclamado
 
 -- =====================================================================================
 -- Tienda y paquetes de gemas
@@ -164,6 +168,15 @@ create table if not exists public.roa_gem_prices (
   primary key (pack_id, currency)
 );
 
+-- Paquetes de monedas: se pagan con gemas (nunca con dinero directo).
+create table if not exists public.roa_coin_packs (
+  id text primary key,
+  coins integer not null check (coins > 0),
+  price_gems integer not null check (price_gems > 0),
+  sort integer not null default 0,
+  active boolean not null default true
+);
+
 -- Precio del Game Pass Premium en cada moneda (dinero real, cobrado con Stripe).
 -- Si la moneda del jugador no está, se cobra en USD. Mínimos de Stripe: 0.50 USD, 10 MXN.
 create table if not exists public.roa_premium_prices (
@@ -185,6 +198,9 @@ alter table public.roa_shop enable row level security;
 alter table public.roa_gem_packs enable row level security;
 alter table public.roa_gem_prices enable row level security;
 alter table public.roa_premium_prices enable row level security;
+alter table public.roa_coin_packs enable row level security;
+drop policy if exists "roa paquetes de monedas visibles" on public.roa_coin_packs;
+create policy "roa paquetes de monedas visibles" on public.roa_coin_packs for select to anon, authenticated using (active);
 
 drop policy if exists "roa items visibles" on public.roa_items;
 create policy "roa items visibles" on public.roa_items for select to anon, authenticated using (true);
@@ -209,7 +225,7 @@ create policy "roa mis reclamos" on public.roa_season_claims for select to authe
 
 revoke insert, update, delete on public.roa_items, public.roa_owned, public.roa_seasons, public.roa_season_rewards,
   public.roa_season_progress, public.roa_season_claims, public.roa_daily, public.roa_shop, public.roa_gem_packs,
-  public.roa_gem_prices, public.roa_premium_prices from anon, authenticated;
+  public.roa_gem_prices, public.roa_premium_prices, public.roa_coin_packs from anon, authenticated;
 
 -- =====================================================================================
 -- Funciones
@@ -296,6 +312,43 @@ as $fn$
 $fn$;
 
 -- Todo lo que el juego muestra: monedero, temporada, pase, premios, colección, tienda y paquetes.
+-- Tienda: cuántas ofertas al día, cuánto descuento, regalo diario y precio de saltar nivel.
+create or replace function public.roa_deal_count() returns integer language sql immutable as $fn$ select 5 $fn$;
+create or replace function public.roa_deal_off() returns numeric language sql immutable as $fn$ select 0.25 $fn$;
+create or replace function public.roa_gift_coins() returns integer language sql immutable as $fn$ select 50 $fn$;
+create or replace function public.roa_skip_gems() returns integer language sql immutable as $fn$ select 30 $fn$;
+
+-- ¿Este artículo está hoy en las ofertas de este jugador? (cambian cada día a las 00:00 UTC)
+create or replace function public.roa_is_deal(p_user uuid, p_item text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $fn$
+  select exists (
+    select 1 from (
+      select s.item_id
+        from public.roa_shop s join public.roa_items i on i.id = s.item_id
+       where s.active and i.active
+       order by md5(s.item_id || current_date::text || p_user::text)
+       limit public.roa_deal_count()
+    ) d where d.item_id = p_item);
+$fn$;
+
+-- Precio con el descuento del día (si es oferta).
+create or replace function public.roa_deal_price(p_user uuid, p_item text, p_price integer)
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $fn$
+  select case when p_price is null then null
+              when public.roa_is_deal(p_user, p_item) then ceil(p_price * (1 - public.roa_deal_off()))::integer
+              else p_price end;
+$fn$;
+
 create or replace function public.roa_status()
 returns jsonb
 language plpgsql
@@ -352,6 +405,21 @@ begin
                                           order by p.sort, p.gems)
                          from public.roa_gem_packs p where p.active), '[]'::jsonb),
     'premium_prices', coalesce((select jsonb_object_agg(x.currency, x.amount) from public.roa_premium_prices x), '{}'::jsonb),
+    'deals', coalesce((select jsonb_agg(jsonb_build_object('item', s.item_id,
+                         'coins', public.roa_deal_price(v_uid, s.item_id, s.price_coins),
+                         'gems', public.roa_deal_price(v_uid, s.item_id, s.price_gems),
+                         'old_coins', s.price_coins, 'old_gems', s.price_gems)
+                                          order by md5(s.item_id || current_date::text || v_uid::text))
+                         from public.roa_shop s join public.roa_items i on i.id = s.item_id
+                        where s.active and i.active and public.roa_is_deal(v_uid, s.item_id)), '[]'::jsonb),
+    'deal_off', public.roa_deal_off(),
+    'deals_end', date_trunc('day', now()) + interval '1 day',
+    'gift_today', coalesce(v_daily.gift, false),
+    'gift_coins', public.roa_gift_coins(),
+    'coin_packs', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'coins', c.coins, 'gems', c.price_gems)
+                                              order by c.sort, c.coins)
+                              from public.roa_coin_packs c where c.active), '[]'::jsonb),
+    'skip_gems', public.roa_skip_gems(),
     'bot_games_today', coalesce(v_daily.bot_games, 0),
     'bot_daily', public.roa_bot_daily(),
     'prizes', jsonb_build_object(
@@ -548,6 +616,7 @@ as $fn$
 declare
   v_uid uuid := auth.uid();
   v_shop public.roa_shop;
+  v_price integer;
 begin
   if v_uid is null then
     raise exception 'Sin sesión';
@@ -562,19 +631,112 @@ begin
   end if;
   insert into public.roa_profiles (id) values (v_uid) on conflict (id) do nothing;
   if v_shop.price_coins is not null then
-    update public.roa_profiles set coins = coins - v_shop.price_coins, updated_at = now()
-     where id = v_uid and coins >= v_shop.price_coins;
+    v_price := public.roa_deal_price(v_uid, p_item, v_shop.price_coins);
+    update public.roa_profiles set coins = coins - v_price, updated_at = now()
+     where id = v_uid and coins >= v_price;
     if not found then
       raise exception 'No te alcanzan las monedas';
     end if;
   else
-    update public.roa_profiles set gems = gems - v_shop.price_gems, updated_at = now()
-     where id = v_uid and gems >= v_shop.price_gems;
+    v_price := public.roa_deal_price(v_uid, p_item, v_shop.price_gems);
+    update public.roa_profiles set gems = gems - v_price, updated_at = now()
+     where id = v_uid and gems >= v_price;
     if not found then
       raise exception 'No te alcanzan las gemas';
     end if;
   end if;
   insert into public.roa_owned (user_id, item_id, source) values (v_uid, p_item, 'tienda');
+  return public.roa_status();
+end;
+$fn$;
+
+-- Regalo del día: unas monedas gratis, una vez por día.
+create or replace function public.roa_daily_gift()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Sin sesión';
+  end if;
+  insert into public.roa_daily (user_id, day) values (v_uid, current_date) on conflict (user_id, day) do nothing;
+  update public.roa_daily set gift = true where user_id = v_uid and day = current_date and not gift;
+  if not found then
+    raise exception 'Ya reclamaste el regalo de hoy';
+  end if;
+  insert into public.roa_profiles (id) values (v_uid) on conflict (id) do nothing;
+  update public.roa_profiles set coins = coins + public.roa_gift_coins(), updated_at = now() where id = v_uid;
+  return public.roa_status();
+end;
+$fn$;
+
+-- Comprar un paquete de monedas con gemas.
+create or replace function public.roa_buy_coins(p_pack text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_uid uuid := auth.uid();
+  v_pack public.roa_coin_packs;
+begin
+  if v_uid is null then
+    raise exception 'Sin sesión';
+  end if;
+  select * into v_pack from public.roa_coin_packs where id = p_pack and active;
+  if v_pack.id is null then
+    raise exception 'Ese paquete no está a la venta';
+  end if;
+  insert into public.roa_profiles (id) values (v_uid) on conflict (id) do nothing;
+  update public.roa_profiles set gems = gems - v_pack.price_gems, coins = coins + v_pack.coins, updated_at = now()
+   where id = v_uid and gems >= v_pack.price_gems;
+  if not found then
+    raise exception 'No te alcanzan las gemas';
+  end if;
+  return public.roa_status();
+end;
+$fn$;
+
+-- Saltar un nivel del pase con gemas: llega justo al inicio del siguiente nivel.
+create or replace function public.roa_skip_tier()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_uid uuid := auth.uid();
+  v_season public.roa_seasons;
+  v_xp integer;
+  v_tier integer;
+begin
+  if v_uid is null then
+    raise exception 'Sin sesión';
+  end if;
+  v_season := public.roa_current_season();
+  if v_season.id is null then
+    raise exception 'No hay temporada en curso';
+  end if;
+  insert into public.roa_season_progress (user_id, season_id) values (v_uid, v_season.id)
+  on conflict (user_id, season_id) do nothing;
+  select xp into v_xp from public.roa_season_progress where user_id = v_uid and season_id = v_season.id for update;
+  v_tier := least(v_season.tiers, v_xp / v_season.tier_xp);
+  if v_tier >= v_season.tiers then
+    raise exception 'Ya estás en el último nivel del pase';
+  end if;
+  insert into public.roa_profiles (id) values (v_uid) on conflict (id) do nothing;
+  update public.roa_profiles set gems = gems - public.roa_skip_gems(), updated_at = now()
+   where id = v_uid and gems >= public.roa_skip_gems();
+  if not found then
+    raise exception 'No te alcanzan las gemas';
+  end if;
+  update public.roa_season_progress set xp = (v_tier + 1) * v_season.tier_xp, updated_at = now()
+   where user_id = v_uid and season_id = v_season.id;
   return public.roa_status();
 end;
 $fn$;
@@ -750,6 +912,14 @@ revoke all on function public.roa_buy_item(text) from public, anon;
 revoke all on function public.roa_equip(text, text) from public, anon;
 revoke all on function public.roa_bot_result(boolean, integer) from public, anon;
 revoke all on function public.roa_profile_json(uuid) from public, anon, authenticated;
+revoke all on function public.roa_is_deal(uuid, text) from public, anon, authenticated;
+revoke all on function public.roa_deal_price(uuid, text, integer) from public, anon, authenticated;
+revoke all on function public.roa_daily_gift() from public, anon;
+revoke all on function public.roa_buy_coins(text) from public, anon;
+revoke all on function public.roa_skip_tier() from public, anon;
+grant execute on function public.roa_daily_gift() to authenticated;
+grant execute on function public.roa_buy_coins(text) to authenticated;
+grant execute on function public.roa_skip_tier() to authenticated;
 grant execute on function public.roa_award(uuid, text, boolean) to service_role;
 grant execute on function public.roa_can_use_civ(uuid, text) to service_role;
 grant execute on function public.roa_grant_gems(uuid, text, text, text, numeric, text) to service_role;
@@ -823,14 +993,24 @@ insert into public.roa_gem_packs (id, gems, bonus, sort) values
   ('gemas_100', 100, 0, 1),
   ('gemas_500', 500, 50, 2),
   ('gemas_1000', 1000, 200, 3),
-  ('gemas_2000', 2000, 600, 4)
+  ('gemas_2000', 2000, 600, 4),
+  ('gemas_5000', 5000, 2000, 5),
+  ('gemas_10000', 10000, 5000, 6)
+on conflict (id) do nothing;
+insert into public.roa_coin_packs (id, coins, price_gems, sort) values
+  ('monedas_1000', 1000, 60, 1),
+  ('monedas_10000', 10000, 500, 2),
+  ('monedas_100000', 100000, 4500, 3)
 on conflict (id) do nothing;
 insert into public.roa_gem_prices (pack_id, currency, amount) values
   ('gemas_100', 'USD', 0.99), ('gemas_500', 'USD', 4.99), ('gemas_1000', 'USD', 9.99), ('gemas_2000', 'USD', 19.99),
   ('gemas_100', 'MXN', 19), ('gemas_500', 'MXN', 99), ('gemas_1000', 'MXN', 199), ('gemas_2000', 'MXN', 399),
   ('gemas_100', 'EUR', 0.99), ('gemas_500', 'EUR', 4.99), ('gemas_1000', 'EUR', 9.99), ('gemas_2000', 'EUR', 19.99),
   ('gemas_100', 'BRL', 4.90), ('gemas_500', 'BRL', 24.90), ('gemas_1000', 'BRL', 49.90), ('gemas_2000', 'BRL', 99.90),
-  ('gemas_100', 'COP', 3900), ('gemas_500', 'COP', 19900), ('gemas_1000', 'COP', 39900), ('gemas_2000', 'COP', 79900)
+  ('gemas_100', 'COP', 3900), ('gemas_500', 'COP', 19900), ('gemas_1000', 'COP', 39900), ('gemas_2000', 'COP', 79900),
+  ('gemas_5000', 'USD', 49.99), ('gemas_10000', 'USD', 99.99), ('gemas_5000', 'MXN', 999), ('gemas_10000', 'MXN', 1999),
+  ('gemas_5000', 'EUR', 49.99), ('gemas_10000', 'EUR', 99.99), ('gemas_5000', 'BRL', 249.90), ('gemas_10000', 'BRL', 499.90),
+  ('gemas_5000', 'COP', 199900), ('gemas_10000', 'COP', 399900)
 on conflict (pack_id, currency) do nothing;
 
 -- Precio del Game Pass Premium (dinero real).
