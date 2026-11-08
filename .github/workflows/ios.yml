@@ -30,10 +30,18 @@ env:
 
 jobs:
   ios:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+
+      - name: Xcode 26 (Godot 4.7 usa el SDK de iOS 26)
+        run: |
+          ls -d /Applications/Xcode*.app
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$x" ]; then echo "::error::No hay Xcode 26 en esta Mac"; exit 1; fi
+          sudo xcode-select -s "$x/Contents/Developer"
+          xcodebuild -version
 
       - name: Godot y la plantilla de iOS
         run: |
