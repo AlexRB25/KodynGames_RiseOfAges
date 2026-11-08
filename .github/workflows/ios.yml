@@ -1,0 +1,175 @@
+# Compila Rise of Ages para iOS en una Mac de GitHub (Windows no puede).
+#
+# Cómo correrlo: GitHub > Actions > "iOS" > Run workflow (o subir una etiqueta ios-v1.0.18).
+# Resultado: el .ipa queda en la ejecución, en "Artifacts". Con "testflight" marcado y la
+# llave de App Store Connect, además se sube a TestFlight.
+#
+# Sin los secretos de Apple compila SIN FIRMAR: sirve para comprobar que todo compila,
+# pero ese .app no se puede instalar. Secretos (Settings > Secrets and variables > Actions),
+# paso a paso en docs/IOS.md:
+#   APPLE_TEAM_ID                  Team ID de tu cuenta de Apple Developer (10 letras/números)
+#   IOS_CERT_P12_BASE64            certificado "Apple Distribution" (.p12) en base64
+#   IOS_CERT_PASSWORD              contraseña de ese .p12
+#   IOS_PROFILE_BASE64             perfil de aprovisionamiento App Store de com.kodyngames.riseofages, en base64
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8   (opcional) llave de API de App Store Connect para TestFlight
+name: iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: "Subir a TestFlight"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "ios-v*"
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot y la plantilla de iOS
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          curl -fsSL -o tpl.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$dest"
+          unzip -q -j tpl.tpz "templates/ios.zip" "templates/version.txt" -d "$dest"
+          rm -f godot.zip tpl.tpz
+          echo "GODOT=$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+
+      - name: Certificado y perfil de Apple
+        id: firma
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CERT: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          CERT_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CERT" ] || [ -z "$PROFILE" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "::warning::Faltan los secretos de Apple: se compila sin firmar (solo para comprobar)."
+            echo "firmado=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          kc="$RUNNER_TEMP/firma.keychain-db"
+          kp="$(uuidgen)"
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kp" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kp" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASS" -A -t cert -f pkcs12 -k "$kc"
+          security set-key-partition-list -S apple-tool:,apple: -k "$kp" "$kc" > /dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          echo "$PROFILE" | base64 --decode > "$RUNNER_TEMP/perfil.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/perfil.mobileprovision" > "$RUNNER_TEMP/perfil.plist"
+          uuid=$(/usr/libexec/PlistBuddy -c "Print UUID" "$RUNNER_TEMP/perfil.plist")
+          name=$(/usr/libexec/PlistBuddy -c "Print Name" "$RUNNER_TEMP/perfil.plist")
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"
+            cp "$RUNNER_TEMP/perfil.mobileprovision" "$d/$uuid.mobileprovision"
+          done
+          echo "firmado=si" >> "$GITHUB_OUTPUT"
+          echo "PROFILE_NAME=$name" >> "$GITHUB_ENV"
+          echo "TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
+
+      - name: Exportar el proyecto de Xcode
+        run: |
+          set -euo pipefail
+          ver=$(grep -m1 '^config/version=' project.godot | cut -d'"' -f2)
+          IFS=. read -r a b c <<< "$ver"
+          code=$((a * 10000 + b * 1000 + c))
+          team="${TEAM_ID:-EQUIPO0000}"
+          sed -i '' -e "s/^application\/short_version=.*/application\/short_version=\"$ver\"/" \
+                    -e "s/^application\/version=.*/application\/version=\"$code\"/" \
+                    -e "s/^application\/app_store_team_id=.*/application\/app_store_team_id=\"$team\"/" export_presets.cfg
+          echo "VERSION=$ver" >> "$GITHUB_ENV"
+          mkdir -p build/ios
+          "$GODOT" --headless --path . --import > import.log 2>&1 || true
+          "$GODOT" --headless --path . --export-release "iOS" build/ios/RiseOfAges.ipa 2>&1 | tee export.log
+          ls build/ios
+          test -d build/ios/RiseOfAges.xcodeproj
+
+      - name: Compilar sin firmar (comprobación)
+        if: steps.firma.outputs.firmado != 'si'
+        run: |
+          set -euo pipefail
+          cd build/ios
+          xcodebuild -project RiseOfAges.xcodeproj -scheme RiseOfAges -configuration Release \
+            -sdk iphoneos -destination "generic/platform=iOS" -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -n 40
+          app=$(find "$RUNNER_TEMP/dd" -name "*.app" -maxdepth 6 | head -1)
+          echo "App: $app"
+          mkdir -p "$RUNNER_TEMP/out"
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/out/RiseOfAges-V${VERSION}-sin-firmar.app.zip"
+
+      - name: Compilar y firmar el .ipa
+        if: steps.firma.outputs.firmado == 'si'
+        run: |
+          set -euo pipefail
+          cd build/ios
+          xcodebuild -project RiseOfAges.xcodeproj -scheme RiseOfAges -configuration Release \
+            -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/RiseOfAges.xcarchive" \
+            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive | tail -n 40
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.kodyngames.riseofages</key><string>$PROFILE_NAME</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/RiseOfAges.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/out"
+          mv "$RUNNER_TEMP/out/"*.ipa "$RUNNER_TEMP/out/RiseOfAges-V${VERSION}.ipa"
+
+      - name: Subir a TestFlight
+        if: steps.firma.outputs.firmado == 'si' && inputs.testflight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$ASC_KEY_ID" ]; then echo "::warning::Sin llave de App Store Connect: no se sube."; exit 0; fi
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          xcrun altool --upload-app -t ios -f "$RUNNER_TEMP/out/RiseOfAges-V${VERSION}.ipa" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Guardar el resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiseOfAges-iOS-V${{ env.VERSION }}
+          path: ${{ runner.temp }}/out/*
+          retention-days: 30
+
+      - name: Registros si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registros-ios
+          path: |
+            export.log
+            import.log
+          if-no-files-found: ignore
+
+      - name: Borrar la llave temporal
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/firma.keychain-db" 2>/dev/null || true
