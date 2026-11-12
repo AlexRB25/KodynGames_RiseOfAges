@@ -34,6 +34,11 @@ var _fog_t := 0.0
 var _vic_t := 0.0
 var _notify_seen := {}
 var _attack_note_t := -100.0
+## Batallas contra el jugador local, para el minimapa: [{p: centro, r: radio en casillas,
+## last: último golpe (tiempo de partida)}]. Solo dibujo; no toca la simulación.
+var attack_pings: Array = []
+const PING_TIME := 6.0      # segundos que sigue el círculo después del último golpe
+const PING_JOIN := 10.0     # golpes a menos de esto se juntan en la misma batalla
 var _world: Node3D
 
 # Órdenes: todo lo que hace un jugador pasa por issue() -> apply_cmd() en un paso fijo.
@@ -359,6 +364,14 @@ func _dev_args() -> void:
 			await get_tree().create_timer(1.0).timeout
 			hud.joystick.vec = Vector2.ZERO
 			print("palanca: la cámara se movió %.1f casillas" % camera.ground_pos().distance_to(c0))
+		elif a == "--ataque":
+			# Desarrollo: guerreros enemigos atacan tu centro (para ver la batalla en el minimapa).
+			var ac := main_center(local_id)
+			var foe := 1 if local_id == 0 else 0
+			for i in 5:
+				var eu := spawn_unit("guerrero", foe, ac.center() + Vector2(4 + i * 0.6, 3))
+				eu.cmd_attack(ac)
+			run_seconds(4.0)
 		elif a == "--reliquia":
 			# Desarrollo: una reliquia junto a tu centro.
 			var rl := Relic.new()
@@ -571,6 +584,8 @@ func on_building_complete(b: Building) -> void:
 func on_attacked(e: Entity, from: Entity) -> void:
 	if from == null:
 		return
+	if e.owner_id == local_id and not headless:
+		_ping_attack(e.center() if e is Building else e.pos)
 	if e.owner_id == local_id and time - _attack_note_t > 12.0:
 		_attack_note_t = time
 		notify(local_id, Lang.t("¡Te están atacando!"), e.pos)
@@ -764,6 +779,19 @@ func end_by_forfeit(winner_team: int, forfeit: bool) -> void:
 	Sfx.play("victoria" if winner_team == team_of(local_id) else "derrota")
 	if hud:
 		hud.show_result(winner_team == team_of(local_id))
+
+
+## Marca (o agranda) la batalla en el minimapa donde golpearon algo tuyo.
+func _ping_attack(p: Vector2) -> void:
+	for pg in attack_pings:
+		var d: float = pg["p"].distance_to(p)
+		if d <= PING_JOIN:
+			pg["last"] = time
+			# El círculo cubre toda la pelea: se mueve un poco hacia el golpe y crece si hace falta.
+			pg["p"] = pg["p"].lerp(p, 0.1)
+			pg["r"] = clampf(maxf(pg["r"], pg["p"].distance_to(p) + 2.0), 4.0, 12.0)
+			return
+	attack_pings.append({"p": p, "r": 4.0, "last": time, "born": time})
 
 
 ## Campana del centro: los aldeanos corren a refugiarse al centro más cercano con

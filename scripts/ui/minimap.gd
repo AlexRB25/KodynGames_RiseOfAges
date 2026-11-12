@@ -135,6 +135,28 @@ func _draw() -> void:
 		pts.append(pts[0])
 		draw_polyline(pts, Color(1, 1, 1, 0.95), 1.5 / maxf(xf.x.length(), 0.01))
 	draw_set_transform_matrix(Transform2D.IDENTITY)
+	_draw_attacks(xf)
+
+
+## Batallas: círculo rojo que late (chico, grande, chico) donde te están atacando.
+func _draw_attacks(xf: Transform2D) -> void:
+	var now := game.time
+	var px := maxf(xf.x.length(), 0.01)      # pixeles por casilla
+	var keep: Array = []
+	for pg in game.attack_pings:
+		var age: float = now - float(pg["last"])
+		if age > Game.PING_TIME:
+			continue
+		keep.append(pg)
+		var c: Vector2 = xf * Vector2(pg["p"])
+		var fade := clampf((Game.PING_TIME - age) / 1.5, 0.0, 1.0)
+		var beat := 0.5 + 0.5 * sin((now - float(pg["born"])) * 6.0)   # 0..1, casi un latido por segundo
+		var r := maxf(float(pg["r"]) * px * 1.5, 16.0) * (0.6 + 0.6 * beat)
+		draw_circle(c, r, Color(1.0, 0.15, 0.1, (0.18 + 0.12 * beat) * fade))
+		draw_arc(c, r, 0.0, TAU, 40, Color(1.0, 0.25, 0.15, 0.95 * fade), 2.5, true)
+		draw_arc(c, r * 1.35, 0.0, TAU, 40, Color(1.0, 0.4, 0.2, 0.35 * fade * (1.0 - beat)), 1.5, true)
+		draw_circle(c, 3.0, Color(1, 0.9, 0.8, fade))
+	game.attack_pings = keep
 
 
 signal jumped
