@@ -17,7 +17,7 @@ var _ghost: Node3D
 var _ghost_parts: Array[MeshInstance3D] = []
 var _last_click_t := 0.0
 var _last_click_kind := ""
-var _idle_i := 0
+var _idle_last: Unit = null    # último aldeano sin tarea al que llevó el botón
 var _press_pos := Vector2.ZERO
 var _touch_long_t := -1.0
 
@@ -437,9 +437,15 @@ func select_next_idle() -> void:
 	var list := idle_villagers()
 	if list.is_empty():
 		return
-	_idle_i = (_idle_i + 1) % list.size()
-	set_selection([list[_idle_i]])
-	cam().focus(list[_idle_i].pos)
+	# El siguiente después del último que se mostró; al acabar la lista, otra vez el primero.
+	var i := 0
+	if _idle_last != null and is_instance_valid(_idle_last):
+		var j := list.find(_idle_last)
+		if j >= 0:
+			i = (j + 1) % list.size()
+	_idle_last = list[i]
+	set_selection([list[i]])
+	cam().focus(list[i].pos)
 
 
 # ---------------- colocar edificios ----------------

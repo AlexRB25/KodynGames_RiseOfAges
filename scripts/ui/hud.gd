@@ -12,7 +12,8 @@ var portrait: TextureRect
 var _era_shown := -1
 var time_label: Label
 var wonder_label: Label
-var idle_btn: Button
+var idle_btn: BaseButton
+const IdleButton := preload("res://scripts/ui/idle_button.gd")
 var notes: VBoxContainer
 var info_title: Label
 var info_body: RichTextLabel
@@ -165,10 +166,6 @@ func _build_top(root: Control) -> void:
 	right.add_child(hr)
 	time_label = Label.new()
 	hr.add_child(time_label)
-	idle_btn = Button.new()
-	idle_btn.tooltip_text = Lang.t("Aldeanos sin tarea (tecla .)")
-	idle_btn.pressed.connect(func() -> void: game.controller.select_next_idle())
-	hr.add_child(idle_btn)
 	var mb := Button.new()
 	mb.text = Lang.t("Menú")
 	mb.custom_minimum_size = Vector2(70, 0)
@@ -269,6 +266,19 @@ func _build_nav(root: Control) -> void:
 	box.anchor_right = 1.0
 	box.offset_left = -MAP_W - 4.0
 	box.offset_right = -4
+	# Botón redondo de aldeanos sin tarea, chico, en la esquina vacía (arriba a la
+	# izquierda) del cuadro del minimapa.
+	idle_btn = IdleButton.new()
+	idle_btn.anchor_left = 1.0
+	idle_btn.anchor_right = 1.0
+	idle_btn.anchor_top = 1.0
+	idle_btn.anchor_bottom = 1.0
+	idle_btn.offset_left = -MAP_W + 6.0
+	idle_btn.offset_right = -MAP_W + 6.0 + 50.0
+	idle_btn.offset_top = -220.0 + 8.0
+	idle_btn.offset_bottom = -220.0 + 8.0 + 50.0
+	root.add_child(idle_btn)
+	idle_btn.setup(game)
 	if not is_touch():
 		minimap.custom_minimum_size = Vector2(MAP_W - 20.0, 200)
 		box.add_child(minimap)
@@ -675,9 +685,6 @@ func _process(dt: float) -> void:
 		var wt := ceili(wc["t"])
 		wonder_label.text = Lang.t("Maravilla de %s: %d:%02d") % [wc["name"], wt / 60, wt % 60]
 		wonder_label.add_theme_color_override("font_color", Color(0.5, 1, 0.5) if wc["mine"] else Color(1, 0.45, 0.35))
-	var idle := game.controller.idle_villagers().size()
-	idle_btn.text = Lang.t("Sin tarea: %d") % idle
-	idle_btn.disabled = idle == 0
 	_t -= dt
 	if _t <= 0.0:
 		_t = 0.25
