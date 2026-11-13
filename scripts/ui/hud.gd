@@ -274,9 +274,9 @@ func _build_nav(root: Control) -> void:
 	idle_btn.anchor_top = 1.0
 	idle_btn.anchor_bottom = 1.0
 	idle_btn.offset_left = -MAP_W + 6.0
-	idle_btn.offset_right = -MAP_W + 6.0 + 50.0
-	idle_btn.offset_top = -220.0 + 8.0
-	idle_btn.offset_bottom = -220.0 + 8.0 + 50.0
+	idle_btn.offset_right = -MAP_W + 6.0 + 36.0
+	idle_btn.offset_top = -220.0 + 10.0
+	idle_btn.offset_bottom = -220.0 + 10.0 + 36.0
 	root.add_child(idle_btn)
 	idle_btn.setup(game)
 	if not is_touch():
